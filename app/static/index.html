@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Finanzprognose</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand">Finanzprognose</div>
+  <nav id="nav">
+    <button data-view="prognose">Prognose</button>
+    <button data-view="buchungen">Buchungen</button>
+    <button data-view="konten">Konten &amp; Ist-Stände</button>
+    <button data-view="verlauf">Verlauf</button>
+    <button data-view="sicherung">Sicherung</button>
+  </nav>
+  <button id="backupPill" class="pill" data-view="sicherung">Sicherung …</button>
+</header>
+<main id="main"></main>
+<div id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>

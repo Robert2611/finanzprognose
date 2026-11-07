@@ -1,0 +1,18 @@
+services:
+  finanzprognose:
+    build: .
+    container_name: finanzprognose
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:8000"
+    environment:
+      TZ: Europe/Berlin
+      APP_USER: ${APP_USER:-admin}
+      APP_PASSWORD: ${APP_PASSWORD:?Bitte APP_PASSWORD in der Datei .env setzen}
+      BACKUP_TIME: ${BACKUP_TIME:-03:00}
+      BACKUP_REQUIRE_MARKER: "1"
+      DB_PATH: /data/finanzen.sqlite
+      BACKUP_DIR: /backup
+    volumes:
+      - ./data:/data                          # Arbeitsdatenbank (lokal im Container-Host)
+      - ${BACKUP_HOST_DIR:?Bitte BACKUP_HOST_DIR in .env setzen}:/backup   # NAS-Freigabe
