@@ -15,8 +15,8 @@ Self-hosted personal finance forecast app (replaces an Excel sheet). FastAPI + S
 ## Commands
 
 ```bash
-# Dependencies (pytest + httpx are needed for tests but are NOT in requirements.txt)
-pip install -r requirements.txt pytest httpx
+# Dependencies (requirements-dev.txt = requirements.txt + pytest + httpx)
+pip install -r requirements-dev.txt
 
 # Run all tests
 python -m pytest -q
@@ -24,8 +24,10 @@ python -m pytest -q
 # Run a single test
 python -m pytest -q tests/test_app.py::test_full_flow
 
-# Run locally (defaults point to /data and /backup, so override them; an empty APP_PASSWORD disables auth)
-DB_PATH=./data/finanzen.sqlite BACKUP_DIR=./data/backup APP_PASSWORD= uvicorn app.main:app --reload
+# Run locally (defaults point to /data and /backup, so override them; an empty APP_PASSWORD disables auth;
+# BACKUP_DIR must exist). Easiest: use the dev container (.devcontainer/) and press F5 (.vscode/launch.json).
+mkdir -p data/backup
+DB_PATH=./data/finanzen.sqlite BACKUP_DIR=./data/backup BACKUP_REQUIRE_MARKER=0 APP_PASSWORD= uvicorn app.main:app --reload
 
 # Production (needs APP_PASSWORD and BACKUP_HOST_DIR in .env, see .env.example)
 docker compose up -d --build

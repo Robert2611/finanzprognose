@@ -1,0 +1,24 @@
+{
+  // Run inside the dev container (see .devcontainer/), which provides the environment variables.
+  // Started without --reload on purpose: a reload would restart the in-process backup scheduler.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Finanzprognose (dev)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["app.main:app", "--host", "0.0.0.0", "--port", "8000"],
+      "justMyCode": true
+    },
+    {
+      "name": "Finanzprognose (with login)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["app.main:app", "--host", "0.0.0.0", "--port", "8000"],
+      "env": { "APP_USER": "admin", "APP_PASSWORD": "dev" },
+      "justMyCode": true
+    }
+  ]
+}

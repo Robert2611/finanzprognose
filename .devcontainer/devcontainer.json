@@ -1,0 +1,29 @@
+{
+  "name": "Finanzprognose",
+  // Same Python version as the production Dockerfile.
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm",
+  "postCreateCommand": "pip install -r requirements-dev.txt && mkdir -p data/backup",
+  "forwardPorts": [8000],
+  "portsAttributes": {
+    "8000": { "label": "Finanzprognose", "onAutoForward": "notify" }
+  },
+  // Local development settings: no login, data under ./data (gitignored),
+  // no NAS marker file required for the backup.
+  "containerEnv": {
+    "TZ": "Europe/Berlin",
+    "DB_PATH": "${containerWorkspaceFolder}/data/finanzen.sqlite",
+    "BACKUP_DIR": "${containerWorkspaceFolder}/data/backup",
+    "BACKUP_REQUIRE_MARKER": "0",
+    "APP_PASSWORD": ""
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python", "ms-python.debugpy"],
+      "settings": {
+        "python.testing.pytestEnabled": true,
+        "python.testing.unittestEnabled": false,
+        "python.testing.pytestArgs": ["tests"]
+      }
+    }
+  }
+}

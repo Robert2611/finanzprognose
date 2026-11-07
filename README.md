@@ -165,10 +165,15 @@ Regeln der Berechnung:
 
 ## Entwicklung und Tests
 
-```bash
-pip install -r requirements.txt pytest httpx
-DB_PATH=./data/dev.sqlite BACKUP_DIR=./backup-dev uvicorn app.main:app --reload
-pytest -q
-```
+Empfohlen ist ein **Dev-Container** (VS Code mit der Erweiterung „Dev Containers“ und Docker):
+
+1. Ordner in VS Code öffnen und **„Reopen in Container“** wählen. Der Container bringt Python 3.12, installiert die Abhängigkeiten (`requirements-dev.txt`) und legt `data/backup` an.
+2. **F5** startet die App („Finanzprognose (dev)“, ohne Passwort). VS Code leitet Port 8000 weiter: `http://localhost:8000`. Haltepunkte funktionieren. Die Variante „with login“ startet die App mit Passwort `dev`.
+3. Die Tests laufen im Testing-Panel von VS Code oder mit `pytest -q`.
+
+Die Entwicklungsdaten liegen in `./data` und sind nicht im Git. Der Dev-Container setzt `BACKUP_REQUIRE_MARKER=0`, damit die Sicherung auch ohne NAS-Markierungsdatei läuft.
+
+Ohne Dev-Container: Python 3.12, `pip install -r requirements-dev.txt`, dann `mkdir -p data/backup` und
+`DB_PATH=./data/finanzen.sqlite BACKUP_DIR=./data/backup BACKUP_REQUIRE_MARKER=0 APP_PASSWORD= uvicorn app.main:app`.
 
 Die API-Dokumentation findest du unter `/api/docs`.
