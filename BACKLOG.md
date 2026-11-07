@@ -6,7 +6,7 @@ Status values: `open`, `in progress`, `done`.
 
 ## B-001 Add test dependencies to the project
 
-- **Status:** open
+- **Status:** done
 - **Problem:** The tests need `pytest` and `httpx` (used by FastAPI's `TestClient`), but neither is listed in `requirements.txt`. A fresh environment cannot run the tests without guessing what to install.
 - **Proposal:** Add a `requirements-dev.txt` that includes `-r requirements.txt` plus pinned `pytest` and `httpx`. Keep `requirements.txt` production-only so the Docker image stays lean.
 - **Done when:** `pip install -r requirements-dev.txt && python -m pytest` works in a fresh venv, and the commands in `CLAUDE.md` reference the new file.
@@ -20,7 +20,7 @@ Status values: `open`, `in progress`, `done`.
 
 ## B-003 Make local development work out of the box
 
-- **Status:** open
+- **Status:** done
 - **Problem:** `DB_PATH` and `BACKUP_DIR` default to `/data/finanzen.sqlite` and `/backup` (the container paths), so running `uvicorn` locally fails or writes to system paths unless both are overridden.
 - **Proposal:** Add a short "Local development" section to the README (or a `.env.dev` file) with the override values, e.g. `DB_PATH=./data/finanzen.sqlite BACKUP_DIR=./data/backup APP_PASSWORD=`. Leave the production defaults unchanged.
 - **Done when:** A documented one-line command starts the app locally without touching `/data` or `/backup`.
@@ -38,3 +38,10 @@ Status values: `open`, `in progress`, `done`.
 - **Problem:** The backend still produces German text that the frontend displays verbatim: API error messages (`detail`, including Pydantic validator messages in `main.py` and `NotFound`/`Conflict` in `db.py`), forecast `warnings`, `explanation` lines and item labels in `forecast.py` ("Startstand (Ist-Stand)", "Grundbetrag …"), backup errors and run reasons ("manuell", "zeitplan") in `backup.py`, and the DB trigger messages. Two German strings are also stored in the database: the checkpoint note "Startstand bei Anlage" and the audit comment "Rückgängig gemacht: Protokolleintrag #n". The account `kind` values (`giro`, `tagesgeld`, `depot`, `kreditkarte`, `bar`, `sonstiges`) are German identifiers stored in existing databases.
 - **Proposal:** Make the backend language-neutral: return stable error/message codes plus parameters (e.g. `{"code": "conflict"}`, `{"code": "base_amount", "amount": -60000}`) and let `app.js` map them to German text. Store neutral values for the two stored strings and keep rendering the old German values for existing rows. Treat renaming the `kind` values as a data migration (depends on B-002), or keep them as opaque keys and only localize their labels.
 - **Done when:** No German text remains in `app/*.py` except in tests that assert on legacy stored data, the UI still shows the same German text, and an upgraded production database still renders correctly.
+
+## B-006 Make Claude Code available in the dev container
+
+- **Status:** open
+- **Problem:** The dev container (`.devcontainer/`) does not include Claude Code, so it cannot be used from inside the container where the app and tests run.
+- **Proposal:** Install the Claude Code CLI in the dev container (e.g. via the official Dev Container Feature or an npm install in the Dockerfile/`postCreateCommand`). Persist its config (`~/.claude`) across rebuilds with a named volume or bind mount, and document how to authenticate.
+- **Done when:** After rebuilding the dev container, `claude` starts in the integrated terminal, stays logged in across rebuilds, and the setup is described in the README or `CLAUDE.md`.
