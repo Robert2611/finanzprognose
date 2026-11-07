@@ -22,34 +22,34 @@ def client():
 
 
 def test_full_flow(client):
-    giro = client.post("/api/accounts", json={"name": "Giro", "kind": "giro", "start_balance": 100000, "start_date": "2026-01-15"}).json()
-    tg = client.post("/api/accounts", json={"name": "Tagesgeld", "kind": "tagesgeld", "start_balance": 0, "start_date": "2026-01-15"}).json()
-    sal = client.post("/api/entries", json={"account_id": giro["id"], "name": "Gehalt", "kind": "recurring", "amount": 300000,
+    giro = client.post("/api/accounts", json={"name": "Checking", "kind": "giro", "start_balance": 100000, "start_date": "2026-01-15"}).json()
+    tg = client.post("/api/accounts", json={"name": "Savings", "kind": "tagesgeld", "start_balance": 0, "start_date": "2026-01-15"}).json()
+    sal = client.post("/api/entries", json={"account_id": giro["id"], "name": "Salary", "kind": "recurring", "amount": 300000,
                                             "start_date": "2026-01-31", "interval_months": 1}).json()
-    client.post("/api/entries", json={"account_id": giro["id"], "name": "Miete", "kind": "recurring", "amount": -120000,
+    client.post("/api/entries", json={"account_id": giro["id"], "name": "Rent", "kind": "recurring", "amount": -120000,
                                       "start_date": "2026-01-01", "interval_months": 1})
-    client.post("/api/entries", json={"account_id": giro["id"], "to_account_id": tg["id"], "name": "Sparen", "kind": "recurring",
+    client.post("/api/entries", json={"account_id": giro["id"], "to_account_id": tg["id"], "name": "Saving", "kind": "recurring",
                                       "amount": 50000, "start_date": "2026-02-05"})
-    client.post("/api/entries", json={"account_id": giro["id"], "name": "Urlaub", "kind": "once", "amount": -200000, "start_date": "2026-03-10"})
-    r = client.post("/api/adjustments", json={"entry_id": sal["id"], "effective_date": "2026-03-01", "mode": "set", "amount": 320000, "note": "Erhöhung"})
+    client.post("/api/entries", json={"account_id": giro["id"], "name": "Vacation", "kind": "once", "amount": -200000, "start_date": "2026-03-10"})
+    r = client.post("/api/adjustments", json={"entry_id": sal["id"], "effective_date": "2026-03-01", "mode": "set", "amount": 320000, "note": "Raise"})
     assert r.status_code == 200, r.text
 
     fc = client.get("/api/forecast?start=2026-01&months=4").json()
     m = {x["month"]: x for x in fc["months"]}
     g = str(giro["id"])
-    # Jan: Start 1000 am 15.1., Miete 1.1. ignoriert (vor Start), Gehalt 31.1. +3000
+    # Jan: start 1000 on Jan 15, rent on Jan 1 ignored (before start), salary on Jan 31 +3000
     assert m["2026-01"]["accounts"][g]["closing"] == 400000
-    # Feb: -1200 Miete +3000 Gehalt (28.2.) -500 Sparen
+    # Feb: -1200 rent, +3000 salary (Feb 28), -500 savings
     assert m["2026-02"]["accounts"][g]["closing"] == 400000 - 120000 + 300000 - 50000
     assert m["2026-02"]["accounts"][str(tg["id"])]["closing"] == 50000
-    # Feb-Gehalt fällt auf den 28.02. (Monatsletzter)
-    assert any(i["date"] == "2026-02-28" and i["label"] == "Gehalt" for i in m["2026-02"]["accounts"][g]["items"])
-    # Mär: Gehalt 3200 mit Begründung, Urlaub
-    sal_mar = [i for i in m["2026-03"]["accounts"][g]["items"] if i["label"] == "Gehalt"][0]
+    # Feb salary falls on Feb 28 (last day of the month)
+    assert any(i["date"] == "2026-02-28" and i["label"] == "Salary" for i in m["2026-02"]["accounts"][g]["items"])
+    # Mar: salary 3200 with explanation, vacation
+    sal_mar = [i for i in m["2026-03"]["accounts"][g]["items"] if i["label"] == "Salary"][0]
     assert sal_mar["amount"] == 320000
     assert any("neuer Betrag" in e for e in sal_mar["explanation"])
 
-    # Ist-Stand mit Abweichung
+    # Checkpoint with deviation
     client.post("/api/checkpoints", json={"account_id": giro["id"], "date": "2026-02-20", "balance": 500000})
     fc = client.get("/api/forecast?start=2026-02&months=1").json()
     cp = [i for i in fc["months"][0]["accounts"][g]["items"] if i["type"] == "checkpoint"][0]
@@ -97,11 +97,11 @@ def test_backup(client):
     assert r["last_result"] == "ok"
     r = client.post("/api/backup/run").json()
     assert r["last_result"] == "unchanged"
-    client.post("/api/accounts", json={"name": "Neu", "start_balance": 0, "start_date": "2026-01-01"})
+    client.post("/api/accounts", json={"name": "New", "start_balance": 0, "start_date": "2026-01-01"})
     import time; time.sleep(1.1)
     r = client.post("/api/backup/run").json()
     assert r["last_result"] == "ok"
     files = backup.list_backups()
-    assert len(files) == 2  # alter Stand bleibt erhalten
+    assert len(files) == 2  # old backup is kept
     c = sqlite3.connect(os.path.join(backup.BACKUP_DIR, files[0]["name"]))
     assert c.execute("SELECT COUNT(*) FROM accounts").fetchone()[0] >= 1

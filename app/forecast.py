@@ -1,12 +1,12 @@
-"""Prognose-Engine.
+"""Forecast engine.
 
-Für jeden Monat und jedes Konto wird berechnet:
-  Anfangsstand -> jede einzelne Buchung (mit Begründung, wie der Betrag zustande kommt) -> Endstand.
+For every month and every account it computes:
+  opening balance -> every single booking (with an explanation of how its amount came about) -> closing balance.
 
-Ankerpunkte sind die Ist-Stände (checkpoints): der tatsächliche Kontostand am Abend eines Tages.
-Der erste Ist-Stand eines Kontos ist der Startpunkt; Buchungen davor oder am selben Tag gelten
-als darin enthalten. Spätere Ist-Stände setzen die Prognose auf den echten Wert zurück und zeigen
-die Abweichung zur Prognose an.
+The anchor points are the checkpoints: the actual account balance at the end of a given day.
+An account's first checkpoint is its starting point; bookings on or before that day are considered
+already included in it. Later checkpoints reset the forecast to the real value and report the
+deviation from the forecast.
 """
 from calendar import monthrange
 from collections import defaultdict
@@ -19,12 +19,12 @@ def add_months(y: int, m: int, n: int) -> tuple[int, int]:
     return t // 12, t % 12 + 1
 
 
-def eur(cents: int) -> str:
+def format_eur(cents: int) -> str:
     s = f"{abs(cents) / 100:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     return ("−" if cents < 0 else "") + s + " €"
 
 
-def de(d: date) -> str:
+def format_date_de(d: date) -> str:
     return d.strftime("%d.%m.%Y")
 
 
@@ -51,17 +51,17 @@ def occurrences(e: dict, until: date):
 
 
 def amount_at(e: dict, adjs: list[dict], d: date) -> tuple[int, list[str]]:
-    """Betrag einer Buchung an einem Datum inkl. lückenloser Herleitung."""
+    """Amount of an entry on a given date, including a complete derivation."""
     amt = e["amount"]
-    expl = [f"Grundbetrag {eur(amt)}"]
-    for a in adjs:  # nach Datum sortiert
+    expl = [f"Grundbetrag {format_eur(amt)}"]
+    for a in adjs:  # sorted by date
         eff = date.fromisoformat(a["effective_date"])
         if eff > d:
             break
         note = f" ({a['note']})" if a.get("note") else ""
         if a["mode"] == "set":
             amt = a["amount"]
-            expl.append(f"ab {de(eff)}: neuer Betrag {eur(amt)}{note}")
+            expl.append(f"ab {format_date_de(eff)}: neuer Betrag {format_eur(amt)}{note}")
         else:
             n = full_years(eff, d) + 1 if a["repeat_yearly"] else 1
             factor = Decimal(1) + Decimal(str(a["percent"])) / 100
@@ -71,7 +71,7 @@ def amount_at(e: dict, adjs: list[dict], d: date) -> tuple[int, list[str]]:
             pct = f"{a['percent']:+g} %".replace(".", ",")
             times = f", jährlich – hier {n}× angewendet" if a["repeat_yearly"] else ""
             amt = int(val)
-            expl.append(f"ab {de(eff)}: {pct}{times} → {eur(amt)}{note}")
+            expl.append(f"ab {format_date_de(eff)}: {pct}{times} → {format_eur(amt)}{note}")
     return amt, expl
 
 
@@ -95,7 +95,7 @@ def compute(state: dict, start: str, months: int) -> dict:
     for lst in adjs.values():
         lst.sort(key=lambda a: (a["effective_date"], a["id"]))
 
-    # Ereignisse je Konto: (datum, reihenfolge, id, item). Buchungen (0) vor Ist-Ständen (1) am selben Tag.
+    # Events per account: (date, order, id, item). On the same day, bookings (0) come before checkpoints (1).
     events = defaultdict(list)
     for cp in state["checkpoints"]:
         if cp["archived"] or cp["account_id"] not in acc_ids:
@@ -148,7 +148,7 @@ def compute(state: dict, start: str, months: int) -> dict:
                 running = it["balance"]
             else:
                 if running is None:
-                    return  # vor dem ersten Ist-Stand: bereits im Startstand enthalten
+                    return  # before the first checkpoint: already included in the starting balance
                 running += it["amount"]
                 it["balance"] = running
             if sink is not None:
@@ -165,7 +165,7 @@ def compute(state: dict, start: str, months: int) -> dict:
             mo = out_months[k]
             mo["accounts"][acc["id"]] = {"opening": opening, "closing": running, "items": items}
             if opening is None and items and items[0]["type"] == "checkpoint":
-                mo["opening"] += items[0]["balance"]  # Konto startet in diesem Monat
+                mo["opening"] += items[0]["balance"]  # account starts in this month
             else:
                 mo["opening"] += opening or 0
             mo["closing"] += running or 0

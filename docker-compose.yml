@@ -8,11 +8,11 @@ services:
     environment:
       TZ: Europe/Berlin
       APP_USER: ${APP_USER:-admin}
-      APP_PASSWORD: ${APP_PASSWORD:?Bitte APP_PASSWORD in der Datei .env setzen}
+      APP_PASSWORD: ${APP_PASSWORD:?Please set APP_PASSWORD in the .env file}
       BACKUP_TIME: ${BACKUP_TIME:-03:00}
       BACKUP_REQUIRE_MARKER: "1"
       DB_PATH: /data/finanzen.sqlite
       BACKUP_DIR: /backup
     volumes:
-      - ./data:/data                          # Arbeitsdatenbank (lokal im Container-Host)
-      - ${BACKUP_HOST_DIR:?Bitte BACKUP_HOST_DIR in .env setzen}:/backup   # NAS-Freigabe
+      - ./data:/data                          # working database (local on the container host)
+      - ${BACKUP_HOST_DIR:?Please set BACKUP_HOST_DIR in .env}:/backup   # NAS share

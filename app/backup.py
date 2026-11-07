@@ -1,13 +1,13 @@
-"""Tägliche Sicherung auf das NAS.
+"""Daily backup to the NAS.
 
-  * Läuft einmal täglich zur Uhrzeit BACKUP_TIME (Standard 03:00).
-  * Sichert nur, wenn sich seit der letzten Sicherung etwas geändert hat.
-  * Alte Stände werden NIE gelöscht – jede Sicherung ist eine neue Datei mit Zeitstempel.
-  * Pro Sicherung: konsistente SQLite-Kopie (online backup API, integrity_check geprüft)
-    und ein menschenlesbarer JSON-Export. Prüfsummen landen in backups.log.
-  * Schutz gegen "NAS nicht eingebunden": Im Zielordner muss die Datei .nas-marker liegen,
-    sonst wird NICHT gesichert und die App zeigt einen roten Fehler an.
-  * Schlägt eine Sicherung fehl, wird stündlich erneut versucht.
+  * Runs once a day at BACKUP_TIME (default 03:00).
+  * Only backs up if something has changed since the last backup.
+  * Old backups are NEVER deleted; every backup is a new file with a timestamp.
+  * Each backup consists of a consistent SQLite copy (online backup API, checked with
+    integrity_check) and a human-readable JSON export. Checksums go to backups.log.
+  * Protection against "NAS not mounted": the target folder must contain the file .nas-marker,
+    otherwise NOTHING is backed up and the app shows a red error.
+  * If a backup fails, it is retried every hour.
 """
 import hashlib
 import json
@@ -130,11 +130,11 @@ def run_backup(force: bool = False, reason: str = "zeitplan") -> dict:
 
             st.update(last_success=st["last_attempt"], last_version=version,
                       last_file=os.path.basename(final_db), last_result="ok", last_error=None)
-            log.info("Sicherung erstellt: %s", final_db)
+            log.info("Backup created: %s", final_db)
         except Exception as ex:  # noqa: BLE001
             st["last_result"] = "error"
             st["last_error"] = str(ex)
-            log.error("Sicherung fehlgeschlagen: %s", ex)
+            log.error("Backup failed: %s", ex)
             for p in ("tmp_db", "tmp_json"):
                 path = locals().get(p)
                 if path and os.path.exists(path):
@@ -178,7 +178,7 @@ def _scheduler() -> None:
                   and now - last_attempt > timedelta(hours=1)):
                 run_backup(reason="wiederholung nach fehler")
         except Exception as ex:  # noqa: BLE001
-            log.exception("Fehler im Backup-Planer: %s", ex)
+            log.exception("Error in backup scheduler: %s", ex)
         time.sleep(60)
 
 

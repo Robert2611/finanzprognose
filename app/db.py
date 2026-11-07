@@ -1,14 +1,14 @@
 """Datenbank-Schicht.
 
-Grundprinzipien für Datensicherheit:
-  * Es wird NIE etwas gelöscht. Datensätze werden nur archiviert (archived=1).
-    SQLite-Trigger verhindern DELETE auf allen Tabellen.
-  * Jede Änderung wird im unveränderlichen Änderungsprotokoll (audit_log)
-    mit Vorher-/Nachher-Zustand gespeichert – in derselben Transaktion.
-    Trigger verhindern UPDATE und DELETE auf dem Protokoll.
-  * Optimistisches Sperren: Wer einen veralteten Stand speichern will
-    (z. B. zweiter Browser-Tab), bekommt einen Konflikt statt Datenverlust.
-  * Beträge werden als ganze Cent (INTEGER) gespeichert – keine Rundungsfehler.
+Core principles for data safety:
+  * NOTHING is ever deleted. Records are only archived (archived=1).
+    SQLite triggers prevent DELETE on all tables.
+  * Every change is stored in the immutable change log (audit_log)
+    with its before/after state, in the same transaction.
+    Triggers prevent UPDATE and DELETE on the log.
+  * Optimistic locking: anyone trying to save a stale version
+    (e.g. from a second browser tab) gets a conflict instead of data loss.
+  * Amounts are stored as whole cents (INTEGER), so there are no rounding errors.
 """
 import json
 import os
@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 
 DB_PATH = os.environ.get("DB_PATH", "/data/finanzen.sqlite")
 
-# Felder, die über die API geschrieben werden dürfen
+# Fields that may be written through the API
 TABLES = {
     "accounts": ["name", "kind", "note"],
     "entries": [
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS entries(
   name TEXT NOT NULL,
   category TEXT NOT NULL DEFAULT '',
   kind TEXT NOT NULL CHECK(kind IN ('recurring','once')),
-  amount INTEGER NOT NULL,              -- Cent, mit Vorzeichen (Umbuchung: positiv)
+  amount INTEGER NOT NULL,              -- cents, signed (transfer: positive)
   start_date TEXT NOT NULL,
   end_date TEXT,
   interval_months INTEGER NOT NULL DEFAULT 1 CHECK(interval_months >= 1),
@@ -61,8 +61,8 @@ CREATE TABLE IF NOT EXISTS adjustments(
   entry_id INTEGER NOT NULL REFERENCES entries(id),
   effective_date TEXT NOT NULL,
   mode TEXT NOT NULL CHECK(mode IN ('set','percent')),
-  amount INTEGER,                        -- bei mode='set': neuer Betrag in Cent
-  percent REAL,                          -- bei mode='percent'
+  amount INTEGER,                        -- if mode='set': new amount in cents
+  percent REAL,                          -- if mode='percent'
   repeat_yearly INTEGER NOT NULL DEFAULT 0,
   note TEXT NOT NULL DEFAULT '',
   archived INTEGER NOT NULL DEFAULT 0,
@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS checkpoints(
   id INTEGER PRIMARY KEY,
   account_id INTEGER NOT NULL REFERENCES accounts(id),
   date TEXT NOT NULL,
-  balance INTEGER NOT NULL,              -- tatsächlicher Kontostand am Abend dieses Tages, Cent
+  balance INTEGER NOT NULL,              -- actual account balance at the end of this day, in cents
   note TEXT NOT NULL DEFAULT '',
   archived INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
@@ -131,7 +131,7 @@ def init() -> None:
     conn = connect()
     try:
         conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA synchronous=FULL")  # jede Transaktion landet sicher auf der Platte
+        conn.execute("PRAGMA synchronous=FULL")  # every transaction is safely on disk
         conn.executescript(SCHEMA)
         conn.execute("PRAGMA user_version=1")
     finally:
@@ -140,7 +140,7 @@ def init() -> None:
 
 @contextmanager
 def tx():
-    """Schreibtransaktion: alles oder nichts."""
+    """Write transaction: all or nothing."""
     with _write_lock:
         conn = connect()
         try:
@@ -225,7 +225,7 @@ def set_archived(conn, table, id_, archived: bool, comment="") -> dict:
 
 
 def revert(conn, audit_id: int) -> dict:
-    """Macht eine einzelne protokollierte Änderung rückgängig (als neue, protokollierte Änderung)."""
+    """Undoes a single logged change (as a new, logged change)."""
     a = conn.execute("SELECT * FROM audit_log WHERE id=?", (audit_id,)).fetchone()
     if a is None:
         raise NotFound(f"Protokolleintrag #{audit_id} nicht gefunden")
@@ -261,7 +261,7 @@ def audit_list(conn, limit=200, before_id=None, entity=None, entity_id=None) -> 
 
 
 def data_version(conn=None) -> int:
-    """Steigt mit jeder Änderung – Grundlage für 'nur sichern, wenn sich etwas geändert hat'."""
+    """Increases with every change; basis for 'only back up if something changed'."""
     own = conn is None
     conn = conn or connect()
     try:

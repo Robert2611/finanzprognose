@@ -28,7 +28,7 @@ APP_USER = os.environ.get("APP_USER", "admin")
 APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
 
 
-# ---------------------------------------------------------------- Zugriffsschutz
+# ---------------------------------------------------------------- Access control
 @app.middleware("http")
 async def basic_auth(request: Request, call_next):
     if APP_PASSWORD and request.url.path != "/healthz":
@@ -56,8 +56,8 @@ async def _cf(_, ex):
     return JSONResponse({"detail": str(ex)}, status_code=409)
 
 
-# ---------------------------------------------------------------- Modelle
-Money = int  # Cent
+# ---------------------------------------------------------------- Models
+Money = int  # cents
 
 
 class Base(BaseModel):
