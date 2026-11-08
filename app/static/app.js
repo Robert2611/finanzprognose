@@ -138,7 +138,7 @@ async function render() {
 async function renderForecast(main) {
   if (!S.data.accounts.length) {
     main.innerHTML = `<div class="panel"><h2>Willkommen</h2><p>Lege zuerst ein Konto mit seinem aktuellen Kontostand an. Danach trägst du wiederkehrende und einmalige Buchungen ein – die Prognose entsteht automatisch.</p><button class="primary" id="first">Erstes Konto anlegen</button></div>`;
-    $('#first').onclick = accountDialog; return;
+    $('#first').onclick = () => accountDialog(); return;
   }
   main.innerHTML = `<div class="toolbar">
       <label>Ab <input type="month" id="from" value="${S.from}"></label>
