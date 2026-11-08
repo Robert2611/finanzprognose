@@ -13,10 +13,12 @@ Status values: `open`, `in progress`, `done`.
 
 ## B-002 Introduce schema migrations
 
-- **Status:** open
-- **Problem:** `db.init()` only runs `CREATE TABLE IF NOT EXISTS` and always sets `PRAGMA user_version=1`. Changing an existing table (e.g. adding a column) has no upgrade path for production databases that already exist.
-- **Proposal:** Add an ordered list of numbered migration steps in `db.py`. On startup, read `user_version`, apply every step with a higher number inside one transaction, then set `user_version` to the latest number. Keep the existing data-safety rules: migrations must never delete data, and the audit log triggers stay in place.
-- **Done when:** A test creates a version-1 database, starts the app, and verifies it is upgraded to the latest version with all existing data intact.
+- **Status:** done (runner implemented; the `db.py` split is split out to B-009)
+- **Problem:** `db.init()` only ran `CREATE TABLE IF NOT EXISTS` and always set `PRAGMA user_version=1`. Changing an existing table (e.g. adding a column) had no upgrade path for production databases that already exist.
+- **Proposal:** Add an ordered list of numbered migration steps in `db.py`. On startup, read `user_version` and apply every step with a higher number, each in its own transaction, bumping `user_version` as it goes. Keep the existing data-safety rules: migrations must never delete data, and the audit log triggers stay in place.
+- **Resolution:** `db.init()` now keeps `SCHEMA` as an always-applied idempotent baseline (version 1) and runs an ordered `MIGRATIONS` list of `(target_version, fn)` on top; each migration runs in its own transaction and must be idempotent (guard `ALTER`s with `_has_column`, since a fresh database gets the change from `SCHEMA` while an existing one gets it from the migration). `MIGRATIONS` is currently empty — there is no pending schema change — with a commented example showing where the first real one slots in. `test_migrations_upgrade_preserves_data` builds a version-1 DB with a row, applies a migration, and asserts the version advanced and the row survived (on its own temp DB, independent of the shared suite DB).
+- **Note:** The `db.py` split proposed originally is moved to **B-009** so the runner could land as a small, contained change.
+- **Done when:** ~~A test creates a version-1 database, starts the app, and verifies it is upgraded to the latest version with all existing data intact.~~ Done.
 
 ## B-003 Make local development work out of the box
 
@@ -45,3 +47,24 @@ Status values: `open`, `in progress`, `done`.
 - **Problem:** The dev container (`.devcontainer/`) does not include Claude Code, so it cannot be used from inside the container where the app and tests run.
 - **Proposal:** Install the Claude Code CLI in the dev container (e.g. via the official Dev Container Feature or an npm install in the Dockerfile/`postCreateCommand`). Persist its config (`~/.claude`) across rebuilds with a named volume or bind mount, and document how to authenticate.
 - **Done when:** After rebuilding the dev container, `claude` starts in the integrated terminal, stays logged in across rebuilds, and the setup is described in the README or `CLAUDE.md`.
+
+## B-007 Split app/main.py into smaller modules
+
+- **Status:** open
+- **Problem:** `main.py` combines several unrelated responsibilities in one 260+ line file: auth middleware, exception handlers, all Pydantic request models, and every route (generic CRUD, accounts, audit/revert, forecast, backup, export). This violates the file-size preference in `CLAUDE.md`.
+- **Proposal:** Split by responsibility, e.g. `app/schemas.py` (the Pydantic models and `MODELS` mapping), `app/auth.py` (the auth middleware), and keep `main.py` for route wiring only (or split routes further by area if that still ends up large). Keep the route paths and behavior unchanged.
+- **Done when:** `main.py` only wires routes/middleware together, the split-out modules each have a single clear responsibility, and the existing test suite passes unchanged.
+
+## B-008 Split app/static/app.js into smaller modules
+
+- **Status:** open
+- **Problem:** `app.js` is a single 500+ line file covering everything: generic helpers, state, the generic form-dialog component, routing, and every view (forecast, entries, accounts, audit/history, backup). It already has clear comment-delimited sections, but they all live in one file. This violates the file-size preference in `CLAUDE.md`.
+- **Proposal:** Split along the existing section boundaries into separate files (e.g. `core.js` for helpers/state/formDialog/routing, and one file per view: `forecast.js`, `entries.js`, `accounts.js`, `audit.js`, `backup.js`). Since the project has no build step, load them as native ES modules (`<script type="module">` with explicit imports/exports) rather than introducing a bundler.
+- **Done when:** `app.js` no longer exists as one monolith, each new file has a single view/responsibility, and the app works unchanged in the browser without any build step.
+
+## B-009 Split db.py into focused modules
+
+- **Status:** open
+- **Problem:** `db.py` combines several responsibilities in one file: the schema and migration runner (B-002), the generic CRUD helpers, the audit log, and the transaction/connection plumbing. This violates the file-size preference in `CLAUDE.md`. It was carved out of B-002 so the migration runner could land as a small, contained change.
+- **Proposal:** Split `db.py` into smaller, well-scoped modules (e.g. schema + migrations, generic CRUD, audit log, connection/transaction helpers), keeping the public functions importable as they are today so callers (`main.py`, `backup.py`, tests) don't change. Preserve every data-safety invariant: DELETE-blocking triggers, append-only `audit_log`, optimistic locking, and the single-writer lock.
+- **Done when:** `db.py`'s responsibilities live in focused modules, the import surface used elsewhere is unchanged, and the existing test suite passes unchanged.

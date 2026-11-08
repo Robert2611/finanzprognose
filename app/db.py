@@ -126,14 +126,42 @@ def connect() -> sqlite3.Connection:
     return conn
 
 
+def _has_column(conn, table: str, col: str) -> bool:
+    return any(r["name"] == col for r in conn.execute(f"PRAGMA table_info({table})"))
+
+
+# Ordered schema migrations, each `(target_version, migrate_fn)`. Version 1 is the
+# baseline created by SCHEMA above, so real migrations start at 2. A migration must be
+# idempotent (e.g. guard ALTERs with _has_column): a fresh database already gets the
+# change from SCHEMA, while an existing one gets it here. SCHEMA stays the living picture
+# of the current schema; every change to an existing table also needs a migration here.
+MIGRATIONS: list[tuple[int, "callable"]] = [
+    # (2, _v2_add_color),
+]
+
+
 def init() -> None:
     os.makedirs(os.path.dirname(os.path.abspath(DB_PATH)), exist_ok=True)
     conn = connect()
     try:
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA synchronous=FULL")  # every transaction is safely on disk
-        conn.executescript(SCHEMA)
-        conn.execute("PRAGMA user_version=1")
+        conn.execute("PRAGMA journal_mode=WAL")   # must run outside a transaction
+        conn.execute("PRAGMA synchronous=FULL")   # every transaction is safely on disk
+        conn.executescript(SCHEMA)                # idempotent baseline (version 1)
+        version = conn.execute("PRAGMA user_version").fetchone()[0]
+        if version < 1:
+            version = 1
+            conn.execute("PRAGMA user_version=1")
+        for target, migrate in MIGRATIONS:
+            if version < target:
+                conn.execute("BEGIN")
+                try:
+                    migrate(conn)
+                    conn.execute(f"PRAGMA user_version={target}")
+                    conn.execute("COMMIT")
+                except BaseException:
+                    conn.execute("ROLLBACK")
+                    raise
+                version = target
     finally:
         conn.close()
 

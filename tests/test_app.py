@@ -8,6 +8,9 @@ _tmp = tempfile.mkdtemp()
 os.environ["DB_PATH"] = os.path.join(_tmp, "data", "finanzen.sqlite")
 os.environ["BACKUP_DIR"] = os.path.join(_tmp, "backup")
 os.environ["APP_PASSWORD"] = ""
+# Pin the marker requirement so test_backup is deterministic regardless of the ambient
+# environment (the dev container sets BACKUP_REQUIRE_MARKER=0 for local runs).
+os.environ["BACKUP_REQUIRE_MARKER"] = "1"
 
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -105,3 +108,32 @@ def test_backup(client):
     assert len(files) == 2  # old backup is kept
     c = sqlite3.connect(os.path.join(backup.BACKUP_DIR, files[0]["name"]))
     assert c.execute("SELECT COUNT(*) FROM accounts").fetchone()[0] >= 1
+
+
+def test_migrations_upgrade_preserves_data(monkeypatch, tmp_path):
+    # Own temp database so this stays independent of the shared module-scoped DB.
+    monkeypatch.setattr(db, "DB_PATH", str(tmp_path / "mig.sqlite"))
+
+    # A baseline (version 1) database holding one row, as an existing install would have.
+    db.init()
+    with db.tx() as conn:
+        db.create(conn, "accounts", {"name": "Old", "kind": "giro", "note": ""})
+    with db.read() as conn:
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == 1
+
+    # A new migration adds a column; init() must apply it and keep existing data.
+    def _v2(conn):
+        if not db._has_column(conn, "accounts", "color"):
+            conn.execute("ALTER TABLE accounts ADD COLUMN color TEXT NOT NULL DEFAULT ''")
+    monkeypatch.setattr(db, "MIGRATIONS", [(2, _v2)])
+
+    db.init()
+    with db.read() as conn:
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert db._has_column(conn, "accounts", "color")
+        assert [r["name"] for r in conn.execute("SELECT name FROM accounts")] == ["Old"]
+
+    # Running again is a no-op (idempotent), not an error.
+    db.init()
+    with db.read() as conn:
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == 2
