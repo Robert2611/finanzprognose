@@ -106,11 +106,20 @@ BEGIN SELECT RAISE(ABORT, 'Löschen ist nicht erlaubt – bitte archivieren'); E
 _write_lock = threading.Lock()
 
 
-class NotFound(Exception):
+class ApiError(Exception):
+    """Base for exceptions that carry a machine-readable {code, params} payload."""
+
+    def __init__(self, code: str, **params):
+        self.code = code
+        self.params = params
+        super().__init__(code)
+
+
+class NotFound(ApiError):
     pass
 
 
-class Conflict(Exception):
+class Conflict(ApiError):
     pass
 
 
@@ -228,9 +237,9 @@ def create(conn, table: str, data: dict, comment: str = "") -> dict:
 def _write(conn, table, id_, changes: dict, action: str, comment="", expected_updated_at=None) -> dict:
     before = get(conn, table, id_)
     if before is None:
-        raise NotFound(f"{table} #{id_} nicht gefunden")
+        raise NotFound("not_found", entity=table, id=id_)
     if expected_updated_at and before["updated_at"] != expected_updated_at:
-        raise Conflict("Der Datensatz wurde inzwischen geändert. Bitte Seite neu laden und erneut versuchen.")
+        raise Conflict("conflict")
     changes = {k: v for k, v in changes.items() if before.get(k) != v}
     if not changes:
         return before
@@ -256,7 +265,7 @@ def revert(conn, audit_id: int) -> dict:
     """Undoes a single logged change (as a new, logged change)."""
     a = conn.execute("SELECT * FROM audit_log WHERE id=?", (audit_id,)).fetchone()
     if a is None:
-        raise NotFound(f"Protokolleintrag #{audit_id} nicht gefunden")
+        raise NotFound("not_found", entity="audit_log", id=audit_id)
     table, eid = a["entity"], a["entity_id"]
     comment = f"Rückgängig gemacht: Protokolleintrag #{audit_id}"
     if a["action"] == "create":

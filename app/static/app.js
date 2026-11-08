@@ -32,9 +32,7 @@ async function api(method, url, body) {
   const r = await fetch(url, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
   let data = null; try { data = await r.json(); } catch { }
   if (!r.ok) {
-    let msg = data?.detail;
-    if (Array.isArray(msg)) msg = msg.map(d => d.msg).join('; ');
-    throw new Error(msg || `Fehler ${r.status}`);
+    throw new Error(errMsg(data) || data?.detail || `Fehler ${r.status}`);
   }
   return data;
 }
@@ -42,7 +40,7 @@ async function api(method, url, body) {
 const KINDS = { giro: 'Girokonto', tagesgeld: 'Tagesgeld', depot: 'Depot', kreditkarte: 'Kreditkarte', bar: 'Bargeld', sonstiges: 'Sonstiges' };
 const RHYTHM = { 1: 'monatlich', 2: 'alle 2 Monate', 3: 'quartalsweise', 6: 'halbjährlich', 12: 'jährlich' };
 const rhythm = n => RHYTHM[n] || `alle ${n} Monate`;
-const ENTITY = { accounts: 'Konto', entries: 'Buchung', adjustments: 'Anpassung', checkpoints: 'Ist-Stand' };
+const ENTITY = { accounts: 'Konto', entries: 'Buchung', adjustments: 'Anpassung', checkpoints: 'Ist-Stand', audit_log: 'Protokolleintrag' };
 const ACTION = { create: 'Angelegt', update: 'Geändert', archive: 'Archiviert', restore: 'Wiederhergestellt', revert: 'Rückgängig' };
 const FIELD = {
   name: 'Name', kind: 'Art', note: 'Notiz', account_id: 'Konto', to_account_id: 'Zielkonto', category: 'Kategorie',
@@ -51,6 +49,51 @@ const FIELD = {
   balance: 'Kontostand', archived: 'Archiviert',
 };
 const COLORS = ['#2f6fdb', '#1a9e77', '#d9822b', '#8e5bd9', '#c94f6d', '#2aa1b3', '#7a8b2b'];
+
+// ------------------------------------------------------------ API-Fehlercodes -> Deutsch
+// The backend never sends German text; every error response is {code, params}. This maps
+// codes raised in app/main.py and app/db.py to the German text the UI shows.
+const VALIDATION_CODES = {
+  missing: () => 'ist erforderlich',
+  string_too_short: p => `muss mindestens ${p.min_length} Zeichen haben`,
+  string_too_long: p => `darf höchstens ${p.max_length} Zeichen haben`,
+  string_type: () => 'muss Text sein',
+  literal_error: p => `ungültiger Wert (erlaubt: ${p.expected})`,
+  int_type: () => 'muss eine Zahl sein',
+  int_parsing: () => 'muss eine Zahl sein',
+  float_type: () => 'muss eine Zahl sein',
+  float_parsing: () => 'muss eine Zahl sein',
+  bool_type: () => 'muss ja/nein sein',
+  bool_parsing: () => 'muss ja/nein sein',
+  date_type: () => 'muss ein gültiges Datum sein',
+  date_parsing: () => 'muss ein gültiges Datum sein',
+  date_from_datetime_parsing: () => 'muss ein gültiges Datum sein',
+  greater_than: p => `muss größer als ${p.gt} sein`,
+  less_than: p => `muss kleiner als ${p.lt} sein`,
+  greater_than_equal: p => `muss mindestens ${p.ge} sein`,
+  less_than_equal: p => `muss höchstens ${p.le} sein`,
+  end_before_start: () => 'Das Enddatum liegt vor dem Startdatum.',
+  transfer_same_account: () => 'Quell- und Zielkonto müssen verschieden sein.',
+  transfer_amount_not_positive: () => 'Der Umbuchungsbetrag muss positiv sein.',
+  amount_zero: () => 'Der Betrag darf nicht 0 sein.',
+  amount_required: () => 'Bitte den neuen Betrag angeben.',
+  percent_required: () => 'Bitte die prozentuale Änderung angeben.',
+};
+const ERROR_CODES = {
+  not_found: p => `${ENTITY[p.entity] || p.entity} #${p.id} nicht gefunden`,
+  conflict: () => 'Der Datensatz wurde inzwischen geändert. Bitte Seite neu laden und erneut versuchen.',
+  unknown_table: () => 'Unbekannter Datentyp',
+  ref_not_found: p => `Verweis ${p.field}=${p.id} existiert nicht.`,
+  validation_error: p => p.errors.map(e => {
+    const fn = VALIDATION_CODES[e.code];
+    const msg = fn ? fn(e.params) : e.code;
+    return e.field ? `${FIELD[e.field] || e.field}: ${msg}` : msg;
+  }).join('; '),
+};
+const errMsg = data => {
+  const fn = data?.code && ERROR_CODES[data.code];
+  return fn ? fn(data.params || {}) : null;
+};
 
 // ------------------------------------------------------------ Zustand
 const S = { view: location.hash.slice(1) || 'prognose', data: null, from: thisMonth(), months: 24, sel: null, showArchived: false, fc: null };
