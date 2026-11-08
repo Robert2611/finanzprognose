@@ -33,6 +33,8 @@ DB_PATH=./data/finanzen.sqlite BACKUP_DIR=./data/backup BACKUP_REQUIRE_MARKER=0 
 docker compose up -d --build
 ```
 
+The dev container also installs the Claude Code CLI and VS Code extension (Dev Container Feature). Its login and config persist in the named volume `finanzprognose-claude-config` (mounted at `~/.claude`, with `CLAUDE_CONFIG_DIR` pointing there); see the README for authentication.
+
 API docs are served at `/api/docs`. There is no linter or formatter configured.
 
 ## Architecture

@@ -2,7 +2,17 @@
   "name": "Finanzprognose",
   // Same Python version as the production Dockerfile.
   "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm",
-  "postCreateCommand": "pip install -r requirements-dev.txt && mkdir -p data/backup",
+  // Claude Code CLI. The tag pins the install script, not the CLI version.
+  "features": {
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
+  },
+  // Named volume keeps the Claude login and settings across rebuilds
+  // (together with CLAUDE_CONFIG_DIR below, which also moves ~/.claude.json into it).
+  "mounts": [
+    "source=finanzprognose-claude-config,target=/home/vscode/.claude,type=volume"
+  ],
+  // The volume can be created root-owned, so fix ownership before anything else.
+  "postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.claude && pip install -r requirements-dev.txt && mkdir -p data/backup",
   "forwardPorts": [8000],
   "portsAttributes": {
     "8000": { "label": "Finanzprognose", "onAutoForward": "notify" }
@@ -11,6 +21,7 @@
   // no NAS marker file required for the backup.
   "containerEnv": {
     "TZ": "Europe/Berlin",
+    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
     "DB_PATH": "${containerWorkspaceFolder}/data/finanzen.sqlite",
     "BACKUP_DIR": "${containerWorkspaceFolder}/data/backup",
     "BACKUP_REQUIRE_MARKER": "0",
@@ -18,7 +29,7 @@
   },
   "customizations": {
     "vscode": {
-      "extensions": ["ms-python.python", "ms-python.debugpy"],
+      "extensions": ["ms-python.python", "ms-python.debugpy", "anthropic.claude-code"],
       "settings": {
         "python.testing.pytestEnabled": true,
         "python.testing.unittestEnabled": false,

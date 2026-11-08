@@ -171,6 +171,8 @@ Empfohlen ist ein **Dev-Container** (VS Code mit der Erweiterung „Dev Containe
 2. **F5** startet die App („Finanzprognose (dev)“, ohne Passwort). VS Code leitet Port 8000 weiter: `http://localhost:8000`. Haltepunkte funktionieren. Die Variante „with login“ startet die App mit Passwort `dev`.
 3. Die Tests laufen im Testing-Panel von VS Code oder mit `pytest -q`.
 
+**Claude Code im Dev-Container:** Die CLI (`claude`) und die VS-Code-Erweiterung sind im Container vorinstalliert. Beim ersten Mal im Terminal `claude` starten und im Browser anmelden (öffnet sich kein Browser, die angezeigte Login-URL manuell öffnen und den Code ins Terminal einfügen). Die Anmeldung und Einstellungen liegen im Docker-Volume `finanzprognose-claude-config` und bleiben bei „Rebuild Container“ erhalten. Zum Zurücksetzen das Volume löschen (`docker volume rm finanzprognose-claude-config`).
+
 Die Entwicklungsdaten liegen in `./data` und sind nicht im Git. Der Dev-Container setzt `BACKUP_REQUIRE_MARKER=0`, damit die Sicherung auch ohne NAS-Markierungsdatei läuft.
 
 Ohne Dev-Container: Python 3.12, `pip install -r requirements-dev.txt`, dann `mkdir -p data/backup` und

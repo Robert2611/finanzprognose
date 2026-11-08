@@ -41,7 +41,7 @@ Status values: `open`, `in progress`, `done`.
 
 ## B-006 Make Claude Code available in the dev container
 
-- **Status:** open
+- **Status:** done (implemented; the rebuild check below still has to be done by hand in VS Code)
 - **Problem:** The dev container (`.devcontainer/`) does not include Claude Code, so it cannot be used from inside the container where the app and tests run.
 - **Proposal:** Install the Claude Code CLI in the dev container (e.g. via the official Dev Container Feature or an npm install in the Dockerfile/`postCreateCommand`). Persist its config (`~/.claude`) across rebuilds with a named volume or bind mount, and document how to authenticate.
 - **Done when:** After rebuilding the dev container, `claude` starts in the integrated terminal, stays logged in across rebuilds, and the setup is described in the README or `CLAUDE.md`.
