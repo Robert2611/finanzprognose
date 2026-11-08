@@ -8,6 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Never revert any commits.
 - Open work items are tracked in `BACKLOG.md`. When you finish one, update its status there.
 - Prefer several smaller files with a well-defined scope over one big file that combines everything. When a file grows unrelated responsibilities, split it rather than adding to the pile.
+- Run `python -m pytest -q` before committing, and don't commit if it fails.
 
 ## Project
 
