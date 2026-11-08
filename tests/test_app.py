@@ -72,6 +72,35 @@ def test_optimistic_locking_and_audit(client):
     assert r["name"] == "X"
 
 
+def test_state_contract(client):
+    acc = client.post("/api/accounts", json={"name": "Contract", "start_balance": 0, "start_date": "2026-01-01"}).json()
+    state = client.get("/api/state").json()
+    row = next(a for a in state["accounts"] if a["id"] == acc["id"])
+    assert set(row) == {"id", "name", "kind", "note", "archived", "updated_at"}
+    assert row["archived"] is False  # not the raw stored 0/1
+    assert "data_version" in state
+
+    # A column added directly to the table (bypassing TABLES/the response model, e.g. a future
+    # migration) must not leak onto the wire: the contract is decoupled from the table shape.
+    conn = db.connect()
+    conn.execute("ALTER TABLE accounts ADD COLUMN extra_col TEXT")
+    conn.close()
+    row2 = next(a for a in client.get("/api/state").json()["accounts"] if a["id"] == acc["id"])
+    assert "extra_col" not in row2 and "created_at" not in row2
+
+
+def test_audit_contract(client):
+    acc = client.post("/api/accounts", json={"name": "AuditContract", "start_balance": 0, "start_date": "2026-01-01"}).json()
+    entry = client.get(f"/api/audit?entity=accounts&entity_id={acc['id']}").json()[0]
+    assert set(entry) == {"id", "ts", "action", "entity", "entity_id", "before", "after", "comment"}
+
+
+def test_backup_status_contract(client):
+    st = client.get("/api/backup/status").json()
+    assert {"backup_dir", "backup_time", "current_version", "pending_changes", "files"} <= set(st)
+    assert isinstance(st["pending_changes"], bool)
+
+
 def test_nothing_can_be_deleted():
     conn = db.connect()
     with pytest.raises(sqlite3.DatabaseError):

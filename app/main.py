@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError, model_validator
 
 from . import backup, db, forecast
+from .contracts import AuditEntryOut, BackupStatusOut, StateResponse
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
@@ -164,7 +165,7 @@ def healthz():
     return {"ok": True}
 
 
-@app.get("/api/state")
+@app.get("/api/state", response_model=StateResponse)
 def get_state():
     with db.read() as conn:
         return {t: db.all_rows(conn, t) for t in db.TABLES} | {"data_version": db.data_version(conn)}
@@ -219,7 +220,7 @@ def restore(table: str, id_: int, body: dict = Body(default={})):
         return db.set_archived(conn, table, id_, False, str(body.get("comment", ""))[:500])
 
 
-@app.get("/api/audit")
+@app.get("/api/audit", response_model=list[AuditEntryOut])
 def audit(limit: int = Query(200, le=1000), before_id: Optional[int] = None,
           entity: Optional[str] = None, entity_id: Optional[int] = None):
     with db.read() as conn:
@@ -240,7 +241,7 @@ def get_forecast(start: Optional[str] = Query(None, pattern=r"^\d{4}-\d{2}$"), m
     return forecast.compute(state, start, months)
 
 
-@app.get("/api/backup/status")
+@app.get("/api/backup/status", response_model=BackupStatusOut)
 def backup_status():
     return backup.status() | {"files": backup.list_backups(30)}
 
