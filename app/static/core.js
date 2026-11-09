@@ -1,0 +1,209 @@
+// ------------------------------------------------------------ Hilfsfunktionen
+export const $ = (s, el = document) => el.querySelector(s);
+export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+export const eur = c => c == null ? '–' : (c / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+export const eurCls = c => c == null ? '' : c < 0 ? 'neg' : '';
+export const signed = c => `<span class="${c < 0 ? 'neg' : 'pos'}">${c > 0 ? '+' : ''}${eur(c)}</span>`;
+export const fDate = iso => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('de-DE') : '';
+export const fShort = iso => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }) : '';
+export const fFull = iso => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+export const fTs = ts => new Date(ts).toLocaleString('de-DE');
+export const fMonth = ym => { const [y, m] = ym.split('-'); return new Date(y, m - 1, 1).toLocaleDateString('de-DE', { month: 'short', year: 'numeric' }); };
+export const today = () => new Date().toLocaleDateString('sv-SE');
+export const thisMonth = () => today().slice(0, 7);
+export const toInput = c => c == null ? '' : (c / 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false });
+
+export function parseEUR(s) {
+  s = String(s ?? '').trim().replace(/\s|€/g, '');
+  if (!s) return NaN;
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+  const v = Number(s);
+  return Number.isFinite(v) ? Math.round(v * 100) : NaN;
+}
+
+export function toast(msg, isErr = false) {
+  const d = document.createElement('div');
+  d.textContent = msg; if (isErr) d.className = 'e';
+  $('#toast').append(d); setTimeout(() => d.remove(), isErr ? 7000 : 3000);
+}
+
+export async function api(method, url, body) {
+  const r = await fetch(url, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
+  let data = null; try { data = await r.json(); } catch { }
+  if (!r.ok) {
+    throw new Error(errMsg(data) || data?.detail || `Fehler ${r.status}`);
+  }
+  return data;
+}
+
+export const KINDS = { checking: 'Girokonto', savings: 'Tagesgeld', custody: 'Depot', credit_card: 'Kreditkarte', cash: 'Bargeld', other: 'Sonstiges' };
+export const RHYTHM = { 1: 'monatlich', 2: 'alle 2 Monate', 3: 'quartalsweise', 6: 'halbjährlich', 12: 'jährlich' };
+export const rhythm = n => RHYTHM[n] || `alle ${n} Monate`;
+export const ENTITY = { accounts: 'Konto', entries: 'Buchung', adjustments: 'Anpassung', checkpoints: 'Ist-Stand', audit_log: 'Protokolleintrag' };
+export const ACTION = { create: 'Angelegt', update: 'Geändert', archive: 'Archiviert', restore: 'Wiederhergestellt', revert: 'Rückgängig' };
+export const FIELD = {
+  name: 'Name', kind: 'Art', note: 'Notiz', account_id: 'Konto', to_account_id: 'Zielkonto', category: 'Kategorie',
+  amount: 'Betrag', start_date: 'Start', end_date: 'Ende', interval_months: 'Rhythmus (Monate)', entry_id: 'Buchung',
+  effective_date: 'Gültig ab', mode: 'Art', percent: 'Prozent', repeat_yearly: 'Jährlich wiederholen', date: 'Datum',
+  balance: 'Kontostand', archived: 'Archiviert',
+};
+export const COLORS = ['#2f6fdb', '#1a9e77', '#d9822b', '#8e5bd9', '#c94f6d', '#2aa1b3', '#7a8b2b'];
+
+// ------------------------------------------------------------ API-Fehlercodes -> Deutsch
+// The backend never sends German text; every error response is {code, params}. This maps
+// codes raised in app/main.py and app/db.py to the German text the UI shows.
+const VALIDATION_CODES = {
+  missing: () => 'ist erforderlich',
+  string_too_short: p => `muss mindestens ${p.min_length} Zeichen haben`,
+  string_too_long: p => `darf höchstens ${p.max_length} Zeichen haben`,
+  string_type: () => 'muss Text sein',
+  literal_error: p => `ungültiger Wert (erlaubt: ${p.expected})`,
+  int_type: () => 'muss eine Zahl sein',
+  int_parsing: () => 'muss eine Zahl sein',
+  float_type: () => 'muss eine Zahl sein',
+  float_parsing: () => 'muss eine Zahl sein',
+  bool_type: () => 'muss ja/nein sein',
+  bool_parsing: () => 'muss ja/nein sein',
+  date_type: () => 'muss ein gültiges Datum sein',
+  date_parsing: () => 'muss ein gültiges Datum sein',
+  date_from_datetime_parsing: () => 'muss ein gültiges Datum sein',
+  greater_than: p => `muss größer als ${p.gt} sein`,
+  less_than: p => `muss kleiner als ${p.lt} sein`,
+  greater_than_equal: p => `muss mindestens ${p.ge} sein`,
+  less_than_equal: p => `muss höchstens ${p.le} sein`,
+  end_before_start: () => 'Das Enddatum liegt vor dem Startdatum.',
+  transfer_same_account: () => 'Quell- und Zielkonto müssen verschieden sein.',
+  transfer_amount_not_positive: () => 'Der Umbuchungsbetrag muss positiv sein.',
+  amount_zero: () => 'Der Betrag darf nicht 0 sein.',
+  amount_required: () => 'Bitte den neuen Betrag angeben.',
+  percent_required: () => 'Bitte die prozentuale Änderung angeben.',
+};
+const ERROR_CODES = {
+  not_found: p => `${ENTITY[p.entity] || p.entity} #${p.id} nicht gefunden`,
+  conflict: () => 'Der Datensatz wurde inzwischen geändert. Bitte Seite neu laden und erneut versuchen.',
+  unknown_table: () => 'Unbekannter Datentyp',
+  ref_not_found: p => `Verweis ${p.field}=${p.id} existiert nicht.`,
+  validation_error: p => p.errors.map(e => {
+    const fn = VALIDATION_CODES[e.code];
+    const msg = fn ? fn(e.params) : e.code;
+    return e.field ? `${FIELD[e.field] || e.field}: ${msg}` : msg;
+  }).join('; '),
+};
+export const errMsg = data => {
+  const fn = data?.code && ERROR_CODES[data.code];
+  return fn ? fn(data.params || {}) : null;
+};
+
+// ------------------------------------------------------------ Prognose-Codes -> Deutsch
+// forecast.compute() never sends German text either; warnings and explanation steps are
+// {code, params} objects that this maps to the German text the UI shows.
+const noteSuffix = note => note ? ` (${note})` : '';
+const EXPLANATION_CODES = {
+  base_amount: p => `Grundbetrag ${eur(p.amount)}`,
+  set_amount: p => `ab ${fFull(p.date)}: neuer Betrag ${eur(p.amount)}${noteSuffix(p.note)}`,
+  percent_change: p => {
+    const pct = `${p.percent > 0 ? '+' : ''}${String(p.percent).replace('.', ',')} %`;
+    const times = p.repeat_yearly ? `, jährlich – hier ${p.years}× angewendet` : '';
+    return `ab ${fFull(p.date)}: ${pct}${times} → ${eur(p.amount)}${noteSuffix(p.note)}`;
+  },
+};
+export const explLine = e => EXPLANATION_CODES[e.code]?.(e) ?? e.code;
+const WARNING_CODES = {
+  transfer_target_archived: p => `Umbuchung „${entryName(p.entry_id)}“ ignoriert: Zielkonto „${accName(p.account_id)}“ ist archiviert.`,
+  no_checkpoint: p => `Konto „${accName(p.account_id)}“ hat keinen Ist-Stand und kann nicht berechnet werden.`,
+};
+export const warnMsg = w => WARNING_CODES[w.code]?.(w) ?? w.code;
+
+// ------------------------------------------------------------ Zustand
+export const S = { view: location.hash.slice(1) || 'prognose', data: null, from: thisMonth(), months: 24, sel: null, showArchived: false, fc: null };
+export const accName = id => S.data.accounts.find(a => a.id === id)?.name ?? `#${id}`;
+export const entryName = id => S.data.entries.find(e => e.id === id)?.name ?? `#${id}`;
+export const activeAccounts = () => S.data.accounts.filter(a => !a.archived);
+
+export async function load() { S.data = await api('GET', '/api/state'); }
+export async function refresh() { await load(); await render(); refreshBackupPill(); }
+
+// ------------------------------------------------------------ Formular-Dialog
+export function formDialog({ title, fields, values = {}, submitLabel = 'Speichern', onSubmit, intro = '' }) {
+  return new Promise(resolve => {
+    let done = false;
+    const dlg = document.createElement('dialog');
+    dlg.innerHTML = `<form><h3>${esc(title)}</h3>${intro}<div class="fields"></div><div class="err"></div>
+      <div class="actions"><button type="button" data-cancel>Abbrechen</button><button type="submit" class="primary">${esc(submitLabel)}</button></div></form>`;
+    const box = $('.fields', dlg);
+    for (const f of fields) {
+      const w = document.createElement('label');
+      w.className = 'field' + (f.type === 'checkbox' ? ' check' : ''); w.dataset.name = f.name;
+      let input;
+      if (f.type === 'select') input = `<select name="${f.name}">${f.options.map(o => `<option value="${esc(o.value)}">${esc(o.label)}</option>`).join('')}</select>`;
+      else if (f.type === 'textarea') input = `<textarea name="${f.name}" rows="2"></textarea>`;
+      else if (f.type === 'checkbox') input = `<input type="checkbox" name="${f.name}">`;
+      else input = `<input name="${f.name}" type="${f.type === 'money' ? 'text' : f.type || 'text'}" ${f.type === 'money' ? 'inputmode="decimal" placeholder="0,00"' : ''} ${f.step ? `step="${f.step}"` : ''} autocomplete="off">`;
+      w.innerHTML = `<span>${esc(f.label)}${f.required ? ' *' : ''}</span>${input}${f.hint ? `<small class="muted">${esc(f.hint)}</small>` : ''}`;
+      box.append(w);
+      const el = w.querySelector('[name]'); const v = values[f.name];
+      if (f.type === 'checkbox') el.checked = !!v; else if (v != null) el.value = v;
+    }
+    const read = () => { const o = {}; for (const f of fields) { const el = box.querySelector(`[name="${f.name}"]`); o[f.name] = f.type === 'checkbox' ? el.checked : el.value; } return o; };
+    const visible = (f, v) => !f.showIf || f.showIf(v);
+    const upd = () => { const v = read(); for (const f of fields) box.querySelector(`[data-name="${f.name}"]`).hidden = !visible(f, v); };
+    dlg.addEventListener('input', upd); dlg.addEventListener('change', upd); upd();
+    const finish = r => { if (!done) { done = true; resolve(r); } dlg.close(); };
+    $('[data-cancel]', dlg).onclick = () => finish(null);
+    dlg.addEventListener('close', () => { if (!done) { done = true; resolve(null); } dlg.remove(); });
+    $('form', dlg).addEventListener('submit', async e => {
+      e.preventDefault();
+      const err = $('.err', dlg); err.textContent = '';
+      const v = read();
+      for (const f of fields) {
+        if (!visible(f, v)) { v[f.name] = null; continue; }
+        if (f.required && (v[f.name] === '' || v[f.name] == null)) { err.textContent = `Bitte „${f.label}“ ausfüllen.`; return; }
+        if (f.type === 'money' && v[f.name] !== '') {
+          const c = parseEUR(v[f.name]); if (Number.isNaN(c)) { err.textContent = `„${f.label}“ ist kein gültiger Betrag.`; return; } v[f.name] = c;
+        } else if (f.type === 'money') v[f.name] = null;
+        if (f.type === 'number') v[f.name] = v[f.name] === '' ? null : Number(String(v[f.name]).replace(',', '.'));
+        if ((f.type === 'date' || f.type === 'text' || f.type === 'select') && v[f.name] === '' && !f.keepEmpty) v[f.name] = f.type === 'text' ? '' : null;
+      }
+      const btn = $('button[type=submit]', dlg); btn.disabled = true;
+      try { const r = onSubmit ? await onSubmit(v) : v; finish(r ?? true); }
+      catch (ex) { err.textContent = ex.message; }
+      finally { btn.disabled = false; }
+    });
+    document.body.append(dlg); dlg.showModal();
+  });
+}
+
+export async function archiveDialog(table, row, label) {
+  const ok = await formDialog({
+    title: `${ENTITY[table]} archivieren`, submitLabel: 'Archivieren',
+    intro: `<p class="muted">„${esc(label)}“ wird archiviert und fließt nicht mehr in die Prognose ein. Nichts wird gelöscht – du kannst es jederzeit wiederherstellen.</p>`,
+    fields: [{ name: 'comment', label: 'Grund (optional)', type: 'textarea' }],
+    onSubmit: v => api('POST', `/api/${table}/${row.id}/archive`, { comment: v.comment || '' }),
+  });
+  if (ok) { toast('Archiviert'); refresh(); }
+}
+export async function restoreRow(table, row) { await api('POST', `/api/${table}/${row.id}/restore`, {}); toast('Wiederhergestellt'); refresh(); }
+
+// ------------------------------------------------------------ Navigation
+// Importing the view renderers here closes an import cycle (each view module imports
+// helpers/state back from core.js). That's safe in native ESM because nothing below runs at
+// module-evaluation time - render()/setView() only touch these bindings once the user
+// navigates, by which point every module has finished loading.
+import { renderForecast } from './forecast.js';
+import { renderEntries } from './entries.js';
+import { renderAccounts } from './accounts.js';
+import { renderAudit } from './audit.js';
+import { renderBackup, refreshBackupPill } from './backup.js';
+
+export function setView(v) { S.view = v; location.hash = v; render(); }
+document.addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b) setView(b.dataset.view); });
+window.addEventListener('hashchange', () => { const v = location.hash.slice(1); if (v && v !== S.view) { S.view = v; render(); } });
+
+export async function render() {
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b.dataset.view === S.view));
+  const main = $('#main');
+  try {
+    await ({ prognose: renderForecast, buchungen: renderEntries, konten: renderAccounts, verlauf: renderAudit, sicherung: renderBackup }[S.view] || renderForecast)(main);
+  } catch (ex) { main.innerHTML = `<div class="banner err">${esc(ex.message)}</div>`; }
+}
