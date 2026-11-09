@@ -1,18 +1,17 @@
-import base64
 import logging
 import os
-import secrets
 from contextlib import asynccontextmanager
 from datetime import date
-from typing import Literal, Optional
+from typing import Optional
 
-from fastapi import Body, FastAPI, HTTPException, Query, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi import Body, FastAPI, HTTPException, Query
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field, ValidationError, model_validator
+from pydantic import ValidationError
 
-from . import backup, db, forecast
+from . import auth, backup, db, errors, forecast
 from .contracts import AuditEntryOut, BackupStatusOut, StateResponse
+from .schemas import AccountCreate, Base, MODELS
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
@@ -25,152 +24,18 @@ async def lifespan(_app):
 
 app = FastAPI(title="Finanzprognose", docs_url="/api/docs", openapi_url="/api/openapi.json", lifespan=lifespan)
 
-APP_USER = os.environ.get("APP_USER", "admin")
-APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
+app.middleware("http")(auth.basic_auth)
+errors.register(app)
 
 
-# ---------------------------------------------------------------- Access control
-@app.middleware("http")
-async def basic_auth(request: Request, call_next):
-    if APP_PASSWORD and request.url.path != "/healthz":
-        ok = False
-        h = request.headers.get("authorization", "")
-        if h.startswith("Basic "):
-            try:
-                user, _, pw = base64.b64decode(h[6:]).decode("utf-8").partition(":")
-                ok = (secrets.compare_digest(user.encode(), APP_USER.encode())
-                      and secrets.compare_digest(pw.encode(), APP_PASSWORD.encode()))
-            except Exception:  # noqa: BLE001
-                ok = False
-        if not ok:
-            return Response(status_code=401, headers={"WWW-Authenticate": 'Basic realm="Finanzprognose"'})
-    return await call_next(request)
-
-
-@app.exception_handler(db.NotFound)
-async def _nf(_, ex):
-    return JSONResponse({"code": ex.code, "params": ex.params}, status_code=404)
-
-
-@app.exception_handler(db.Conflict)
-async def _cf(_, ex):
-    return JSONResponse({"code": ex.code, "params": ex.params}, status_code=409)
-
-
-@app.exception_handler(HTTPException)
-async def _http_err(_, ex):
-    """Pass through the {code, params} envelope raised via HTTPException(detail=...); fall back to
-    FastAPI's plain-string {detail} shape for exceptions outside our own routes (e.g. the framework's
-    own 404/405)."""
-    if isinstance(ex.detail, dict) and "code" in ex.detail:
-        return JSONResponse(ex.detail, status_code=ex.status_code, headers=ex.headers)
-    return JSONResponse({"detail": ex.detail}, status_code=ex.status_code, headers=ex.headers)
-
-
-# ---------------------------------------------------------------- Models
-Money = int  # cents
-
-
-class Base(BaseModel):
-    expected_updated_at: Optional[str] = None
-    comment: str = Field("", max_length=500)
-
-
-class AccountIn(Base):
-    name: str = Field(min_length=1, max_length=100)
-    kind: Literal["checking", "savings", "custody", "credit_card", "cash", "other"] = "checking"
-    note: str = Field("", max_length=2000)
-
-
-class AccountCreate(AccountIn):
-    start_balance: Money
-    start_date: date
-
-
-class EntryIn(Base):
-    account_id: int
-    to_account_id: Optional[int] = None
-    name: str = Field(min_length=1, max_length=100)
-    category: str = Field("", max_length=100)
-    kind: Literal["recurring", "once"]
-    amount: Money
-    start_date: date
-    end_date: Optional[date] = None
-    interval_months: int = Field(1, ge=1, le=120)
-    note: str = Field("", max_length=2000)
-
-    @model_validator(mode="after")
-    def _check(self):
-        if self.end_date and self.end_date < self.start_date:
-            raise ValueError("end_before_start")
-        if self.kind == "once":
-            self.end_date = None
-            self.interval_months = 1
-        if self.to_account_id is not None:
-            if self.to_account_id == self.account_id:
-                raise ValueError("transfer_same_account")
-            if self.amount <= 0:
-                raise ValueError("transfer_amount_not_positive")
-        if self.amount == 0:
-            raise ValueError("amount_zero")
-        return self
-
-
-class AdjustmentIn(Base):
-    entry_id: int
-    effective_date: date
-    mode: Literal["set", "percent"]
-    amount: Optional[Money] = None
-    percent: Optional[float] = Field(None, gt=-100, lt=1000)
-    repeat_yearly: bool = False
-    note: str = Field("", max_length=500)
-
-    @model_validator(mode="after")
-    def _check(self):
-        if self.mode == "set":
-            if self.amount is None:
-                raise ValueError("amount_required")
-            self.percent, self.repeat_yearly = None, False
-        else:
-            if self.percent is None:
-                raise ValueError("percent_required")
-            self.amount = None
-        return self
-
-
-class CheckpointIn(Base):
-    account_id: int
-    date: date
-    balance: Money
-    note: str = Field("", max_length=500)
-
-
-MODELS = {"accounts": AccountIn, "entries": EntryIn, "adjustments": AdjustmentIn, "checkpoints": CheckpointIn}
-
-
-def _validation_detail(ex: ValidationError) -> dict:
-    """Turns a Pydantic ValidationError into a {code, params} envelope: built-in constraint
-    violations keep Pydantic's own machine-readable `type`/`ctx`; our custom model_validators
-    raise ValueError(<short code>), which becomes the `code` with no params."""
-    errors = []
-    for e in ex.errors():
-        field = ".".join(str(p) for p in e["loc"])
-        if e["type"] == "value_error":
-            code, params = e["msg"].removeprefix("Value error, "), {}
-        else:
-            code = e["type"]
-            params = {k: v for k, v in e.get("ctx", {}).items() if isinstance(v, (str, int, float, bool))}
-        errors.append({"field": field, "code": code, "params": params})
-    return {"code": "validation_error", "params": {"errors": errors}}
-
-
+# ---------------------------------------------------------------- Helpers
 def _parse(table: str, body: dict) -> Base:
     if table not in MODELS:
         raise HTTPException(404, detail={"code": "unknown_table", "params": {"table": table}})
     try:
         return MODELS[table].model_validate(body)
     except ValidationError as ex:
-        raise HTTPException(422, detail=_validation_detail(ex)) from None
+        raise HTTPException(422, detail=errors.validation_detail(ex)) from None
 
 
 def _data(m: Base) -> dict:
@@ -201,7 +66,7 @@ def create_account(body: dict = Body(...)):
     try:
         m = AccountCreate.model_validate(body)
     except ValidationError as ex:
-        raise HTTPException(422, detail=_validation_detail(ex)) from None
+        raise HTTPException(422, detail=errors.validation_detail(ex)) from None
     with db.tx() as conn:
         acc = db.create(conn, "accounts", {"name": m.name, "kind": m.kind, "note": m.note}, m.comment)
         db.create(conn, "checkpoints", {"account_id": acc["id"], "date": m.start_date.isoformat(),
