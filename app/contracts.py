@@ -76,6 +76,7 @@ class AuditEntryOut(BaseModel):
     before: Optional[dict] = None
     after: Optional[dict] = None
     comment: str
+    reverts_id: Optional[int] = None
 
 
 class BackupFileOut(BaseModel):

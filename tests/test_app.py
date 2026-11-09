@@ -25,8 +25,8 @@ def client():
 
 
 def test_full_flow(client):
-    giro = client.post("/api/accounts", json={"name": "Checking", "kind": "giro", "start_balance": 100000, "start_date": "2026-01-15"}).json()
-    tg = client.post("/api/accounts", json={"name": "Savings", "kind": "tagesgeld", "start_balance": 0, "start_date": "2026-01-15"}).json()
+    giro = client.post("/api/accounts", json={"name": "Checking", "kind": "checking", "start_balance": 100000, "start_date": "2026-01-15"}).json()
+    tg = client.post("/api/accounts", json={"name": "Savings", "kind": "savings", "start_balance": 0, "start_date": "2026-01-15"}).json()
     sal = client.post("/api/entries", json={"account_id": giro["id"], "name": "Salary", "kind": "recurring", "amount": 300000,
                                             "start_date": "2026-01-31", "interval_months": 1}).json()
     client.post("/api/entries", json={"account_id": giro["id"], "name": "Rent", "kind": "recurring", "amount": -120000,
@@ -61,15 +61,17 @@ def test_full_flow(client):
 
 def test_optimistic_locking_and_audit(client):
     acc = client.post("/api/accounts", json={"name": "X", "start_balance": 0, "start_date": "2026-01-01"}).json()
-    ok = client.put(f"/api/accounts/{acc['id']}", json={"name": "Y", "kind": "giro", "expected_updated_at": acc["updated_at"]})
+    ok = client.put(f"/api/accounts/{acc['id']}", json={"name": "Y", "kind": "checking", "expected_updated_at": acc["updated_at"]})
     assert ok.status_code == 200
-    stale = client.put(f"/api/accounts/{acc['id']}", json={"name": "Z", "kind": "giro", "expected_updated_at": acc["updated_at"]})
+    stale = client.put(f"/api/accounts/{acc['id']}", json={"name": "Z", "kind": "checking", "expected_updated_at": acc["updated_at"]})
     assert stale.status_code == 409
     log = client.get(f"/api/audit?entity=accounts&entity_id={acc['id']}").json()
     upd = [a for a in log if a["action"] == "update"][0]
     assert upd["before"]["name"] == "X" and upd["after"]["name"] == "Y"
     r = client.post(f"/api/audit/{upd['id']}/revert").json()
     assert r["name"] == "X"
+    log = client.get(f"/api/audit?entity=accounts&entity_id={acc['id']}").json()
+    assert log[0]["action"] == "revert" and log[0]["reverts_id"] == upd["id"]
 
 
 def test_state_contract(client):
@@ -92,7 +94,7 @@ def test_state_contract(client):
 def test_audit_contract(client):
     acc = client.post("/api/accounts", json={"name": "AuditContract", "start_balance": 0, "start_date": "2026-01-01"}).json()
     entry = client.get(f"/api/audit?entity=accounts&entity_id={acc['id']}").json()[0]
-    assert set(entry) == {"id", "ts", "action", "entity", "entity_id", "before", "after", "comment"}
+    assert set(entry) == {"id", "ts", "action", "entity", "entity_id", "before", "after", "comment", "reverts_id"}
 
 
 def test_backup_status_contract(client):
@@ -146,7 +148,7 @@ def test_migrations_upgrade_preserves_data(monkeypatch, tmp_path):
     # A baseline (version 1) database holding one row, as an existing install would have.
     db.init()
     with db.tx() as conn:
-        db.create(conn, "accounts", {"name": "Old", "kind": "giro", "note": ""})
+        db.create(conn, "accounts", {"name": "Old", "kind": "checking", "note": ""})
     with db.read() as conn:
         assert conn.execute("PRAGMA user_version").fetchone()[0] == 1
 

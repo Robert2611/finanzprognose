@@ -38,7 +38,7 @@ async function api(method, url, body) {
   return data;
 }
 
-const KINDS = { giro: 'Girokonto', tagesgeld: 'Tagesgeld', depot: 'Depot', kreditkarte: 'Kreditkarte', bar: 'Bargeld', sonstiges: 'Sonstiges' };
+const KINDS = { checking: 'Girokonto', savings: 'Tagesgeld', custody: 'Depot', credit_card: 'Kreditkarte', cash: 'Bargeld', other: 'Sonstiges' };
 const RHYTHM = { 1: 'monatlich', 2: 'alle 2 Monate', 3: 'quartalsweise', 6: 'halbjährlich', 12: 'jährlich' };
 const rhythm = n => RHYTHM[n] || `alle ${n} Monate`;
 const ENTITY = { accounts: 'Konto', entries: 'Buchung', adjustments: 'Anpassung', checkpoints: 'Ist-Stand', audit_log: 'Protokolleintrag' };
@@ -423,7 +423,7 @@ async function accountDialog(acc = null) {
   fields.push({ name: 'note', label: 'Notiz (optional)', type: 'textarea' });
   const ok = await formDialog({
     title: acc ? `Konto „${acc.name}“ bearbeiten` : 'Neues Konto', fields,
-    values: acc ? acc : { kind: 'giro', start_date: today() },
+    values: acc ? acc : { kind: 'checking', start_date: today() },
     onSubmit: v => acc ? api('PUT', `/api/accounts/${acc.id}`, { name: v.name, kind: v.kind, note: v.note || '', expected_updated_at: acc.updated_at })
       : api('POST', '/api/accounts', { name: v.name, kind: v.kind, note: v.note || '', start_balance: v.start_balance, start_date: v.start_date }),
   });
@@ -459,13 +459,15 @@ async function renderAccounts(main) {
     <div class="cards">${accs.map(a => {
       const cps = S.data.checkpoints.filter(c => c.account_id === a.id && (S.showArchived || !c.archived)).sort((x, y) => y.date.localeCompare(x.date));
       const last = cps.find(c => !c.archived);
+      const active = cps.filter(c => !c.archived);
+      const startId = active.length ? active.reduce((min, c) => c.date < min.date ? c : min).id : null;
       return `<div class="panel ${a.archived ? 'archived' : ''}" style="${a.archived ? 'opacity:.55' : ''}">
         <div class="toolbar" style="margin-bottom:6px"><h3 style="margin:0">${esc(a.name)}</h3><span class="tag">${KINDS[a.kind] || a.kind}</span><span class="spacer"></span>
         ${a.archived ? `<button class="small" data-restore="${a.id}">Wiederherstellen</button>` : `<button class="small" data-edit="${a.id}">Bearbeiten</button><button class="small" data-arch="${a.id}">Archivieren</button>`}</div>
         ${a.note ? `<p class="small muted">${esc(a.note)}</p>` : ''}
         <div class="kv"><span class="muted">Letzter Ist-Stand</span><span>${last ? `<b>${eur(last.balance)}</b> am ${fDate(last.date)}` : '<span class="neg">keiner – Konto wird nicht berechnet</span>'}</span></div>
         <div class="toolbar" style="margin:12px 0 4px"><b class="small">Ist-Stände</b><span class="spacer"></span>${a.archived ? '' : `<button class="small primary" data-cp="${a.id}">+ Ist-Stand</button>`}</div>
-        <table><tbody>${cps.map(c => `<tr class="${c.archived ? 'archived' : ''}"><td>${fDate(c.date)}</td><td class="num ${eurCls(c.balance)}">${eur(c.balance)}</td><td class="small muted">${esc(c.note)}</td>
+        <table><tbody>${cps.map(c => `<tr class="${c.archived ? 'archived' : ''}"><td>${fDate(c.date)}${c.id === startId ? ' <span class="tag">Startstand</span>' : ''}</td><td class="num ${eurCls(c.balance)}">${eur(c.balance)}</td><td class="small muted">${esc(c.note)}</td>
           <td style="white-space:nowrap;text-align:right">${c.archived ? `<button class="small" data-cprestore="${c.id}">Wiederherstellen</button>` : `<button class="small" data-cpedit="${c.id}">Bearbeiten</button> <button class="small" data-cparch="${c.id}">Archivieren</button>`}</td></tr>`).join('')}</tbody></table>
       </div>`;
     }).join('') || '<div class="panel muted">Noch keine Konten.</div>'}</div>`;
@@ -508,7 +510,7 @@ function diffHtml(a) {
 }
 function auditRows(rows) {
   return rows.map(a => `<tr><td class="small" style="white-space:nowrap">${fTs(a.ts)}<div class="muted">#${a.id}</div></td><td>${ACTION[a.action] || a.action}</td>
-    <td>${ENTITY[a.entity] || a.entity}<div class="small"><b>${esc(objLabel(a))}</b></div></td><td>${diffHtml(a)}${a.comment ? `<div class="small muted">„${esc(a.comment)}“</div>` : ''}</td>
+    <td>${ENTITY[a.entity] || a.entity}<div class="small"><b>${esc(objLabel(a))}</b></div></td><td>${diffHtml(a)}${a.comment ? `<div class="small muted">„${esc(a.comment)}“</div>` : ''}${a.reverts_id ? `<div class="small muted">Rückgängig gemacht: ${ENTITY.audit_log} #${a.reverts_id}</div>` : ''}</td>
     <td><button class="small" data-revert="${a.id}" title="Diese Änderung rückgängig machen">Rückgängig</button></td></tr>`).join('');
 }
 async function bindRevert(root, after) {

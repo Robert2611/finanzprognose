@@ -78,7 +78,7 @@ class Base(BaseModel):
 
 class AccountIn(Base):
     name: str = Field(min_length=1, max_length=100)
-    kind: Literal["giro", "tagesgeld", "depot", "kreditkarte", "bar", "sonstiges"] = "giro"
+    kind: Literal["checking", "savings", "custody", "credit_card", "cash", "other"] = "checking"
     note: str = Field("", max_length=2000)
 
 
@@ -205,7 +205,7 @@ def create_account(body: dict = Body(...)):
     with db.tx() as conn:
         acc = db.create(conn, "accounts", {"name": m.name, "kind": m.kind, "note": m.note}, m.comment)
         db.create(conn, "checkpoints", {"account_id": acc["id"], "date": m.start_date.isoformat(),
-                                        "balance": m.start_balance, "note": "Startstand bei Anlage"})
+                                        "balance": m.start_balance, "note": ""})
     return acc
 
 
