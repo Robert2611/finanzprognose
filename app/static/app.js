@@ -7,6 +7,7 @@ const eurCls = c => c == null ? '' : c < 0 ? 'neg' : '';
 const signed = c => `<span class="${c < 0 ? 'neg' : 'pos'}">${c > 0 ? '+' : ''}${eur(c)}</span>`;
 const fDate = iso => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('de-DE') : '';
 const fShort = iso => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }) : '';
+const fFull = iso => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
 const fTs = ts => new Date(ts).toLocaleString('de-DE');
 const fMonth = ym => { const [y, m] = ym.split('-'); return new Date(y, m - 1, 1).toLocaleDateString('de-DE', { month: 'short', year: 'numeric' }); };
 const today = () => new Date().toLocaleDateString('sv-SE');
@@ -95,9 +96,30 @@ const errMsg = data => {
   return fn ? fn(data.params || {}) : null;
 };
 
+// ------------------------------------------------------------ Prognose-Codes -> Deutsch
+// forecast.compute() never sends German text either; warnings and explanation steps are
+// {code, params} objects that this maps to the German text the UI shows.
+const noteSuffix = note => note ? ` (${note})` : '';
+const EXPLANATION_CODES = {
+  base_amount: p => `Grundbetrag ${eur(p.amount)}`,
+  set_amount: p => `ab ${fFull(p.date)}: neuer Betrag ${eur(p.amount)}${noteSuffix(p.note)}`,
+  percent_change: p => {
+    const pct = `${p.percent > 0 ? '+' : ''}${String(p.percent).replace('.', ',')} %`;
+    const times = p.repeat_yearly ? `, jährlich – hier ${p.years}× angewendet` : '';
+    return `ab ${fFull(p.date)}: ${pct}${times} → ${eur(p.amount)}${noteSuffix(p.note)}`;
+  },
+};
+const explLine = e => EXPLANATION_CODES[e.code]?.(e) ?? e.code;
+const WARNING_CODES = {
+  transfer_target_archived: p => `Umbuchung „${entryName(p.entry_id)}“ ignoriert: Zielkonto „${accName(p.account_id)}“ ist archiviert.`,
+  no_checkpoint: p => `Konto „${accName(p.account_id)}“ hat keinen Ist-Stand und kann nicht berechnet werden.`,
+};
+const warnMsg = w => WARNING_CODES[w.code]?.(w) ?? w.code;
+
 // ------------------------------------------------------------ Zustand
 const S = { view: location.hash.slice(1) || 'prognose', data: null, from: thisMonth(), months: 24, sel: null, showArchived: false, fc: null };
 const accName = id => S.data.accounts.find(a => a.id === id)?.name ?? `#${id}`;
+const entryName = id => S.data.entries.find(e => e.id === id)?.name ?? `#${id}`;
 const activeAccounts = () => S.data.accounts.filter(a => !a.archived);
 
 async function load() { S.data = await api('GET', '/api/state'); }
@@ -198,7 +220,7 @@ async function renderForecast(main) {
   const fc = S.fc = await api('GET', `/api/forecast?start=${S.from}&months=${S.months}`);
   if (!S.sel || !fc.months.some(m => m.month === S.sel)) S.sel = fc.months[0].month;
   const neg = fc.months.find(m => m.closing < 0);
-  $('#warn').innerHTML = fc.warnings.map(w => `<div class="banner warn">${esc(w)}</div>`).join('') +
+  $('#warn').innerHTML = fc.warnings.map(w => `<div class="banner warn">${esc(warnMsg(w))}</div>`).join('') +
     (neg ? `<div class="banner err">Achtung: Im ${fMonth(neg.month)} wird der Gesamtstand voraussichtlich negativ (${eur(neg.closing)}).</div>` : '');
   drawChart(fc);
   drawTable(fc);
@@ -260,13 +282,14 @@ function drawDetail(fc) {
     if (!am.items.length) h += `<div class="row"><span></span><span class="muted">Keine Buchungen in diesem Monat</span><span></span></div>`;
     for (const it of am.items) {
       if (it.type === 'checkpoint') {
-        h += `<div class="row cp"><span>${fShort(it.date)}</span><span>${esc(it.label)}${it.note ? ` <span class="muted small">(${esc(it.note)})</span>` : ''}</span><span class="num"><b>${eur(it.balance)}</b></span>`;
+        const label = it.deviation != null ? 'Ist-Stand eingetragen' : 'Startstand (Ist-Stand)';
+        h += `<div class="row cp"><span>${fShort(it.date)}</span><span>${esc(label)}${it.note ? ` <span class="muted small">(${esc(it.note)})</span>` : ''}</span><span class="num"><b>${eur(it.balance)}</b></span>`;
         if (it.deviation != null) h += `<div class="expl"><div>Prognose war ${eur(it.expected)}, tatsächlich ${eur(it.balance)} → Abweichung ${it.deviation > 0 ? '+' : ''}${eur(it.deviation)}</div><div>Ab hier rechnet die Prognose mit dem echten Kontostand weiter.</div></div>`;
         else h += `<div class="expl"><div>Ausgangspunkt der Berechnung für dieses Konto</div></div>`;
         h += `</div>`;
       } else {
         h += `<div class="row"><span>${fShort(it.date)}</span><span><button class="link" data-entry="${it.entry_id}" title="Buchung bearbeiten">${esc(it.label)}</button>${it.category ? `<span class="tag">${esc(it.category)}</span>` : ''}</span><span class="num">${signed(it.amount)}</span>
-          <div class="expl">${it.explanation.map(e => `<div>${esc(e)}</div>`).join('')}<div>Kontostand danach: ${eur(it.balance)}</div></div></div>`;
+          <div class="expl">${it.explanation.map(e => `<div>${esc(explLine(e))}</div>`).join('')}<div>Kontostand danach: ${eur(it.balance)}</div></div></div>`;
       }
     }
     h += `<div class="row sum"><span></span><span>Endstand</span><span class="num ${eurCls(am.closing)}">${eur(am.closing)}</span></div></div>`;

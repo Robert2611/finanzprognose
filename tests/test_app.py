@@ -50,7 +50,7 @@ def test_full_flow(client):
     # Mar: salary 3200 with explanation, vacation
     sal_mar = [i for i in m["2026-03"]["accounts"][g]["items"] if i["label"] == "Salary"][0]
     assert sal_mar["amount"] == 320000
-    assert any("neuer Betrag" in e for e in sal_mar["explanation"])
+    assert any(e["code"] == "set_amount" for e in sal_mar["explanation"])
 
     # Checkpoint with deviation
     client.post("/api/checkpoints", json={"account_id": giro["id"], "date": "2026-02-20", "balance": 500000})

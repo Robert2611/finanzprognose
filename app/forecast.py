@@ -19,15 +19,6 @@ def add_months(y: int, m: int, n: int) -> tuple[int, int]:
     return t // 12, t % 12 + 1
 
 
-def format_eur(cents: int) -> str:
-    s = f"{abs(cents) / 100:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    return ("−" if cents < 0 else "") + s + " €"
-
-
-def format_date_de(d: date) -> str:
-    return d.strftime("%d.%m.%Y")
-
-
 def full_years(a: date, b: date) -> int:
     y = b.year - a.year
     if (b.month, b.day) < (a.month, a.day):
@@ -50,28 +41,32 @@ def occurrences(e: dict, until: date):
         i += 1
 
 
-def amount_at(e: dict, adjs: list[dict], d: date) -> tuple[int, list[str]]:
-    """Amount of an entry on a given date, including a complete derivation."""
+def amount_at(e: dict, adjs: list[dict], d: date) -> tuple[int, list[dict]]:
+    """Amount of an entry on a given date, including a complete derivation.
+
+    Each explanation step is a {code, params} dict; app.js renders the German text.
+    """
     amt = e["amount"]
-    expl = [f"Grundbetrag {format_eur(amt)}"]
+    expl = [{"code": "base_amount", "amount": amt}]
     for a in adjs:  # sorted by date
         eff = date.fromisoformat(a["effective_date"])
         if eff > d:
             break
-        note = f" ({a['note']})" if a.get("note") else ""
+        note = a.get("note") or None
         if a["mode"] == "set":
             amt = a["amount"]
-            expl.append(f"ab {format_date_de(eff)}: neuer Betrag {format_eur(amt)}{note}")
+            expl.append({"code": "set_amount", "date": a["effective_date"], "amount": amt, "note": note})
         else:
             n = full_years(eff, d) + 1 if a["repeat_yearly"] else 1
             factor = Decimal(1) + Decimal(str(a["percent"])) / 100
             val = Decimal(amt)
             for _ in range(n):
                 val = (val * factor).quantize(Decimal(1), rounding=ROUND_HALF_UP)
-            pct = f"{a['percent']:+g} %".replace(".", ",")
-            times = f", jährlich – hier {n}× angewendet" if a["repeat_yearly"] else ""
             amt = int(val)
-            expl.append(f"ab {format_date_de(eff)}: {pct}{times} → {format_eur(amt)}{note}")
+            expl.append({
+                "code": "percent_change", "date": a["effective_date"], "percent": a["percent"],
+                "repeat_yearly": bool(a["repeat_yearly"]), "years": n, "amount": amt, "note": note,
+            })
     return amt, expl
 
 
@@ -86,7 +81,7 @@ def compute(state: dict, start: str, months: int) -> dict:
     accounts = [a for a in state["accounts"] if not a["archived"]]
     acc_ids = {a["id"] for a in accounts}
     acc_name = {a["id"]: a["name"] for a in state["accounts"]}
-    warnings: list[str] = []
+    warnings: list[dict] = []
 
     adjs = defaultdict(list)
     for a in state["adjustments"]:
@@ -112,7 +107,7 @@ def compute(state: dict, start: str, months: int) -> dict:
             continue
         to = e.get("to_account_id")
         if to and to not in acc_ids:
-            warnings.append(f"Umbuchung „{e['name']}“ ignoriert: Zielkonto „{acc_name.get(to, to)}“ ist archiviert.")
+            warnings.append({"code": "transfer_target_archived", "entry_id": e["id"], "account_id": to})
             continue
         for d in occurrences(e, horizon):
             amt, expl = amount_at(e, adjs[e["id"]], d)
@@ -131,7 +126,7 @@ def compute(state: dict, start: str, months: int) -> dict:
     for acc in accounts:
         evs = sorted(events[acc["id"]], key=lambda x: (x[0], x[1], x[2]))
         if not any(ev[3]["type"] == "checkpoint" for ev in evs):
-            warnings.append(f"Konto „{acc['name']}“ hat keinen Ist-Stand und kann nicht berechnet werden.")
+            warnings.append({"code": "no_checkpoint", "account_id": acc["id"]})
         running = None
         i = 0
 
@@ -139,10 +134,7 @@ def compute(state: dict, start: str, months: int) -> dict:
             nonlocal running
             it = dict(item)
             if it["type"] == "checkpoint":
-                if running is None:
-                    it["label"] = "Startstand (Ist-Stand)"
-                else:
-                    it["label"] = "Ist-Stand eingetragen"
+                if running is not None:
                     it["expected"] = running
                     it["deviation"] = it["balance"] - running
                 running = it["balance"]
