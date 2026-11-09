@@ -62,9 +62,10 @@ Status values: `open`, `in progress`, `done`.
 
 ## B-007 Split app/main.py into smaller modules
 
-- **Status:** open
+- **Status:** done
 - **Problem:** `main.py` combines several unrelated responsibilities in one 260+ line file: auth middleware, exception handlers, all Pydantic request models, and every route (generic CRUD, accounts, audit/revert, forecast, backup, export). This violates the file-size preference in `CLAUDE.md`.
 - **Proposal:** Split by responsibility, e.g. `app/schemas.py` (the Pydantic models and `MODELS` mapping), `app/auth.py` (the auth middleware), and keep `main.py` for route wiring only (or split routes further by area if that still ends up large). Keep the route paths and behavior unchanged.
+- **Resolution:** Split into `app/auth.py` (`APP_USER`/`APP_PASSWORD`, the `basic_auth` middleware function), `app/schemas.py` (`Money`, `Base` and all the `*In`/`AccountCreate` Pydantic models, plus `MODELS`), and `app/errors.py` (`validation_detail()` plus a `register(app)` that attaches the `NotFound`/`Conflict`/`HTTPException` exception handlers). `main.py` dropped from 288 to 152 lines and now only builds the `FastAPI` app, registers the middleware/handlers via `auth.basic_auth`/`errors.register(app)`, defines the small per-route glue (`_parse`/`_data`/`_check_refs`) that didn't belong in any of the split-out modules, and wires every route. Route paths, request/response shapes and the public import surface (`from app.main import app`) are unchanged. Verified with `python -m pytest -q` (9 passed) and a manual `TestClient` run exercising `/healthz`, `/api/state`, `POST /api/accounts`, `/api/forecast` and an `unknown_table` error response.
 - **Done when:** `main.py` only wires routes/middleware together, the split-out modules each have a single clear responsibility, and the existing test suite passes unchanged.
 
 ## B-008 Split app/static/app.js into smaller modules
