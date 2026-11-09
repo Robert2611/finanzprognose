@@ -34,7 +34,7 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS accounts(
   id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,
-  kind TEXT NOT NULL DEFAULT 'giro',
+  kind TEXT NOT NULL DEFAULT 'checking',
   note TEXT NOT NULL DEFAULT '',
   archived INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
@@ -87,7 +87,8 @@ CREATE TABLE IF NOT EXISTS audit_log(
   entity_id INTEGER NOT NULL,
   before TEXT,
   after TEXT,
-  comment TEXT NOT NULL DEFAULT ''
+  comment TEXT NOT NULL DEFAULT '',
+  reverts_id INTEGER REFERENCES audit_log(id)
 );
 CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log(entity, entity_id);
 
@@ -211,13 +212,14 @@ def all_rows(conn, table: str) -> list[dict]:
     return [dict(r) for r in conn.execute(f"SELECT * FROM {table} ORDER BY id")]
 
 
-def _audit(conn, action, entity, entity_id, before, after, comment=""):
+def _audit(conn, action, entity, entity_id, before, after, comment="", reverts_id=None):
     conn.execute(
-        "INSERT INTO audit_log(ts, action, entity, entity_id, before, after, comment) VALUES(?,?,?,?,?,?,?)",
+        "INSERT INTO audit_log(ts, action, entity, entity_id, before, after, comment, reverts_id) "
+        "VALUES(?,?,?,?,?,?,?,?)",
         (now(), action, entity, entity_id,
          json.dumps(before, ensure_ascii=False) if before is not None else None,
          json.dumps(after, ensure_ascii=False) if after is not None else None,
-         comment or ""),
+         comment or "", reverts_id),
     )
 
 
@@ -234,7 +236,7 @@ def create(conn, table: str, data: dict, comment: str = "") -> dict:
     return new
 
 
-def _write(conn, table, id_, changes: dict, action: str, comment="", expected_updated_at=None) -> dict:
+def _write(conn, table, id_, changes: dict, action: str, comment="", expected_updated_at=None, reverts_id=None) -> dict:
     before = get(conn, table, id_)
     if before is None:
         raise NotFound("not_found", entity=table, id=id_)
@@ -247,7 +249,7 @@ def _write(conn, table, id_, changes: dict, action: str, comment="", expected_up
     sets = ",".join(f"{k}=?" for k in changes)
     conn.execute(f"UPDATE {table} SET {sets} WHERE id=?", [*changes.values(), id_])
     after = get(conn, table, id_)
-    _audit(conn, action, table, id_, before, after, comment)
+    _audit(conn, action, table, id_, before, after, comment, reverts_id)
     return after
 
 
@@ -267,12 +269,11 @@ def revert(conn, audit_id: int) -> dict:
     if a is None:
         raise NotFound("not_found", entity="audit_log", id=audit_id)
     table, eid = a["entity"], a["entity_id"]
-    comment = f"Rückgängig gemacht: Protokolleintrag #{audit_id}"
     if a["action"] == "create":
-        return _write(conn, table, eid, {"archived": 1}, "revert", comment)
+        return _write(conn, table, eid, {"archived": 1}, "revert", reverts_id=audit_id)
     before = json.loads(a["before"])
     changes = {f: before[f] for f in TABLES[table] + ["archived"] if f in before}
-    return _write(conn, table, eid, changes, "revert", comment)
+    return _write(conn, table, eid, changes, "revert", reverts_id=audit_id)
 
 
 def audit_list(conn, limit=200, before_id=None, entity=None, entity_id=None) -> list[dict]:
