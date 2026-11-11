@@ -1,9 +1,10 @@
+import { html, render as renderLit, nothing } from './vendor/lit-html.js';
+
 // ------------------------------------------------------------ Hilfsfunktionen
 export const $ = (s, el = document) => el.querySelector(s);
-export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export const eur = c => c == null ? '–' : (c / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 export const eurCls = c => c == null ? '' : c < 0 ? 'neg' : '';
-export const signed = c => `<span class="${c < 0 ? 'neg' : 'pos'}">${c > 0 ? '+' : ''}${eur(c)}</span>`;
+export const signed = c => html`<span class="${c < 0 ? 'neg' : 'pos'}">${c > 0 ? '+' : ''}${eur(c)}</span>`;
 export const fDate = iso => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('de-DE') : '';
 export const fShort = iso => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }) : '';
 export const fFull = iso => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
@@ -129,47 +130,67 @@ export function formDialog({ title, fields, values = {}, submitLabel = 'Speicher
   return new Promise(resolve => {
     let done = false;
     const dlg = document.createElement('dialog');
-    dlg.innerHTML = `<form><h3>${esc(title)}</h3>${intro}<div class="fields"></div><div class="err"></div>
-      <div class="actions"><button type="button" data-cancel>Abbrechen</button><button type="submit" class="primary">${esc(submitLabel)}</button></div></form>`;
-    const box = $('.fields', dlg);
-    for (const f of fields) {
-      const w = document.createElement('label');
-      w.className = 'field' + (f.type === 'checkbox' ? ' check' : ''); w.dataset.name = f.name;
-      let input;
-      if (f.type === 'select') input = `<select name="${f.name}">${f.options.map(o => `<option value="${esc(o.value)}">${esc(o.label)}</option>`).join('')}</select>`;
-      else if (f.type === 'textarea') input = `<textarea name="${f.name}" rows="2"></textarea>`;
-      else if (f.type === 'checkbox') input = `<input type="checkbox" name="${f.name}">`;
-      else input = `<input name="${f.name}" type="${f.type === 'money' ? 'text' : f.type || 'text'}" ${f.type === 'money' ? 'inputmode="decimal" placeholder="0,00"' : ''} ${f.step ? `step="${f.step}"` : ''} autocomplete="off">`;
-      w.innerHTML = `<span>${esc(f.label)}${f.required ? ' *' : ''}</span>${input}${f.hint ? `<small class="muted">${esc(f.hint)}</small>` : ''}`;
-      box.append(w);
-      const el = w.querySelector('[name]'); const v = values[f.name];
-      if (f.type === 'checkbox') el.checked = !!v; else if (v != null) el.value = v;
-    }
-    const read = () => { const o = {}; for (const f of fields) { const el = box.querySelector(`[name="${f.name}"]`); o[f.name] = f.type === 'checkbox' ? el.checked : el.value; } return o; };
-    const visible = (f, v) => !f.showIf || f.showIf(v);
-    const upd = () => { const v = read(); for (const f of fields) box.querySelector(`[data-name="${f.name}"]`).hidden = !visible(f, v); };
-    dlg.addEventListener('input', upd); dlg.addEventListener('change', upd); upd();
+    const state = { values: { ...values }, error: '', busy: false };
     const finish = r => { if (!done) { done = true; resolve(r); } dlg.close(); };
-    $('[data-cancel]', dlg).onclick = () => finish(null);
-    dlg.addEventListener('close', () => { if (!done) { done = true; resolve(null); } dlg.remove(); });
-    $('form', dlg).addEventListener('submit', async e => {
+
+    const fieldTpl = f => {
+      if (f.showIf && !f.showIf(state.values)) return nothing;
+      const v = state.values[f.name];
+      let input;
+      if (f.type === 'select') {
+        input = html`<select name=${f.name}>${f.options.map(o => html`<option value=${o.value} ?selected=${String(o.value) === String(v)}>${o.label}</option>`)}</select>`;
+      } else if (f.type === 'textarea') {
+        input = html`<textarea name=${f.name} rows="2" .value=${v ?? ''}></textarea>`;
+      } else if (f.type === 'checkbox') {
+        input = html`<input type="checkbox" name=${f.name} .checked=${!!v}>`;
+      } else {
+        input = html`<input name=${f.name} type=${f.type === 'money' ? 'text' : f.type || 'text'}
+          inputmode=${f.type === 'money' ? 'decimal' : nothing} placeholder=${f.type === 'money' ? '0,00' : nothing}
+          step=${f.step ?? nothing} autocomplete="off" .value=${v ?? ''}>`;
+      }
+      return html`<label class="field ${f.type === 'checkbox' ? 'check' : ''}" data-name=${f.name}>
+        <span>${f.label}${f.required ? ' *' : ''}</span>${input}${f.hint ? html`<small class="muted">${f.hint}</small>` : ''}
+      </label>`;
+    };
+
+    const onFormChange = e => {
+      const name = e.target.name; if (!name) return;
+      const f = fields.find(x => x.name === name); if (!f) return;
+      state.values[name] = f.type === 'checkbox' ? e.target.checked : e.target.value;
+      draw();
+    };
+
+    const onSubmitForm = async e => {
       e.preventDefault();
-      const err = $('.err', dlg); err.textContent = '';
-      const v = read();
+      state.error = '';
+      const v = { ...state.values };
       for (const f of fields) {
-        if (!visible(f, v)) { v[f.name] = null; continue; }
-        if (f.required && (v[f.name] === '' || v[f.name] == null)) { err.textContent = `Bitte „${f.label}“ ausfüllen.`; return; }
+        if (f.showIf && !f.showIf(v)) { v[f.name] = null; continue; }
+        if (f.required && (v[f.name] === '' || v[f.name] == null)) { state.error = `Bitte „${f.label}“ ausfüllen.`; draw(); return; }
         if (f.type === 'money' && v[f.name] !== '') {
-          const c = parseEUR(v[f.name]); if (Number.isNaN(c)) { err.textContent = `„${f.label}“ ist kein gültiger Betrag.`; return; } v[f.name] = c;
+          const c = parseEUR(v[f.name]); if (Number.isNaN(c)) { state.error = `„${f.label}“ ist kein gültiger Betrag.`; draw(); return; } v[f.name] = c;
         } else if (f.type === 'money') v[f.name] = null;
         if (f.type === 'number') v[f.name] = v[f.name] === '' ? null : Number(String(v[f.name]).replace(',', '.'));
         if ((f.type === 'date' || f.type === 'text' || f.type === 'select') && v[f.name] === '' && !f.keepEmpty) v[f.name] = f.type === 'text' ? '' : null;
       }
-      const btn = $('button[type=submit]', dlg); btn.disabled = true;
+      state.busy = true; draw();
       try { const r = onSubmit ? await onSubmit(v) : v; finish(r ?? true); }
-      catch (ex) { err.textContent = ex.message; }
-      finally { btn.disabled = false; }
-    });
+      catch (ex) { state.error = ex.message; state.busy = false; draw(); }
+    };
+
+    const tpl = () => html`<form @input=${onFormChange} @change=${onFormChange} @submit=${onSubmitForm}>
+      <h3>${title}</h3>${intro}
+      <div class="fields">${fields.map(fieldTpl)}</div>
+      <div class="err">${state.error}</div>
+      <div class="actions">
+        <button type="button" @click=${() => finish(null)}>Abbrechen</button>
+        <button type="submit" class="primary" ?disabled=${state.busy}>${submitLabel}</button>
+      </div>
+    </form>`;
+    const draw = () => renderLit(tpl(), dlg);
+
+    dlg.addEventListener('close', () => { if (!done) { done = true; resolve(null); } dlg.remove(); });
+    draw();
     document.body.append(dlg); dlg.showModal();
   });
 }
@@ -177,7 +198,7 @@ export function formDialog({ title, fields, values = {}, submitLabel = 'Speicher
 export async function archiveDialog(table, row, label) {
   const ok = await formDialog({
     title: `${ENTITY[table]} archivieren`, submitLabel: 'Archivieren',
-    intro: `<p class="muted">„${esc(label)}“ wird archiviert und fließt nicht mehr in die Prognose ein. Nichts wird gelöscht – du kannst es jederzeit wiederherstellen.</p>`,
+    intro: html`<p class="muted">„${label}“ wird archiviert und fließt nicht mehr in die Prognose ein. Nichts wird gelöscht – du kannst es jederzeit wiederherstellen.</p>`,
     fields: [{ name: 'comment', label: 'Grund (optional)', type: 'textarea' }],
     onSubmit: v => api('POST', `/api/${table}/${row.id}/archive`, { comment: v.comment || '' }),
   });
@@ -205,5 +226,5 @@ export async function render() {
   const main = $('#main');
   try {
     await ({ prognose: renderForecast, buchungen: renderEntries, konten: renderAccounts, verlauf: renderAudit, sicherung: renderBackup }[S.view] || renderForecast)(main);
-  } catch (ex) { main.innerHTML = `<div class="banner err">${esc(ex.message)}</div>`; }
+  } catch (ex) { renderLit(html`<div class="banner err">${ex.message}</div>`, main); }
 }
