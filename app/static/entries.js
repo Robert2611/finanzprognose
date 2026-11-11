@@ -1,5 +1,6 @@
 // ------------------------------------------------------------ Buchungen
-import { $, esc, eur, signed, fDate, toInput, today, toast, api, RHYTHM, rhythm, accName, activeAccounts, S, formDialog, refresh, load, archiveDialog, restoreRow } from './core.js';
+import { html, render as renderLit } from './vendor/lit-html.js';
+import { $, eur, signed, fDate, toInput, today, toast, api, RHYTHM, rhythm, accName, activeAccounts, S, formDialog, refresh, load, archiveDialog, restoreRow } from './core.js';
 import { historyDialog } from './audit.js';
 
 function entryType(e) { return e.to_account_id ? 'transfer' : e.amount < 0 ? 'expense' : 'income'; }
@@ -12,7 +13,7 @@ export async function entryDialog(e = null) {
     : { type: 'expense', kind: 'recurring', interval_months: 1, start_date: today(), account_id: accs[0].id };
   const ok = await formDialog({
     title: e ? `Buchung „${e.name}“ bearbeiten` : 'Neue Buchung', values,
-    intro: e ? `<p class="small muted">Änderungen am Grundbetrag wirken rückwirkend auf alle Termine. Für eine Änderung <i>ab einem Datum</i> (z. B. Gehaltserhöhung) nutze stattdessen „Anpassungen“.</p>` : '',
+    intro: e ? html`<p class="small muted">Änderungen am Grundbetrag wirken rückwirkend auf alle Termine. Für eine Änderung <i>ab einem Datum</i> (z. B. Gehaltserhöhung) nutze stattdessen „Anpassungen“.</p>` : '',
     fields: [
       { name: 'name', label: 'Bezeichnung', required: true },
       { name: 'type', label: 'Typ', type: 'select', options: [{ value: 'income', label: 'Einnahme' }, { value: 'expense', label: 'Ausgabe' }, { value: 'transfer', label: 'Umbuchung zwischen Konten' }] },
@@ -44,29 +45,24 @@ export async function renderEntries(main) {
   const adjCount = id => S.data.adjustments.filter(a => a.entry_id === id && !a.archived).length;
   const typeLabel = { income: 'Einnahme', expense: 'Ausgabe', transfer: 'Umbuchung' };
   const sorted = entries.slice().sort((a, b) => a.archived - b.archived || b.kind.localeCompare(a.kind) || a.name.localeCompare(b.name, 'de'));
-  main.innerHTML = `<div class="toolbar"><h2 style="margin:0">Buchungen</h2><span class="spacer"></span>
-    <label><input type="checkbox" id="arch" ${S.showArchived ? 'checked' : ''}> Archivierte zeigen</label>
-    <button class="primary" id="new">+ Neue Buchung</button></div>
-    <div class="panel table-wrap"><table><thead><tr><th>Bezeichnung</th><th>Typ</th><th>Konto</th><th class="num">Grundbetrag</th><th>Rhythmus</th><th>Zeitraum</th><th>Anpassungen</th><th></th></tr></thead><tbody>
-    ${sorted.map(e => `<tr class="${e.archived ? 'archived' : ''}">
-      <td><b>${esc(e.name)}</b>${e.category ? `<span class="tag">${esc(e.category)}</span>` : ''}${e.note ? `<div class="small muted">${esc(e.note)}</div>` : ''}</td>
+  const rowTpl = e => html`<tr class="${e.archived ? 'archived' : ''}">
+      <td><b>${e.name}</b>${e.category ? html`<span class="tag">${e.category}</span>` : ''}${e.note ? html`<div class="small muted">${e.note}</div>` : ''}</td>
       <td>${typeLabel[entryType(e)]}</td>
-      <td>${esc(accName(e.account_id))}${e.to_account_id ? ` → ${esc(accName(e.to_account_id))}` : ''}</td>
+      <td>${accName(e.account_id)}${e.to_account_id ? html` → ${accName(e.to_account_id)}` : ''}</td>
       <td class="num">${entryType(e) === 'transfer' ? eur(e.amount) : signed(e.amount)}</td>
       <td>${e.kind === 'once' ? 'einmalig' : rhythm(e.interval_months)}</td>
       <td>${e.kind === 'once' ? fDate(e.start_date) : `ab ${fDate(e.start_date)}${e.end_date ? ` bis ${fDate(e.end_date)}` : ''}`}</td>
-      <td><button class="small" data-adj="${e.id}">${adjCount(e.id)} Anpassung${adjCount(e.id) === 1 ? '' : 'en'}</button></td>
-      <td style="white-space:nowrap">${e.archived ? `<button class="small" data-restore="${e.id}">Wiederherstellen</button>` : `<button class="small" data-edit="${e.id}">Bearbeiten</button> <button class="small" data-arch="${e.id}">Archivieren</button>`}
-        <button class="small" data-hist="${e.id}" title="Änderungsverlauf">Verlauf</button></td></tr>`).join('') || `<tr><td colspan="8" class="muted">Noch keine Buchungen.</td></tr>`}
-    </tbody></table></div>`;
-  const find = id => S.data.entries.find(e => e.id === +id);
-  $('#arch').onchange = ev => { S.showArchived = ev.target.checked; renderEntries(main); };
-  $('#new').onclick = () => entryDialog();
-  main.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => entryDialog(find(b.dataset.edit)));
-  main.querySelectorAll('[data-arch]').forEach(b => b.onclick = () => archiveDialog('entries', find(b.dataset.arch), find(b.dataset.arch).name));
-  main.querySelectorAll('[data-restore]').forEach(b => b.onclick = () => restoreRow('entries', find(b.dataset.restore)));
-  main.querySelectorAll('[data-adj]').forEach(b => b.onclick = () => adjustmentsDialog(find(b.dataset.adj)));
-  main.querySelectorAll('[data-hist]').forEach(b => b.onclick = () => historyDialog('entries', +b.dataset.hist));
+      <td><button class="small" @click=${() => adjustmentsDialog(e)}>${adjCount(e.id)} Anpassung${adjCount(e.id) === 1 ? '' : 'en'}</button></td>
+      <td style="white-space:nowrap">${e.archived
+        ? html`<button class="small" @click=${() => restoreRow('entries', e)}>Wiederherstellen</button>`
+        : html`<button class="small" @click=${() => entryDialog(e)}>Bearbeiten</button> <button class="small" @click=${() => archiveDialog('entries', e, e.name)}>Archivieren</button>`}
+        <button class="small" title="Änderungsverlauf" @click=${() => historyDialog('entries', e.id)}>Verlauf</button></td></tr>`;
+  renderLit(html`<div class="toolbar"><h2 style="margin:0">Buchungen</h2><span class="spacer"></span>
+    <label><input type="checkbox" .checked=${S.showArchived} @change=${ev => { S.showArchived = ev.target.checked; renderEntries(main); }}> Archivierte zeigen</label>
+    <button class="primary" @click=${() => entryDialog()}>+ Neue Buchung</button></div>
+    <div class="panel table-wrap"><table><thead><tr><th>Bezeichnung</th><th>Typ</th><th>Konto</th><th class="num">Grundbetrag</th><th>Rhythmus</th><th>Zeitraum</th><th>Anpassungen</th><th></th></tr></thead><tbody>
+    ${sorted.length ? sorted.map(rowTpl) : html`<tr><td colspan="8" class="muted">Noch keine Buchungen.</td></tr>`}
+    </tbody></table></div>`, main);
 }
 
 function adjLabel(a) {
@@ -78,20 +74,19 @@ async function adjustmentsDialog(entry) {
   const dlg = document.createElement('dialog');
   const draw = () => {
     const list = S.data.adjustments.filter(a => a.entry_id === entry.id).sort((a, b) => a.effective_date.localeCompare(b.effective_date));
-    dlg.innerHTML = `<div class="body"><h3>Anpassungen: ${esc(entry.name)}</h3>
+    const rowTpl = a => html`<tr class="${a.archived ? 'archived' : ''}"><td>${fDate(a.effective_date)}</td><td>${adjLabel(a)}</td><td class="small">${a.note}</td>
+        <td style="white-space:nowrap">${a.archived
+          ? html`<button class="small" @click=${() => restoreAdj(a)}>Wiederherstellen</button>`
+          : html`<button class="small" @click=${() => edit(a)}>Bearbeiten</button> <button class="small" @click=${() => archiveAdj(a)}>Archivieren</button>`}</td></tr>`;
+    renderLit(html`<div class="body"><h3>Anpassungen: ${entry.name}</h3>
       <p class="small muted">Grundbetrag ${eur(entry.amount)}. Anpassungen gelten ab ihrem Datum und werden in zeitlicher Reihenfolge angewendet. Ein neuer fester Betrag ersetzt alle früheren Anpassungen.</p>
       <table><thead><tr><th>Gültig ab</th><th>Änderung</th><th>Notiz</th><th></th></tr></thead><tbody>
-      ${list.map(a => `<tr class="${a.archived ? 'archived' : ''}"><td>${fDate(a.effective_date)}</td><td>${esc(adjLabel(a))}</td><td class="small">${esc(a.note)}</td>
-        <td style="white-space:nowrap">${a.archived ? `<button class="small" data-r="${a.id}">Wiederherstellen</button>` : `<button class="small" data-e="${a.id}">Bearbeiten</button> <button class="small" data-a="${a.id}">Archivieren</button>`}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">Keine Anpassungen.</td></tr>'}
-      </tbody></table><div class="actions"><button data-close>Schließen</button><button class="primary" data-new>+ Anpassung</button></div></div>`;
-    $('[data-close]', dlg).onclick = () => dlg.close();
-    $('[data-new]', dlg).onclick = () => edit(null);
-    const find = id => S.data.adjustments.find(a => a.id === +id);
-    dlg.querySelectorAll('[data-e]').forEach(b => b.onclick = () => edit(find(b.dataset.e)));
-    dlg.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => { await api('POST', `/api/adjustments/${b.dataset.a}/archive`, {}); await reload(); });
-    dlg.querySelectorAll('[data-r]').forEach(b => b.onclick = async () => { await api('POST', `/api/adjustments/${b.dataset.r}/restore`, {}); await reload(); });
+      ${list.length ? list.map(rowTpl) : html`<tr><td colspan="4" class="muted">Keine Anpassungen.</td></tr>`}
+      </tbody></table><div class="actions"><button @click=${() => dlg.close()}>Schließen</button><button class="primary" @click=${() => edit(null)}>+ Anpassung</button></div></div>`, dlg);
   };
   const reload = async () => { await load(); draw(); toast('Gespeichert'); };
+  const archiveAdj = async a => { await api('POST', `/api/adjustments/${a.id}/archive`, {}); await reload(); };
+  const restoreAdj = async a => { await api('POST', `/api/adjustments/${a.id}/restore`, {}); await reload(); };
   const sign = entry.to_account_id ? 1 : Math.sign(entry.amount);
   const edit = async a => {
     const ok = await formDialog({
