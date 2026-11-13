@@ -9,13 +9,14 @@ set and every request must authenticate (except the health probe), or no passwor
 and the app is open.
 
 ## Interface
-HTTP middleware applied to every request (`app.middleware("http")`). Configured by env:
-- `APP_USER` (default `admin`), `APP_PASSWORD` (default empty).
+HTTP middleware applied to every request (`app.middleware("http")`). Configured by the app's `Settings`: `app_user` (default `admin`) and `app_password`
+(default empty). In production these come from the env vars `APP_USER` / `APP_PASSWORD`
+via `Settings.from_env()`; tests pass them directly to `Settings(...)`.
 
 Clients authenticate with standard HTTP Basic Auth (`Authorization: Basic base64(user:pass)`).
 
 ## Dependencies & side effects
-Reads `APP_USER`/`APP_PASSWORD` (captured at import). No DB, no files. On failure returns
+Reads `app_user`/`app_password` from the serving app's `Settings` on each request (no import-time capture). No DB, no files. On failure returns
 `401` without calling the route.
 
 ## Behavior clauses
