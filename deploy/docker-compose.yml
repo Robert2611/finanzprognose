@@ -1,6 +1,9 @@
+# Production compose file. It ships inside the image (/deploy) and is copied to the install
+# directory (default /opt/finanzprognose) by install.sh and update.sh. Do not edit it there:
+# the next update overwrites it. All settings belong in .env next to it.
 services:
   finanzprognose:
-    build: .
+    image: ghcr.io/robert2611/finanzprognose:${APP_VERSION:?Please set APP_VERSION in the .env file}
     container_name: finanzprognose
     restart: unless-stopped
     ports:
@@ -14,5 +17,5 @@ services:
       DB_PATH: /data/finanzen.sqlite
       BACKUP_DIR: /backup
     volumes:
-      - ./data:/data                          # working database (local on the container host)
+      - ./data:/data                          # working database (local disk of the VM)
       - ${BACKUP_HOST_DIR:?Please set BACKUP_HOST_DIR in .env}:/backup   # NAS share

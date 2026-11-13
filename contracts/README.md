@@ -63,7 +63,7 @@ E2E clauses additionally carry a verification tag:
 ## Rules for the test-writing agent
 
 **You may read:** everything in `contracts/`, the project `README.md`, and the public
-entry points needed to *start and configure* the app — `docker-compose.yml`, `Dockerfile`,
+entry points needed to *start and configure* the app — `deploy/docker-compose.yml`, `Dockerfile`,
 `.env.example`, `.devcontainer/devcontainer.json`, `.vscode/launch.json`, `requirements*.txt`,
 and the environment-variable names those expose. You may read `tests/test_app.py` to see
 the existing harness (but you are writing a fresh, independent suite).

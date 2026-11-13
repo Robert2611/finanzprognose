@@ -51,84 +51,124 @@ Bei Ist-Ständen siehst du den prognostizierten Wert, den tatsächlichen Wert un
 
 ## Installation auf Proxmox
 
-Empfohlener Aufbau: **Debian-LXC mit Docker.** Die NAS-Freigabe wird auf dem Proxmox-Host eingebunden und per Bind-Mount in den Container gereicht. Unprivilegierte LXC-Container können NFS oder SMB nicht selbst einbinden.
+Empfohlener Aufbau: **Debian-VM mit Docker.** Ein einziges Skript (`install.sh`) richtet alles in der VM ein: Docker, die NAS-Freigabe für die Sicherungen, die Einstellungen und die App selbst. Updates spielt danach `update.sh` ein.
 
-### 1. NAS-Freigabe auf dem Proxmox-Host einbinden
+Die App kommt als fertiges Docker-Image aus GitHub (`ghcr.io/robert2611/finanzprognose`). Es wird bei jedem GitHub-Release automatisch gebaut. Auf dem Server wird nichts kompiliert, und es liegt dort kein Quellcode.
 
-Lege auf dem NAS eine Freigabe an, z. B. `finanzbackup`.
+### 1. NAS-Freigabe vorbereiten
 
-Unprivilegierte LXC-Container sehen Dateien als Benutzer **100000** des Hosts. Diese Benutzerkennung braucht Schreibrechte.
+Lege auf dem NAS eine Freigabe an, z. B. `finanzbackup`, und einen Benutzer mit Schreibrecht darauf.
 
-**Variante SMB/CIFS** (auf dem Proxmox-Host als root):
+- **SMB:** Benutzername und Passwort fragt `install.sh` ab.
+- **NFS:** Gib die Freigabe für die IP der VM frei. Stelle die Benutzerzuordnung (squash) so ein, dass alle Zugriffe auf einen NAS-Benutzer mit Schreibrecht abgebildet werden („Map all users to admin“ bzw. `all_squash`).
 
-```bash
-apt install -y cifs-utils
-mkdir -p /mnt/nas-finanzen
-cat > /root/.smb-nas <<'EOF'
-username=DEIN_NAS_BENUTZER
-password=DEIN_NAS_PASSWORT
-EOF
-chmod 600 /root/.smb-nas
+### 2. VM anlegen
 
-echo '//NAS-IP/finanzbackup /mnt/nas-finanzen cifs credentials=/root/.smb-nas,uid=100000,gid=100000,file_mode=0660,dir_mode=0770,_netdev,nofail 0 0' >> /etc/fstab
-mount /mnt/nas-finanzen
-```
+Lege in der Proxmox-Oberfläche eine VM an:
 
-**Variante NFS:** Gib die Freigabe auf dem NAS für die IP des Proxmox-Hosts frei. Stelle die Benutzerzuordnung (squash) so ein, dass alle Zugriffe auf einen NAS-Benutzer mit Schreibrecht abgebildet werden („Map all users to admin“ bzw. `all_squash`). Danach:
+- ISO: **Debian 13** (netinst), Debian 12 geht auch
+- 1 CPU, 1 GB RAM, 10 GB Platte
+- unter *Optionen* den **QEMU Guest Agent** einschalten
+- bei der Debian-Installation nur „SSH-Server“ und „Standard-Systemwerkzeuge“ auswählen
 
-```bash
-mkdir -p /mnt/nas-finanzen
-echo 'NAS-IP:/volume1/finanzbackup /mnt/nas-finanzen nfs defaults,_netdev,nofail 0 0' >> /etc/fstab
-mount /mnt/nas-finanzen
-```
+Gib der VM eine feste IP-Adresse (oder eine feste DHCP-Zuweisung im Router), damit die App immer unter derselben Adresse erreichbar ist.
 
-Lege dann den Zielordner und die Markierungsdatei an:
+### 3. GitHub-Token anlegen
 
-```bash
-mkdir -p /mnt/nas-finanzen/finanzprognose
-touch /mnt/nas-finanzen/finanzprognose/.nas-marker
-```
+Das Image ist privat. Die VM braucht deshalb ein Token zum Herunterladen:
 
-### 2. LXC-Container anlegen
+1. GitHub → *Settings → Developer settings → Personal access tokens → Tokens (classic)* → *Generate new token (classic)*
+2. Nur den Haken bei **`read:packages`** setzen. Mehr Rechte braucht die VM nicht.
+3. Ein Ablaufdatum wählen und das Token sicher aufheben.
 
-Lege in der Proxmox-Oberfläche einen Container aus dem Template **Debian 12** an, z. B. mit 1 CPU, 512 MB RAM und 4 GB Platte. Setze unter *Optionen → Features* den Haken bei **Nesting**, das braucht Docker. Danach auf dem Host:
+Ist das Token abgelaufen, schlägt `update.sh` mit einem Hinweis fehl. Dann ein neues Token anlegen und in der VM `sudo docker login ghcr.io -u DEIN_GITHUB_NAME` ausführen (das Token als Passwort eingeben).
+
+### 4. `install.sh` ausführen
+
+Lade `install.sh` von der [Release-Seite](https://github.com/Robert2611/finanzprognose/releases/latest) herunter (unter *Assets*) und kopiere es in die VM:
 
 ```bash
-# CTID durch die Nummer des Containers ersetzen
-pct set CTID -mp0 /mnt/nas-finanzen/finanzprognose,mp=/mnt/nas-backup/finanzprognose
-pct reboot CTID
+scp install.sh BENUTZER@IP-DER-VM:
+ssh BENUTZER@IP-DER-VM
+sudo bash install.sh            # neueste Version
+# oder: sudo bash install.sh v1.4.0
 ```
 
-### 3. Docker im Container installieren
+Das Skript fragt nacheinander ab:
 
-```bash
-pct enter CTID
-apt update && apt install -y curl
-curl -fsSL https://get.docker.com | sh
-```
+- GitHub-Benutzername und das Token aus Schritt 3
+- wie das NAS erreicht wird (`smb`, `nfs` oder `manual`, falls du es selbst eingebunden hast), dazu Adresse, Freigabe und ggf. Zugangsdaten
+- Port (Standard 8080), Benutzername und Passwort für die App (leer lassen = Passwort erzeugen), Uhrzeit der täglichen Sicherung
 
-### 4. App starten
+Danach liegt alles in `/opt/finanzprognose`:
 
-Kopiere den Ordner `finanzprognose` in den Container, z. B. nach `/opt/finanzprognose` (per `scp` oder `pct push`). Dann:
+| Pfad | Inhalt |
+|---|---|
+| `.env` | deine Einstellungen (nur für root lesbar) |
+| `data/` | die Datenbank |
+| `data/pre-update/` | Kopien der Datenbank vor jedem Update |
+| `docker-compose.yml`, `update.sh`, `install.sh` | kommen aus dem Image und werden bei jedem Update ersetzt, nicht von Hand ändern |
 
-```bash
-cd /opt/finanzprognose
-cp .env.example .env
-nano .env            # APP_PASSWORD setzen, BACKUP_HOST_DIR=/mnt/nas-backup/finanzprognose
-docker compose up -d --build
-```
+Die NAS-Freigabe ist unter `/mnt/nas-finanzen` eingebunden (Eintrag in `/etc/fstab`), die Sicherungen landen in `/mnt/nas-finanzen/finanzprognose`. Dort legt das Skript auch die Datei `.nas-marker` an.
 
-Öffne `http://IP-DES-CONTAINERS:8080` im Browser. Geh einmal auf **Sicherung → Jetzt sichern** und prüfe, ob auf dem NAS eine Datei ankommt.
+Außerdem schaltet das Skript die automatischen Sicherheitsupdates von Debian (`unattended-upgrades`) und die Begrenzung der Docker-Logs ein.
+
+### 5. Ausprobieren
+
+Öffne `http://IP-DER-VM:8080` im Browser. Geh einmal auf **Sicherung → Jetzt sichern** und prüfe, ob auf dem NAS eine Datei ankommt.
+
+Du kannst `install.sh` jederzeit erneut ausführen, z. B. um Passwort oder NAS zu ändern. Es fragt, ob die bisherigen Einstellungen bleiben sollen, und lässt die Daten unangetastet.
 
 ### Updates
 
+Lies vorher kurz die Release-Notizen auf GitHub. Dann:
+
 ```bash
-cd /opt/finanzprognose
-# neue Dateien einspielen, dann:
-docker compose up -d --build
+sudo /opt/finanzprognose/update.sh            # neueste Version
+sudo /opt/finanzprognose/update.sh v1.4.0     # eine bestimmte Version
 ```
 
-Deine Daten liegen in `./data` und bleiben bei Updates erhalten.
+Das Skript
+
+1. lädt das neue Image herunter (ist schon die neueste Version installiert, hört es hier auf),
+2. hält die App an und kopiert die Datenbank nach `data/pre-update/DATUM_ALTEVERSION/`,
+3. übernimmt die neuen `docker-compose.yml`, `update.sh` und `install.sh` aus dem Image,
+4. trägt die neue Version in `.env` ein, startet die App und wartet, bis sie läuft.
+
+Die Kopien in `data/pre-update/` werden nie gelöscht. Wenn der Platz knapp wird, kannst du alte Kopien von Hand entfernen.
+
+Vor großen Updates lohnt sich zusätzlich ein **Snapshot der VM** in Proxmox.
+
+### Zurückrollen
+
+Neue Versionen können die Datenbank umbauen (Migration). Eine ältere Version kann eine umgebaute Datenbank nicht immer lesen. Zum Zurückrollen gehören deshalb **beide Schritte**: die Datenbank-Kopie von vor dem Update zurückholen und die alte Version starten. Schlägt ein Update fehl, zeigt `update.sh` die passenden Befehle mit den richtigen Pfaden an. Allgemein:
+
+```bash
+cd /opt/finanzprognose
+sudo docker compose stop
+sudo mkdir -p data/verworfen && sudo mv data/finanzen.sqlite* data/verworfen/   # aktuellen Stand aufheben (inkl. -wal/-shm!)
+sudo cp -p data/pre-update/2026-11-13_201500_v1.3.0/finanzen.sqlite* data/
+sudo ./update.sh v1.3.0
+```
+
+Alles, was du nach dem Update eingetragen hast, fehlt danach. Es steht aber noch in `data/verworfen/`.
+
+### Umzug von einer bisherigen LXC-Installation
+
+1. Im alten Container: `cd /opt/finanzprognose && docker compose stop`
+2. In der neuen VM `install.sh` ausführen (Schritte 1–5). Dabei kannst du dieselbe NAS-Freigabe verwenden.
+3. Datenbank übernehmen:
+
+   ```bash
+   # in der VM
+   cd /opt/finanzprognose
+   sudo docker compose stop
+   sudo mkdir -p data/leer && sudo mv data/finanzen.sqlite* data/leer/
+   # alte Datenbank (inkl. finanzen.sqlite-wal/-shm, falls vorhanden) aus dem LXC nach data/ kopieren, z. B. per scp
+   sudo docker compose start
+   ```
+
+4. Im Browser prüfen, ob alle Konten da sind. Danach den alten Container abschalten.
 
 ---
 
@@ -136,10 +176,10 @@ Deine Daten liegen in `./data` und bleiben bei Updates erhalten.
 
 ```bash
 cd /opt/finanzprognose
-docker compose stop
-mkdir -p data/alt && mv data/finanzen.sqlite* data/alt/       # aktuellen Stand aufheben (inkl. -wal/-shm!)
-cp /mnt/nas-backup/finanzprognose/finanzen_2026-11-08_030000_v57.sqlite data/finanzen.sqlite
-docker compose start
+sudo docker compose stop
+sudo mkdir -p data/alt && sudo mv data/finanzen.sqlite* data/alt/       # aktuellen Stand aufheben (inkl. -wal/-shm!)
+sudo cp /mnt/nas-finanzen/finanzprognose/finanzen_2026-11-08_030000_v57.sqlite data/finanzen.sqlite
+sudo docker compose start
 ```
 
 Du musst nicht immer den ganzen Stand zurückholen. Für einzelne Fehler reicht meist **Verlauf → Rückgängig**.
@@ -147,7 +187,7 @@ Du musst nicht immer den ganzen Stand zurückholen. Für einzelne Fehler reicht 
 ## Zusätzlicher Schutz (empfohlen)
 
 - **Snapshots auf dem NAS** für die Backup-Freigabe aktivieren, z. B. Synology Snapshot Replication oder ZFS-Snapshots. Die App hat Schreibzugriff auf den Backup-Ordner. Schreibgeschützte Snapshots schützen die Sicherungen auch dann, wenn der Server kompromittiert wird.
-- **Proxmox-Backup (vzdump)** des LXC-Containers einplanen.
+- **Proxmox-Backup (vzdump)** der VM einplanen.
 - Die App **nicht ins Internet freigeben.** Für den Zugriff von unterwegs besser ein VPN wie WireGuard oder Tailscale nutzen.
 
 ## Bedienung in Kürze
@@ -179,3 +219,18 @@ Ohne Dev-Container: Python 3.12, `pip install -r requirements-dev.txt`, dann `mk
 `DB_PATH=./data/finanzen.sqlite BACKUP_DIR=./data/backup BACKUP_REQUIRE_MARKER=0 APP_PASSWORD= uvicorn app.main:app`.
 
 Die API-Dokumentation findest du unter `/api/docs`.
+
+### Release erstellen
+
+1. Änderungen auf `master` bringen und pushen.
+2. Auf GitHub unter *Releases → Draft a new release* einen neuen Tag im Format `vX.Y.Z` anlegen (z. B. `v1.4.0`), Release-Notizen schreiben und veröffentlichen.
+3. Der Workflow `.github/workflows/release.yml` führt die Tests aus, baut das Image, lädt es als `ghcr.io/robert2611/finanzprognose:vX.Y.Z` und `:latest` hoch und hängt `install.sh` an das Release.
+4. Auf dem Server: `sudo /opt/finanzprognose/update.sh`.
+
+Ein Release mit dem Haken **„Set as a pre-release“** (z. B. `v1.4.0-rc1`) bekommt kein `latest`. Es lässt sich gezielt mit `update.sh v1.4.0-rc1` testen, ohne dass `update.sh` ohne Versionsangabe es installiert.
+
+Das Image lokal bauen und mit der Produktions-Compose-Datei starten (braucht eine `.env` im Projektordner, siehe `.env.example`; der Ordner aus `BACKUP_HOST_DIR` muss eine `.nas-marker` enthalten):
+
+```bash
+docker build -t ghcr.io/robert2611/finanzprognose:dev . && APP_VERSION=dev docker compose --project-directory . -f deploy/docker-compose.yml up -d
+```
