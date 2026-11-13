@@ -9,18 +9,20 @@ deletes older backups, verifies each snapshot's integrity, and guards against si
 writing to an unmounted NAS.
 
 ## Interface
-Import: `from app import backup`. Config via env (captured at import):
-`BACKUP_DIR` (default `/backup`), `BACKUP_TIME` (default `03:00`),
-`BACKUP_REQUIRE_MARKER` (default `1`; `MARKER = ".nas-marker"`).
+Import: `from app import backup`. Every function takes the app's `Settings` `s`
+(`app/settings.py`): `s.backup_dir` (env `BACKUP_DIR`, default `/backup`), `s.backup_time`
+(env `BACKUP_TIME`, default `03:00`), `s.backup_require_marker` (env `BACKUP_REQUIRE_MARKER`,
+default `1`; `MARKER = ".nas-marker"`), `s.db_path`. Nothing is captured at import.
 
-- `backup.run_backup(force=False, reason="zeitplan") -> dict` — attempt a backup; returns
+- `backup.run_backup(s, force=False, reason="zeitplan") -> dict` — attempt a backup; returns
   the resulting status dict.
-- `backup.status() -> dict` — current status (persisted fields + live `backup_dir`,
+- `backup.status(s) -> dict` — current status (persisted fields + live `backup_dir`,
   `backup_time`, `current_version`, `pending_changes`).
-- `backup.list_backups(limit=100) -> list[dict]` — `{name, size, mtime}` for
+- `backup.list_backups(s, limit=100) -> list[dict]` — `{name, size, mtime}` for
   `finanzen_*.sqlite` files, newest-first.
-- `backup.start_scheduler() -> None` — start the daemon scheduler thread (called from the
-  app lifespan).
+- `backup.start_scheduler(s) -> threading.Event` — start the daemon scheduler thread;
+  setting the returned event stops it. The app lifespan starts it only when
+  `s.backup_scheduler` is true (env `BACKUP_SCHEDULER`, default `1`) and stops it on shutdown.
 
 **Artifacts in `BACKUP_DIR`** for a run at data-version `v`, local timestamp
 `YYYY-MM-DD_HHMMSS`:

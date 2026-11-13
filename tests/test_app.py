@@ -4,23 +4,22 @@ import tempfile
 
 import pytest
 
+from fastapi.testclient import TestClient
+
+from app import backup, db, forecast
+from app.main import create_app
+from app.settings import Settings
+
 _tmp = tempfile.mkdtemp()
-os.environ["DB_PATH"] = os.path.join(_tmp, "data", "finanzen.sqlite")
-os.environ["BACKUP_DIR"] = os.path.join(_tmp, "backup")
-os.environ["APP_PASSWORD"] = ""
-# Pin the marker requirement so test_backup is deterministic regardless of the ambient
-# environment (the dev container sets BACKUP_REQUIRE_MARKER=0 for local runs).
-os.environ["BACKUP_REQUIRE_MARKER"] = "1"
-
-from fastapi.testclient import TestClient  # noqa: E402
-
-from app import backup, db, forecast  # noqa: E402
-from app.main import app  # noqa: E402
+# Explicit settings, independent of the ambient environment (the dev container sets
+# BACKUP_REQUIRE_MARKER=0 for local runs). No scheduler thread in tests.
+S = Settings(db_path=os.path.join(_tmp, "data", "finanzen.sqlite"), backup_dir=os.path.join(_tmp, "backup"),
+             backup_require_marker=True, backup_scheduler=False, app_password="")
 
 
 @pytest.fixture(scope="module")
 def client():
-    with TestClient(app) as c:
+    with TestClient(create_app(S)) as c:
         yield c
 
 
@@ -84,7 +83,7 @@ def test_state_contract(client):
 
     # A column added directly to the table (bypassing TABLES/the response model, e.g. a future
     # migration) must not leak onto the wire: the contract is decoupled from the table shape.
-    conn = db.connect()
+    conn = db.connect(S.db_path)
     conn.execute("ALTER TABLE accounts ADD COLUMN extra_col TEXT")
     conn.close()
     row2 = next(a for a in client.get("/api/state").json()["accounts"] if a["id"] == acc["id"])
@@ -103,8 +102,8 @@ def test_backup_status_contract(client):
     assert isinstance(st["pending_changes"], bool)
 
 
-def test_nothing_can_be_deleted():
-    conn = db.connect()
+def test_nothing_can_be_deleted(client):
+    conn = db.connect(S.db_path)
     with pytest.raises(sqlite3.DatabaseError):
         conn.execute("DELETE FROM accounts")
     with pytest.raises(sqlite3.DatabaseError):
@@ -123,10 +122,10 @@ def test_percent_yearly():
 
 
 def test_backup(client):
-    os.makedirs(backup.BACKUP_DIR, exist_ok=True)
+    os.makedirs(S.backup_dir, exist_ok=True)
     r = client.post("/api/backup/run").json()
     assert r["last_result"] == "error" and ".nas-marker" in r["last_error"]
-    open(os.path.join(backup.BACKUP_DIR, ".nas-marker"), "w").close()
+    open(os.path.join(S.backup_dir, ".nas-marker"), "w").close()
     r = client.post("/api/backup/run").json()
     assert r["last_result"] == "ok"
     r = client.post("/api/backup/run").json()
@@ -135,21 +134,21 @@ def test_backup(client):
     import time; time.sleep(1.1)
     r = client.post("/api/backup/run").json()
     assert r["last_result"] == "ok"
-    files = backup.list_backups()
+    files = backup.list_backups(S)
     assert len(files) == 2  # old backup is kept
-    c = sqlite3.connect(os.path.join(backup.BACKUP_DIR, files[0]["name"]))
+    c = sqlite3.connect(os.path.join(S.backup_dir, files[0]["name"]))
     assert c.execute("SELECT COUNT(*) FROM accounts").fetchone()[0] >= 1
 
 
 def test_migrations_upgrade_preserves_data(monkeypatch, tmp_path):
     # Own temp database so this stays independent of the shared module-scoped DB.
-    monkeypatch.setattr(db, "DB_PATH", str(tmp_path / "mig.sqlite"))
+    path = str(tmp_path / "mig.sqlite")
 
     # A baseline (version 1) database holding one row, as an existing install would have.
-    db.init()
-    with db.tx() as conn:
+    db.init(path)
+    with db.tx(path) as conn:
         db.create(conn, "accounts", {"name": "Old", "kind": "checking", "note": ""})
-    with db.read() as conn:
+    with db.read(path) as conn:
         assert conn.execute("PRAGMA user_version").fetchone()[0] == 1
 
     # A new migration adds a column; init() must apply it and keep existing data.
@@ -158,13 +157,42 @@ def test_migrations_upgrade_preserves_data(monkeypatch, tmp_path):
             conn.execute("ALTER TABLE accounts ADD COLUMN color TEXT NOT NULL DEFAULT ''")
     monkeypatch.setattr(db, "MIGRATIONS", [(2, _v2)])
 
-    db.init()
-    with db.read() as conn:
+    db.init(path)
+    with db.read(path) as conn:
         assert conn.execute("PRAGMA user_version").fetchone()[0] == 2
         assert db._has_column(conn, "accounts", "color")
         assert [r["name"] for r in conn.execute("SELECT name FROM accounts")] == ["Old"]
 
     # Running again is a no-op (idempotent), not an error.
-    db.init()
-    with db.read() as conn:
+    db.init(path)
+    with db.read(path) as conn:
         assert conn.execute("PRAGMA user_version").fetchone()[0] == 2
+
+
+def test_settings_are_per_app(tmp_path):
+    """Two apps with different settings coexist in one process: own DB, own auth."""
+    def settings(name, password):
+        return Settings(db_path=str(tmp_path / name / "finanzen.sqlite"), backup_dir=str(tmp_path / name / "nas"),
+                        backup_scheduler=False, app_password=password)
+
+    with TestClient(create_app(settings("open", ""))) as open_c, \
+            TestClient(create_app(settings("locked", "secret"))) as locked_c:
+        r = open_c.post("/api/accounts", json={"name": "A", "start_balance": 0, "start_date": "2026-01-01"})
+        assert r.status_code == 200
+        assert [a["name"] for a in open_c.get("/api/state").json()["accounts"]] == ["A"]
+
+        assert locked_c.get("/healthz").status_code == 200
+        assert locked_c.get("/api/state").status_code == 401
+        assert locked_c.get("/api/state", auth=("admin", "wrong")).status_code == 401
+        state = locked_c.get("/api/state", auth=("admin", "secret")).json()
+        assert state["accounts"] == []  # separate database
+        st = locked_c.get("/api/backup/status", auth=("admin", "secret")).json()
+        assert st["backup_dir"] == str(tmp_path / "locked" / "nas")
+
+
+def test_settings_from_env():
+    s = Settings.from_env({"DB_PATH": "/x/db.sqlite", "BACKUP_REQUIRE_MARKER": "0", "BACKUP_SCHEDULER": "0",
+                           "APP_PASSWORD": "pw", "BACKUP_TIME": "04:30"})
+    assert s == Settings(db_path="/x/db.sqlite", backup_dir="/backup", backup_time="04:30",
+                         backup_require_marker=False, backup_scheduler=False, app_user="admin", app_password="pw")
+    assert Settings.from_env({}) == Settings()

@@ -16,8 +16,7 @@ Import: `from app import db`.
   JSON into dicts (or `None`).
 - `db.revert(conn, audit_id) -> dict` — undo the change recorded by `audit_log` row
   `audit_id`, as a new logged change; returns the resulting row.
-- `db.data_version(conn=None) -> int` — `MAX(audit_log.id)` (0 if empty). Opens its own
-  connection when `conn` is omitted.
+- `db.data_version(conn) -> int` — `MAX(audit_log.id)` (0 if empty).
 - `db.export_all(conn) -> dict` — the full dataset for backup/export.
 
 ## Dependencies & side effects

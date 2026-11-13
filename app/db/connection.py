@@ -1,9 +1,9 @@
-"""Connection and transaction plumbing: single DB path, single writer lock.
+"""Connection and transaction plumbing: explicit DB path, single writer lock.
 
-DB_PATH itself is defined in the package's __init__.py (the attribute tests
-and callers patch as `db.DB_PATH`); the lookup here is deliberately lazy
-(`from . import DB_PATH` inside the function, not at module scope) so a
-patched value is picked up on the next call.
+The database path is passed in by the caller (it comes from the app's `Settings`), so
+there is no module-level path to patch and several databases can be used in one process.
+The writer lock stays process-wide: it only needs to serialize writers, and sharing it
+between databases is harmless.
 """
 import sqlite3
 import threading
@@ -17,9 +17,8 @@ def now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds")
 
 
-def connect() -> sqlite3.Connection:
-    from . import DB_PATH
-    conn = sqlite3.connect(DB_PATH, timeout=30, isolation_level=None)
+def connect(path: str) -> sqlite3.Connection:
+    conn = sqlite3.connect(path, timeout=30, isolation_level=None)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys=ON")
     conn.execute("PRAGMA busy_timeout=30000")
@@ -27,10 +26,10 @@ def connect() -> sqlite3.Connection:
 
 
 @contextmanager
-def tx():
+def tx(path: str):
     """Write transaction: all or nothing."""
     with _write_lock:
-        conn = connect()
+        conn = connect(path)
         try:
             conn.execute("BEGIN IMMEDIATE")
             yield conn
@@ -43,8 +42,8 @@ def tx():
 
 
 @contextmanager
-def read():
-    conn = connect()
+def read(path: str):
+    conn = connect(path)
     try:
         yield conn
     finally:
