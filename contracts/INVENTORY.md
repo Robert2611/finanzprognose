@@ -152,7 +152,7 @@ container forwards 8000.
 | `PORT` | `8080` | Compose-only: host port. |
 | `TZ` | `Europe/Berlin` | Timezone (affects `BACKUP_TIME` wall-clock and local timestamps). |
 
-**Config files:** `.env` (from `.env.example`) for compose; `docker-compose.yml`
+**Config files:** `.env` (from `.env.example`) for compose; `deploy/docker-compose.yml`
 (1 worker, volumes `./data:/data` and `BACKUP_HOST_DIR:/backup`); `Dockerfile`
 (`python:3.12-slim`, `--workers 1`, healthcheck on `/healthz`); `.devcontainer/devcontainer.json`
 (sets `DB_PATH`/`BACKUP_DIR` under `./data`, `BACKUP_REQUIRE_MARKER=0`, `APP_PASSWORD=`);

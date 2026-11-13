@@ -229,4 +229,8 @@ Die API-Dokumentation findest du unter `/api/docs`.
 
 Ein Release mit dem Haken **„Set as a pre-release“** (z. B. `v1.4.0-rc1`) bekommt kein `latest`. Es lässt sich gezielt mit `update.sh v1.4.0-rc1` testen, ohne dass `update.sh` ohne Versionsangabe es installiert.
 
-Das Image lokal bauen und starten: `docker compose up -d --build` mit der `docker-compose.yml` im Projektordner (braucht eine `.env`, siehe `.env.example`).
+Das Image lokal bauen und mit der Produktions-Compose-Datei starten (braucht eine `.env` im Projektordner, siehe `.env.example`; der Ordner aus `BACKUP_HOST_DIR` muss eine `.nas-marker` enthalten):
+
+```bash
+docker build -t ghcr.io/robert2611/finanzprognose:dev . && APP_VERSION=dev docker compose --project-directory . -f deploy/docker-compose.yml up -d
+```

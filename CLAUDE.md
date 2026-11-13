@@ -31,8 +31,9 @@ python -m pytest -q tests/test_app.py::test_full_flow
 mkdir -p data/backup
 DB_PATH=./data/finanzen.sqlite BACKUP_DIR=./data/backup BACKUP_REQUIRE_MARKER=0 APP_PASSWORD= uvicorn app.main:app --reload
 
-# Build and run the production image locally from source (root docker-compose.yml; needs a .env, see .env.example)
-docker compose up -d --build
+# Build the image locally and run it with the production compose file (needs a .env, see .env.example;
+# --project-directory keeps ./data and .env relative to the repo root instead of deploy/)
+docker build -t ghcr.io/robert2611/finanzprognose:dev . && APP_VERSION=dev docker compose --project-directory . -f deploy/docker-compose.yml up -d
 
 # Release: publish a GitHub release with a tag vX.Y.Z -> .github/workflows/release.yml runs the tests,
 # pushes ghcr.io/robert2611/finanzprognose:vX.Y.Z (+ :latest unless prerelease) and attaches install.sh.
@@ -53,7 +54,7 @@ API docs are served at `/api/docs`. There is no linter or formatter configured.
 - `app/routes.py` exposes generic REST routes (`/api/{table}`, `/api/{table}/{id}`, `/archive`, `/restore`) on an `APIRouter`; each route gets the settings through `Depends(get_settings)` and passes `s.db_path` to `db.tx()`/`db.read()`. `MODELS` (in `schemas.py`) maps table names to Pydantic validators. `POST /api/accounts` is special: it also creates the account's first checkpoint (the starting balance) in the same transaction.
 - `app/forecast.py` is a pure function, `compute(state, start, months)`. It takes the raw table rows and returns the per-month, per-account item lists that the frontend renders directly. Every amount carries an `explanation` list, a human-readable derivation (base amount, then each adjustment applied). Keep these explanations accurate whenever the calculation logic changes, because showing them is a core feature.
 - `app/backup.py` functions all take the app's `Settings`. The daemon scheduler thread is started from the FastAPI lifespan (unless `backup_scheduler` is off), checks every 60s and stops on shutdown. Backup state is kept in `backup_status.json` next to the database.
-- `deploy/` holds the production delivery: `docker-compose.yml` (uses the released image, version pinned by `APP_VERSION` in `.env`), `install.sh` (sets up a fresh Debian VM: Docker, ghcr.io login, NAS mount, `.env`) and `update.sh` (copies the DB to `data/pre-update/`, switches the version, waits for the health check). The Dockerfile copies `deploy/` into the image at `/deploy` and sets the label `finanzprognose.version`; both scripts copy the deploy files out of the image, so they update themselves and only need a `read:packages` token. `install.sh` is standalone (it is also a release asset), so a few helpers are duplicated in both scripts; keep them in sync.
+- `deploy/` holds the production delivery: `docker-compose.yml` (the only compose file; uses the released image, version pinned by `APP_VERSION` in `.env`), `install.sh` (sets up a fresh Debian VM: Docker, ghcr.io login, NAS mount, `.env`) and `update.sh` (copies the DB to `data/pre-update/`, switches the version, waits for the health check). The Dockerfile copies `deploy/` into the image at `/deploy` and sets the label `finanzprognose.version`; both scripts copy the deploy files out of the image, so they update themselves and only need a `read:packages` token. `install.sh` is standalone (it is also a release asset), so a few helpers are duplicated in both scripts; keep them in sync.
 - `app/static/app.js` is the whole UI: hash-based views, with the full state loaded from `/api/state`. It sends `expected_updated_at` on every PUT.
 
 ### Data-safety invariants (do not break)
