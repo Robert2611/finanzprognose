@@ -1,6 +1,11 @@
+# Build-from-source variant, e.g. to try the production image locally.
+# Real installations use deploy/docker-compose.yml (the released image), set up by deploy/install.sh.
 services:
   finanzprognose:
-    build: .
+    build:
+      context: .
+      args:
+        APP_VERSION: ${APP_VERSION:-dev}
     container_name: finanzprognose
     restart: unless-stopped
     ports:
