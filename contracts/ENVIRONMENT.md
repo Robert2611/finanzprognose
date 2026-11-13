@@ -43,11 +43,11 @@ There is no separate dev server; the backend serves the SPA.
   export DB_PATH=$(mktemp -d)/finanzen.sqlite
   ```
 
-- `DB_PATH` is **read at import time** (and lazily thereafter as the module attribute
-  `db.DB_PATH`). For an in-process test harness, either set the env var **before importing
-  `app`**, or monkeypatch the attribute `app.db.DB_PATH` and re-run `app.db.init()` (the
-  existing `test_migrations_upgrade_preserves_data` uses the monkeypatch approach on its
-  own temp DB).
+- For an in-process test harness, don't use env vars at all: build the app with
+  `app.main.create_app(Settings(db_path=..., backup_dir=..., backup_scheduler=False, ...))`
+  and wrap it in `TestClient`. Each app has its own DB, backup dir, status file and auth, so
+  differently configured apps can coexist in one process (see `test_settings_are_per_app`).
+  The data layer takes the path explicitly: `db.init(path)`, `db.tx(path)`, `db.read(path)`.
 - A brand-new DB starts empty (no accounts/entries/...). `user_version` is set to the
   baseline (1) plus any applied migrations.
 - WAL mode means a DB on disk is three files: `finanzen.sqlite`, `-wal`, `-shm`. When
@@ -124,7 +124,7 @@ There is **no injectable clock**. To make time deterministic:
 Each gap below names a dependency a black-box test can't cleanly control, and suggests a
 seam. **Do not implement the seam** — record only.
 
-1. **Backup scheduler timing & 60s poll.** `start_scheduler()` spawns a daemon thread
+1. **Backup scheduler timing & 60s poll.** `start_scheduler(s)` spawns a daemon thread
    that loops every 60s comparing `datetime.now()` to `BACKUP_TIME`. A test cannot force
    "it is now 03:00" or fast-forward the loop. *Seam suggestion:* extract the "is a
    scheduled run due?" decision and the sleep interval into injectable parameters, or
@@ -140,18 +140,12 @@ seam. **Do not implement the seam** — record only.
 4. **"Disk full" and "slow NAS".** No seam to inject `ENOSPC` or latency into the file
    writes; only a constrained/throttled filesystem under `BACKUP_DIR` can reproduce them.
    *Seam:* route file writes through an injectable filesystem/open function.
-5. **Global/import-time config.** `DB_PATH`, `BACKUP_DIR`, `BACKUP_TIME`,
-   `BACKUP_REQUIRE_MARKER`, `APP_USER`, `APP_PASSWORD` are read into module globals at
-   import. Changing them after import requires monkeypatching the module attribute, not
-   the env var (except `db.DB_PATH`, which is re-read lazily on each `connect()`/`init()`).
-   `BACKUP_DIR`/`BACKUP_TIME`/`REQUIRE_MARKER` in `app.backup` and `APP_PASSWORD` in
-   `app.auth` are captured once. *Seam:* read config lazily (as the DB path already does)
-   or expose a `configure()` entry point.
-6. **Scheduler always starts.** The lifespan unconditionally starts the scheduler thread;
-   there is no flag to disable it for tests. It is harmless (60s cadence, no scheduled run
-   unless the wall clock matches `BACKUP_TIME` and nothing has run), but it is an
-   uncontrolled background thread during the test session. *Seam:* a `BACKUP_SCHEDULER=0`
-   switch, or start the scheduler outside the lifespan.
+5. ~~**Global/import-time config.**~~ *Closed:* all config lives in a per-app `Settings`
+   object (`app/settings.py`). `Settings.from_env()` reads the env vars for production;
+   tests pass `Settings(...)` to `create_app()`. No module reads config at import.
+6. ~~**Scheduler always starts.**~~ *Closed:* `Settings.backup_scheduler` (env
+   `BACKUP_SCHEDULER`, default `1`) controls whether the lifespan starts it, and the
+   lifespan stops it on shutdown.
 7. **Browser/DOM.** The repo ships no browser test harness; the frontend is only
    reachable via a real browser. E2E clauses tagged `[BROWSER-REQUIRED]` need Playwright
    (planned) pointed at the served SPA; `[HTTP-checkable]` ones can be verified with

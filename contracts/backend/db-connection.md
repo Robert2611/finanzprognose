@@ -11,28 +11,29 @@ plumbing every other data-layer function builds on.
 ## Interface
 Import: `from app import db` (re-exported from the `app.db` package).
 
-- `db.connect() -> sqlite3.Connection` — a new connection; `row_factory=sqlite3.Row`,
+- `db.connect(path) -> sqlite3.Connection` — a new connection to the database file `path`; `row_factory=sqlite3.Row`,
   `foreign_keys=ON`, `busy_timeout=30000`, autocommit (`isolation_level=None`).
-- `db.tx()` — context manager yielding a connection inside a write transaction
+- `db.tx(path)` — context manager yielding a connection inside a write transaction
   (`BEGIN IMMEDIATE` … `COMMIT`, `ROLLBACK` on any exception). Acquires the process-wide
   write lock for its whole body.
-- `db.read()` — context manager yielding a connection for reads; no transaction, no lock.
+- `db.read(path)` — context manager yielding a connection for reads; no transaction, no lock.
 - `db.now() -> str` — current time as UTC ISO-8601 with millisecond precision
   (e.g. `'2026-11-12T09:30:00.123+00:00'`).
-- `db.DB_PATH: str` — the database file path (module attribute; patchable by tests;
-  re-read lazily on each `connect()`).
+
+There is no module-level database path: callers pass the path explicitly (the app passes
+`Settings.db_path`, see `app/settings.py`), so several databases can be used in one process.
 
 ## Dependencies & side effects
-Reads `db.DB_PATH`. Opens/holds SQLite connections. `tx()` holds an in-process
+Opens/holds SQLite connections. `tx()` holds an in-process
 `threading.Lock` for the duration of the `with` block. No network, no files beyond the DB.
 
 ## Behavior clauses
 
 - `DB-CONN-001` [INFERRED] `connect()` returns a usable connection whose rows are
   mapping-style (`row['col']` works) because `row_factory` is `sqlite3.Row`.
-- `DB-CONN-002` [INFERRED] `connect()` honors the current value of `db.DB_PATH` at call
-  time, not the value captured at import (patching `db.DB_PATH` then calling `connect()`
-  opens the new path). [TEST: `test_migrations_upgrade_preserves_data` relies on this]
+- `DB-CONN-002` [INFERRED] `connect(path)` opens exactly the database at `path`; there is
+  no hidden global path, so two different paths can be used side by side in one process.
+  [TEST: `test_migrations_upgrade_preserves_data` and `test_settings_are_per_app` rely on this]
 - `DB-CONN-003` [README] Within a `tx()` block, all statements commit together on normal
   exit and roll back entirely if the block raises — partial writes never persist.
 - `DB-CONN-004` [README] `tx()` serializes writers: two `tx()` blocks cannot run their
@@ -51,9 +52,9 @@ Reads `db.DB_PATH`. Opens/holds SQLite connections. `tx()` holds an in-process
   (no connection leak on success or on exception).
 
 ## Examples
-- `with db.tx() as c: db.create(c, 'accounts', {...})` → committed; a later `read()` sees
+- `with db.tx(path) as c: db.create(c, 'accounts', {...})` → committed; a later `read(path)` sees
   the row.
-- `with db.tx() as c: db.create(...); raise RuntimeError()` → nothing persisted.
+- `with db.tx(path) as c: db.create(...); raise RuntimeError()` → nothing persisted.
 
 ## Out of scope / not specified
 - The exact `busy_timeout`/`timeout` numeric values as externally asserted behavior

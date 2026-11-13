@@ -2,7 +2,7 @@
 helpers that are derived from it."""
 import json
 
-from .connection import connect, now
+from .connection import now
 from .crud import _write, all_rows
 from .errors import NotFound
 from .schema import TABLES
@@ -43,15 +43,9 @@ def audit_list(conn, limit=200, before_id=None, entity=None, entity_id=None) -> 
     return out
 
 
-def data_version(conn=None) -> int:
+def data_version(conn) -> int:
     """Increases with every change; basis for 'only back up if something changed'."""
-    own = conn is None
-    conn = conn or connect()
-    try:
-        return conn.execute("SELECT COALESCE(MAX(id),0) FROM audit_log").fetchone()[0]
-    finally:
-        if own:
-            conn.close()
+    return conn.execute("SELECT COALESCE(MAX(id),0) FROM audit_log").fetchone()[0]
 
 
 def export_all(conn) -> dict:

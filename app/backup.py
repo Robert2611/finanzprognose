@@ -1,6 +1,6 @@
 """Daily backup to the NAS.
 
-  * Runs once a day at BACKUP_TIME (default 03:00).
+  * Runs once a day at Settings.backup_time (default 03:00).
   * Only backs up if something has changed since the last backup.
   * Old backups are NEVER deleted; every backup is a new file with a timestamp.
   * Each backup consists of a consistent SQLite copy (online backup API, checked with
@@ -8,6 +8,9 @@
   * Protection against "NAS not mounted": the target folder must contain the file .nas-marker,
     otherwise NOTHING is backed up and the app shows a red error.
   * If a backup fails, it is retried every hour.
+
+All configuration comes from the `Settings` passed in by the caller (the app's settings),
+never from module globals, so tests can use several configurations in one process.
 """
 import hashlib
 import json
@@ -15,44 +18,42 @@ import logging
 import os
 import sqlite3
 import threading
-import time
 from datetime import datetime, timedelta
 
 from . import db
+from .settings import Settings
 
 log = logging.getLogger("backup")
 
-BACKUP_DIR = os.environ.get("BACKUP_DIR", "/backup")
-BACKUP_TIME = os.environ.get("BACKUP_TIME", "03:00")
-REQUIRE_MARKER = os.environ.get("BACKUP_REQUIRE_MARKER", "1") == "1"
 MARKER = ".nas-marker"
 
 _lock = threading.Lock()
 
 
-def _status_file() -> str:
-    return os.path.join(os.path.dirname(os.path.abspath(db.DB_PATH)), "backup_status.json")
+def _data_version(s: Settings) -> int:
+    with db.read(s.db_path) as conn:
+        return db.data_version(conn)
 
 
-def status() -> dict:
+def status(s: Settings) -> dict:
     try:
-        with open(_status_file(), encoding="utf-8") as f:
+        with open(s.status_file, encoding="utf-8") as f:
             st = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         st = {}
-    st["backup_dir"] = BACKUP_DIR
-    st["backup_time"] = BACKUP_TIME
-    st["current_version"] = db.data_version()
+    st["backup_dir"] = s.backup_dir
+    st["backup_time"] = s.backup_time
+    st["current_version"] = _data_version(s)
     st["pending_changes"] = st["current_version"] != st.get("last_version")
     return st
 
 
-def _save_status(st: dict) -> None:
+def _save_status(s: Settings, st: dict) -> None:
     st = {k: v for k, v in st.items() if k not in ("backup_dir", "backup_time", "current_version", "pending_changes")}
-    tmp = _status_file() + ".tmp"
+    tmp = s.status_file + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(st, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, _status_file())
+    os.replace(tmp, s.status_file)
 
 
 def _fsync_file(path: str) -> None:
@@ -71,34 +72,35 @@ def _sha256(path: str) -> str:
     return h.hexdigest()
 
 
-def run_backup(force: bool = False, reason: str = "zeitplan") -> dict:
+def run_backup(s: Settings, force: bool = False, reason: str = "zeitplan") -> dict:
+    backup_dir = s.backup_dir
     with _lock:
-        st = status()
+        st = status(s)
         st["last_attempt"] = datetime.now().isoformat(timespec="seconds")
         st["last_reason"] = reason
         try:
-            if not os.path.isdir(BACKUP_DIR):
-                raise RuntimeError(f"Backup-Ziel {BACKUP_DIR} existiert nicht.")
-            if REQUIRE_MARKER and not os.path.exists(os.path.join(BACKUP_DIR, MARKER)):
+            if not os.path.isdir(backup_dir):
+                raise RuntimeError(f"Backup-Ziel {backup_dir} existiert nicht.")
+            if s.backup_require_marker and not os.path.exists(os.path.join(backup_dir, MARKER)):
                 raise RuntimeError(
                     f"Datei {MARKER} fehlt im Backup-Ziel – ist das NAS eingebunden? "
                     "Es wurde nichts gesichert.")
-            version = db.data_version()
+            version = _data_version(s)
             last_file = st.get("last_file")
             if (not force and version == st.get("last_version") and last_file
-                    and os.path.exists(os.path.join(BACKUP_DIR, last_file))):
+                    and os.path.exists(os.path.join(backup_dir, last_file))):
                 st["last_result"] = "unchanged"
                 st["last_error"] = None
                 return st
 
             stamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
             base = f"finanzen_{stamp}_v{version}"
-            final_db = os.path.join(BACKUP_DIR, base + ".sqlite")
-            final_json = os.path.join(BACKUP_DIR, base + ".json")
-            tmp_db = os.path.join(BACKUP_DIR, f".{base}.sqlite.tmp")
-            tmp_json = os.path.join(BACKUP_DIR, f".{base}.json.tmp")
+            final_db = os.path.join(backup_dir, base + ".sqlite")
+            final_json = os.path.join(backup_dir, base + ".json")
+            tmp_db = os.path.join(backup_dir, f".{base}.sqlite.tmp")
+            tmp_json = os.path.join(backup_dir, f".{base}.json.tmp")
 
-            src = db.connect()
+            src = db.connect(s.db_path)
             try:
                 dst = sqlite3.connect(tmp_db)
                 src.backup(dst)
@@ -123,7 +125,7 @@ def run_backup(force: bool = False, reason: str = "zeitplan") -> dict:
             os.replace(tmp_json, final_json)
 
             line = f"{stamp}\tv{version}\t{os.path.basename(final_db)}\tsha256={_sha256(final_db)}\t{reason}\n"
-            with open(os.path.join(BACKUP_DIR, "backups.log"), "a", encoding="utf-8") as f:
+            with open(os.path.join(backup_dir, "backups.log"), "a", encoding="utf-8") as f:
                 f.write(line)
                 f.flush()
                 os.fsync(f.fileno())
@@ -143,44 +145,48 @@ def run_backup(force: bool = False, reason: str = "zeitplan") -> dict:
                     except OSError:
                         pass
         finally:
-            _save_status(st)
-        return status()
+            _save_status(s, st)
+        return status(s)
 
 
-def list_backups(limit: int = 100) -> list[dict]:
-    if not os.path.isdir(BACKUP_DIR):
+def list_backups(s: Settings, limit: int = 100) -> list[dict]:
+    backup_dir = s.backup_dir
+    if not os.path.isdir(backup_dir):
         return []
     files = []
-    for name in os.listdir(BACKUP_DIR):
+    for name in os.listdir(backup_dir):
         if name.startswith("finanzen_") and name.endswith(".sqlite"):
-            p = os.path.join(BACKUP_DIR, name)
+            p = os.path.join(backup_dir, name)
             files.append({"name": name, "size": os.path.getsize(p),
                           "mtime": datetime.fromtimestamp(os.path.getmtime(p)).isoformat(timespec="seconds")})
     files.sort(key=lambda f: f["name"], reverse=True)
     return files[:limit]
 
 
-def _scheduler() -> None:
-    while True:
+def _scheduler(s: Settings, stop: threading.Event) -> None:
+    while not stop.is_set():
         try:
             now = datetime.now()
-            hh, mm = map(int, BACKUP_TIME.split(":"))
+            hh, mm = map(int, s.backup_time.split(":"))
             due = now.replace(hour=hh, minute=mm, second=0, microsecond=0)
-            st = status()
+            st = status(s)
             last_sched = st.get("last_scheduled_run")
             last_sched = datetime.fromisoformat(last_sched) if last_sched else None
             last_attempt = datetime.fromisoformat(st["last_attempt"]) if st.get("last_attempt") else None
             if now >= due and (last_sched is None or last_sched < due):
-                st = run_backup(reason="zeitplan")
+                st = run_backup(s, reason="zeitplan")
                 st["last_scheduled_run"] = now.isoformat(timespec="seconds")
-                _save_status(st)
+                _save_status(s, st)
             elif (st.get("last_result") == "error" and last_attempt
                   and now - last_attempt > timedelta(hours=1)):
-                run_backup(reason="wiederholung nach fehler")
+                run_backup(s, reason="wiederholung nach fehler")
         except Exception as ex:  # noqa: BLE001
             log.exception("Error in backup scheduler: %s", ex)
-        time.sleep(60)
+        stop.wait(60)
 
 
-def start_scheduler() -> None:
-    threading.Thread(target=_scheduler, name="backup-scheduler", daemon=True).start()
+def start_scheduler(s: Settings) -> threading.Event:
+    """Start the daily backup thread. Setting the returned event stops it."""
+    stop = threading.Event()
+    threading.Thread(target=_scheduler, args=(s, stop), name="backup-scheduler", daemon=True).start()
+    return stop

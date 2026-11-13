@@ -110,15 +110,14 @@ MIGRATIONS: list[tuple[int, "callable"]] = [
 ]
 
 
-def init() -> None:
-    # Lazy package-level lookups (not module-scope imports): DB_PATH and MIGRATIONS
-    # are patched as `db.DB_PATH` / `db.MIGRATIONS` by callers and tests, so each
-    # run of init() must re-read the current value rather than one captured at
-    # import time.
-    from . import DB_PATH, MIGRATIONS
+def init(path: str) -> None:
+    """Create or upgrade the database at `path`."""
+    # Lazy package-level lookup (not a module-scope import): MIGRATIONS is patched
+    # as `db.MIGRATIONS` by tests, so each run of init() must re-read the current value.
+    from . import MIGRATIONS
 
-    os.makedirs(os.path.dirname(os.path.abspath(DB_PATH)), exist_ok=True)
-    conn = connect()
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    conn = connect(path)
     try:
         conn.execute("PRAGMA journal_mode=WAL")   # must run outside a transaction
         conn.execute("PRAGMA synchronous=FULL")   # every transaction is safely on disk

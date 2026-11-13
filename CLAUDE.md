@@ -42,9 +42,11 @@ API docs are served at `/api/docs`. There is no linter or formatter configured.
 ## Architecture
 
 - `app/db.py` is the data layer, and every write goes through it. `TABLES` is the single whitelist of tables and of the columns that are writable through the API. It drives the generic CRUD, the DELETE-blocking triggers and the export. To add a column, update `SCHEMA`, `TABLES` and the Pydantic model in `main.py`. There is no migration system: the schema uses `CREATE TABLE IF NOT EXISTS`, and `user_version` is hard-coded to 1, so changes to existing tables need hand-written `ALTER TABLE` handling in `db.init()`.
-- `app/main.py` exposes generic REST routes (`/api/{table}`, `/api/{table}/{id}`, `/archive`, `/restore`), and `MODELS` maps table names to Pydantic validators. `POST /api/accounts` is special: it also creates the account's first checkpoint (the starting balance) in the same transaction. Static files are mounted at `/` last, so API routes must be registered before that mount.
+- `app/settings.py` holds all runtime config in a frozen `Settings` dataclass. `Settings.from_env()` reads the env vars (production); nothing else reads them, and no module captures config at import. To add a setting, add a field and its env var in `from_env()`.
+- `app/main.py` is the app factory: `create_app(settings)` builds an independent app (own DB, backup dir, auth, scheduler) and stores the settings on `app.state.settings`; `app = create_app()` is what uvicorn serves. Static files are mounted at `/` last, so API routes must be registered before that mount.
+- `app/routes.py` exposes generic REST routes (`/api/{table}`, `/api/{table}/{id}`, `/archive`, `/restore`) on an `APIRouter`; each route gets the settings through `Depends(get_settings)` and passes `s.db_path` to `db.tx()`/`db.read()`. `MODELS` (in `schemas.py`) maps table names to Pydantic validators. `POST /api/accounts` is special: it also creates the account's first checkpoint (the starting balance) in the same transaction.
 - `app/forecast.py` is a pure function, `compute(state, start, months)`. It takes the raw table rows and returns the per-month, per-account item lists that the frontend renders directly. Every amount carries an `explanation` list, a human-readable derivation (base amount, then each adjustment applied). Keep these explanations accurate whenever the calculation logic changes, because showing them is a core feature.
-- `app/backup.py` runs a daemon scheduler thread, started from the FastAPI lifespan, that checks every 60s. Backup state is kept in `backup_status.json` next to the database.
+- `app/backup.py` functions all take the app's `Settings`. The daemon scheduler thread is started from the FastAPI lifespan (unless `backup_scheduler` is off), checks every 60s and stops on shutdown. Backup state is kept in `backup_status.json` next to the database.
 - `app/static/app.js` is the whole UI: hash-based views, with the full state loaded from `/api/state`. It sends `expected_updated_at` on every PUT.
 
 ### Data-safety invariants (do not break)
@@ -68,4 +70,4 @@ API docs are served at `/api/docs`. There is no linter or formatter configured.
 
 ### Tests
 
-There is a single file, `tests/test_app.py`. It sets `DB_PATH`/`BACKUP_DIR` env vars to a temp dir **before** importing `app`, because those paths are read at import time. All tests share one module-scoped DB, so later tests see data created by earlier ones.
+There is a single file, `tests/test_app.py`. It builds the app with `create_app(Settings(db_path=<tmp>, backup_dir=<tmp>, backup_scheduler=False, ...))` and wraps it in `TestClient`; no env vars are involved. For a different config (auth on, marker off, other DB), build another app in the same process instead of starting a server. Most tests share one module-scoped DB, so later tests see data created by earlier ones.

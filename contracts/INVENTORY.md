@@ -126,9 +126,11 @@ by `navigation.md` + `backup-view.md`); it only wires `load()`+`render()`+pill p
 
 ## 3. How the app is started, configured and run
 
-**Entry point:** `app.main:app` (FastAPI). Run with
+**Entry point:** `app.main:app` (FastAPI), built by `create_app(Settings.from_env())`. Run with
 `uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1`. The FastAPI *lifespan*
-runs `db.init()` then `backup.start_scheduler()` on startup.
+runs `db.init(path)` then (unless `BACKUP_SCHEDULER=0`) `backup.start_scheduler(s)` on
+startup, and stops the scheduler on shutdown. `create_app(settings)` builds further
+independent instances (used by tests).
 
 **Ports:** container listens on **8000**; Docker maps host `${PORT:-8080}→8000`. Dev
 container forwards 8000.
@@ -139,10 +141,11 @@ container forwards 8000.
 **Environment variables:**
 | Var | Default | Meaning |
 |---|---|---|
-| `DB_PATH` | `/data/finanzen.sqlite` | SQLite file location (parent dir auto-created). Read lazily as `db.DB_PATH`. |
+| `DB_PATH` | `/data/finanzen.sqlite` | SQLite file location (parent dir auto-created). `Settings.db_path`. |
 | `BACKUP_DIR` | `/backup` | Backup output directory (the NAS mount). |
 | `BACKUP_TIME` | `03:00` | Daily backup time, `HH:MM`, 24h. |
 | `BACKUP_REQUIRE_MARKER` | `1` | If `1`, refuse backup unless `BACKUP_DIR/.nas-marker` exists. |
+| `BACKUP_SCHEDULER` | `1` | If `0`, the daily backup thread is not started (tests). |
 | `APP_USER` | `admin` | Basic-auth username. |
 | `APP_PASSWORD` | `` (empty) | Basic-auth password; **empty disables auth entirely**. |
 | `BACKUP_HOST_DIR` | — | Compose-only: host path bind-mounted to `/backup`. |
@@ -167,11 +170,10 @@ container forwards 8000.
 
 - **Framework:** `pytest` (9.2.0) + FastAPI `TestClient` (needs `httpx` 0.28.1).
   Install via `pip install -r requirements-dev.txt`. Run with `python -m pytest -q`.
-- **Single test file:** `tests/test_app.py` (10 tests).
-- **Env setup:** the module sets `DB_PATH`, `BACKUP_DIR`, `APP_PASSWORD=""`,
-  `BACKUP_REQUIRE_MARKER=1` into a fresh `tempfile.mkdtemp()` **before importing `app`**,
-  because those paths are read at import time.
-- **Fixtures:** one module-scoped `client` fixture wrapping `TestClient(app)` (which runs
+- **Single test file:** `tests/test_app.py` (11 tests).
+- **Setup:** the module builds a `Settings` pointing at a fresh `tempfile.mkdtemp()`
+  (`backup_require_marker=True`, `backup_scheduler=False`, no password); no env vars.
+- **Fixtures:** one module-scoped `client` fixture wrapping `TestClient(create_app(S))` (which runs
   the lifespan). Tests share one DB and are **order-dependent** (e.g. `test_backup`
   expects exactly 2 backup files) — this is a known gap tracked as **B-004**.
 - **Existing tests:** `test_full_flow`, `test_optimistic_locking_and_audit`,

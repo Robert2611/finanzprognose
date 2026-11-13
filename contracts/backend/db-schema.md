@@ -11,7 +11,7 @@ drives the generic CRUD and export.
 ## Interface
 Import: `from app import db`.
 
-- `db.init() -> None` — create/upgrade the database at `db.DB_PATH`. Safe to call
+- `db.init(path) -> None` — create/upgrade the database at `path`. Safe to call
   repeatedly. Sets WAL + `synchronous=FULL`, applies `SCHEMA`, ensures `user_version >= 1`,
   then applies each pending migration in `MIGRATIONS` in its own transaction.
 - `db.TABLES: dict[str, list[str]]` — the writable-column whitelist, keys
@@ -22,12 +22,12 @@ Import: `from app import db`.
 - `db._has_column(conn, table, col) -> bool` — helper used to guard idempotent `ALTER`s.
 
 ## Dependencies & side effects
-Creates the parent directory of `db.DB_PATH`. Creates/alters the SQLite schema. Reads
-`db.DB_PATH` and `db.MIGRATIONS` lazily on each call (so patched values take effect).
+Creates the parent directory of `path`. Creates/alters the SQLite schema. Reads
+`db.MIGRATIONS` lazily on each call (so a patched value takes effect).
 
 ## Behavior clauses
 
-- `DB-SCHEMA-001` [INFERRED] `init()` on a non-existent `DB_PATH` creates the parent
+- `DB-SCHEMA-001` [INFERRED] `init(path)` on a non-existent `path` creates the parent
   directory and an empty, fully-structured database (all tables, triggers, index present).
 - `DB-SCHEMA-002` [INFERRED] `init()` is idempotent: calling it again on an existing
   database makes no destructive change and does not error.
