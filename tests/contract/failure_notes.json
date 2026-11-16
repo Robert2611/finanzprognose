@@ -1,0 +1,32 @@
+{
+ "test_create_with_missing_whitelisted_keys_uses_defaults": {
+  "contract": "DB-CRUD-004: missing whitelisted keys are inserted as NULL/column default. data/schema.md (DATA-014): accounts.kind defaults to 'checking'.",
+  "happened": "db.create(c, 'accounts', {'name': 'only name'}) raised sqlite3.IntegrityError: NOT NULL constraint failed: accounts.kind. The missing key was inserted as NULL, so the column default was not used.",
+  "class": "LIKELY APP BUG",
+  "note": "Also CONTRACT UNCLEAR (F-15): 'NULL/column default' is ambiguous for NOT NULL columns. The API always sends kind, so this is only reachable through the data layer."
+ },
+ "test_opening_balance_is_the_start_checkpoint": {
+  "contract": "E2E-ONBOARD-005: the account's starting month opens at the start balance.",
+  "happened": "forecast.compute: for start month 2026-01 with a start checkpoint on 2026-01-15 (balance 100000) the account's per-month 'opening' is None, not 100000.",
+  "class": "LIKELY APP BUG",
+  "note": "FC-006 does not define 'opening' for the start month (F-19), so the wording of the clause is thin. The e2e clause is explicit. Same finding at HTTP level in test_forecast_of_the_new_account_opens_at_the_start_balance."
+ },
+ "test_forecast_of_the_new_account_opens_at_the_start_balance": {
+  "contract": "E2E-ONBOARD-005: GET /api/forecast?start=2026-01&months=12 -> 12 months; the starting month opens at the start balance.",
+  "happened": "The 12 months are returned, but the account's opening in 2026-01 is null instead of 100000 (assert None == 100000).",
+  "class": "LIKELY APP BUG",
+  "note": "Same root cause as test_opening_balance_is_the_start_checkpoint. Possibly intended (the account did not exist at the start of the month) but then the e2e clause is wrong."
+ },
+ "test_run_response_has_the_same_fields_as_status": {
+  "contract": "API-BKP-001 / API-BKP shape: POST /api/backup/run returns 200 BackupStatusOut with every field (nullable fields present as null).",
+  "happened": "After a first-ever failed run the POST response lacks keys that GET /api/backup/status returns (e.g. last_success); the key sets differ.",
+  "class": "LIKELY APP BUG",
+  "note": "GET status does include all keys. Clients reading last_success from the POST response get a KeyError/undefined."
+ },
+ "test_status_after_error_sets_last_error": {
+  "contract": "BKP-018 / API-BKP shape: after an error last_error is set and last_success/last_version are unchanged (null when there was no success).",
+  "happened": "KeyError: 'last_success' on the POST /api/backup/run response after a failed first run: the key is absent rather than null.",
+  "class": "LIKELY APP BUG",
+  "note": "Same root cause as test_run_response_has_the_same_fields_as_status."
+ }
+}

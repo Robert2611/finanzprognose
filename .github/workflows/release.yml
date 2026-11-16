@@ -31,10 +31,11 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - name: Run tests
+      - name: Run tests (including the browser tests of the contract suite)
         run: |
-          pip install -r requirements-dev.txt
-          python -m pytest -q
+          pip install -r requirements-contract.txt
+          python -m playwright install --with-deps chromium
+          python -m pytest -q -m ""
 
       - name: Image name and tags
         id: meta
