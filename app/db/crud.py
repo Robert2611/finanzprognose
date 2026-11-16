@@ -33,8 +33,9 @@ def _audit(conn, action, entity, entity_id, before, after, comment="", reverts_i
 def create(conn, table: str, data: dict, comment: str = "") -> dict:
     fields = TABLES[table]
     ts = now()
-    cols = fields + ["created_at", "updated_at"]
-    vals = [data.get(f) for f in fields] + [ts, ts]
+    given = [f for f in fields if f in data]  # missing keys fall back to the column default
+    cols = given + ["created_at", "updated_at"]
+    vals = [data[f] for f in given] + [ts, ts]
     cur = conn.execute(
         f"INSERT INTO {table}({','.join(cols)}) VALUES({','.join('?' * len(cols))})", vals
     )

@@ -125,9 +125,9 @@ def backup_status(s: Settings = Depends(get_settings)):
     return backup.status(s) | {"files": backup.list_backups(s, 30)}
 
 
-@router.post("/api/backup/run")
+@router.post("/api/backup/run", response_model=BackupStatusOut)
 def backup_run(s: Settings = Depends(get_settings)):
-    return backup.run_backup(s, force=False, reason="manuell")
+    return backup.run_backup(s, force=False, reason="manuell") | {"files": backup.list_backups(s, 30)}
 
 
 @router.get("/api/export")

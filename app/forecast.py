@@ -155,11 +155,10 @@ def compute(state: dict, start: str, months: int) -> dict:
                 apply(evs[i][3], items)
                 i += 1
             mo = out_months[k]
-            mo["accounts"][acc["id"]] = {"opening": opening, "closing": running, "items": items}
             if opening is None and items and items[0]["type"] == "checkpoint":
-                mo["opening"] += items[0]["balance"]  # account starts in this month
-            else:
-                mo["opening"] += opening or 0
+                opening = items[0]["balance"]  # account starts in this month: it opens at the start balance
+            mo["accounts"][acc["id"]] = {"opening": opening, "closing": running, "items": items}
+            mo["opening"] += opening or 0
             mo["closing"] += running or 0
             for it in items:
                 if it["type"] == "booking":
