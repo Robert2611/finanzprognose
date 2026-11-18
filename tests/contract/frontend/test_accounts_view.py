@@ -190,7 +190,8 @@ def test_saving_a_checkpoint_refreshes_the_card(s, app_page):
     put_value(dlg, "Kontostand", "5.000,00")
     dlg.locator("button.primary").click()
     expect(page.locator("#toast")).to_contain_text("Gespeichert")
-    assert "5.000,00 € am 20.2.2026" in norm(card_of(page, "Giro").inner_text())
+    # the toast shows before the cards reload, so wait for the new value (\s also matches the NBSPs)
+    expect(card_of(page, "Giro")).to_contain_text(re.compile(r"5\.000,00\s€\sam\s20\.2\.2026"))
 
 
 @pytest.mark.contract("FE-ACCOUNTS-011")
