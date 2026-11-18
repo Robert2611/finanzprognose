@@ -155,3 +155,18 @@ def test_pill_refreshes_periodically(s, app_page, nas):
     assert s.c.post("/api/backup/run").json()["last_result"] == "ok"
     page.clock.run_for("01:00:00")
     expect(pill(page)).to_contain_text("Gesichert")
+
+
+@pytest.mark.contract("FE-BACKUP-010")
+@pytest.mark.parametrize("fail", ["http", "network"])
+def test_failed_run_request_shows_error_toast(s, app_page, nas, fail):
+    """FE-BACKUP-010: a failing POST /api/backup/run (500 or aborted) shows an error toast instead of doing nothing."""
+    nas.put_marker()
+    s.account("Giro")
+    page = open_backup(app_page)
+    if fail == "http":
+        page.route("**/api/backup/run", lambda r: r.fulfill(status=500, content_type="application/json", body='{"detail":"kaputt"}'))
+    else:
+        page.route("**/api/backup/run", lambda r: r.abort())
+    page.get_by_role("button", name="Jetzt sichern").click()
+    expect(page.locator("#toast .e")).to_contain_text("Sicherung fehlgeschlagen:")

@@ -256,6 +256,8 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | BKP-021 | R/I | — |
 | BKP-022 | I | — |
 | BKP-023 | R | — |
+| BKP-024 | R | — |
+| BKP-025 | I | — |
 | RESTORE-001 | R | — |
 | RESTORE-002 | R | — |
 | RESTORE-003 | I | — |
@@ -290,6 +292,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | FE-BACKUP-004..006 | I | — |
 | FE-BACKUP-007 | R | — |
 | FE-BACKUP-008..009 | I | — |
+| FE-BACKUP-010 | I | — |
 
 (No existing test covers any frontend clause — there is no browser/DOM harness today.)
 

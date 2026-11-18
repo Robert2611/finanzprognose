@@ -90,6 +90,12 @@ and scheduling. Serializes runs with an internal lock.
   half-written final artifact.
 - `BKP-017` [INFERRED] On any failure mid-run, the temporary files are removed (best effort)
   and no final `.sqlite`/`.json` appears.
+- `BKP-024` [README] SQLite never reads or writes a file inside `BACKUP_DIR` (file locking on
+  SMB/NFS is unreliable and can hang). The snapshot, the integrity check and the JSON export
+  are built in a staging area in the directory of `DB_PATH` (dot-prefixed `.tmp` names) and
+  only the finished files are copied to `BACKUP_DIR` (then fsynced and renamed per BKP-016).
+- `BKP-025` [INFERRED] The staging files are removed after every run, successful or not, so
+  the DB directory holds no `.tmp` leftovers.
 
 ### Status & retry
 - `BKP-018` [INFERRED] After a run, `status()` reflects `last_attempt`, `last_reason`,

@@ -171,7 +171,12 @@ mount_nas() {
 setup_smb() {
     local server share user pass
     ask server "NAS host name or IP"
-    ask share "Share name (e.g. finanzbackup)"
+    ask share "Share name, optionally with subfolder (e.g. finanzbackup or homes/finanzprognose)"
+    # A leading/trailing slash makes the UNC path malformed ("//host//share").
+    share=${share#"${share%%[!/]*}"}
+    share=${share%"${share##*[!/]}"}
+    [[ -n $share ]] || die "Share name must not be empty"
+    share=${share// /\\040} # spaces must be escaped in fstab
     ask user "NAS user (needs write access to the share)"
     ask_secret pass "NAS password"
     umask 077

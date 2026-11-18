@@ -16,6 +16,7 @@ import hashlib
 import json
 import logging
 import os
+import shutil
 import sqlite3
 import threading
 from datetime import datetime, timedelta
@@ -97,19 +98,24 @@ def run_backup(s: Settings, force: bool = False, reason: str = "zeitplan") -> di
             base = f"finanzen_{stamp}_v{version}"
             final_db = os.path.join(backup_dir, base + ".sqlite")
             final_json = os.path.join(backup_dir, base + ".json")
+            # SQLite must not write to the NAS directly (file locking on SMB/NFS is unreliable
+            # and can hang), so build and verify both files next to the database first.
+            work_dir = os.path.dirname(os.path.abspath(s.db_path))
+            loc_db = os.path.join(work_dir, f".{base}.sqlite.tmp")
+            loc_json = os.path.join(work_dir, f".{base}.json.tmp")
             tmp_db = os.path.join(backup_dir, f".{base}.sqlite.tmp")
             tmp_json = os.path.join(backup_dir, f".{base}.json.tmp")
 
             src = db.connect(s.db_path)
             try:
-                dst = sqlite3.connect(tmp_db)
+                dst = sqlite3.connect(loc_db)
                 src.backup(dst)
                 dst.close()
                 export = db.export_all(src)
             finally:
                 src.close()
 
-            chk = sqlite3.connect(tmp_db)
+            chk = sqlite3.connect(loc_db)
             try:
                 res = chk.execute("PRAGMA integrity_check").fetchone()[0]
             finally:
@@ -117,10 +123,11 @@ def run_backup(s: Settings, force: bool = False, reason: str = "zeitplan") -> di
             if res != "ok":
                 raise RuntimeError(f"Integritätsprüfung der Sicherung fehlgeschlagen: {res}")
 
-            with open(tmp_json, "w", encoding="utf-8") as f:
+            with open(loc_json, "w", encoding="utf-8") as f:
                 json.dump(export, f, ensure_ascii=False, indent=1)
-            for p in (tmp_db, tmp_json):
-                _fsync_file(p)
+            for src_path, dst_path in ((loc_db, tmp_db), (loc_json, tmp_json)):
+                shutil.copyfile(src_path, dst_path)
+                _fsync_file(dst_path)
             os.replace(tmp_db, final_db)
             os.replace(tmp_json, final_json)
 
@@ -137,7 +144,7 @@ def run_backup(s: Settings, force: bool = False, reason: str = "zeitplan") -> di
             st["last_result"] = "error"
             st["last_error"] = str(ex)
             log.error("Backup failed: %s", ex)
-            for p in ("tmp_db", "tmp_json"):
+            for p in ("tmp_db", "tmp_json", "loc_db", "loc_json"):
                 path = locals().get(p)
                 if path and os.path.exists(path):
                     try:
@@ -145,6 +152,13 @@ def run_backup(s: Settings, force: bool = False, reason: str = "zeitplan") -> di
                     except OSError:
                         pass
         finally:
+            for p in ("loc_db", "loc_json"):
+                path = locals().get(p)
+                if path and os.path.exists(path):
+                    try:
+                        os.remove(path)
+                    except OSError:
+                        pass
             _save_status(s, st)
         return status(s)
 

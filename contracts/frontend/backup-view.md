@@ -39,6 +39,9 @@ status on an interval and after actions.
   outcome: `"Sicherung erstellt"` (ok), `"Keine Änderungen seit der letzten Sicherung"`
   (unchanged), or an error toast `"Sicherung fehlgeschlagen: <error>"`; the panel and pill
   refresh.
+- `FE-BACKUP-010` [INFERRED] If the `POST /api/backup/run` request itself fails (HTTP error
+  or network failure), the click is not silently swallowed: an error toast
+  `"Sicherung fehlgeschlagen: <message>"` is shown and the panel and pill refresh.
 - `FE-BACKUP-005` [INFERRED] The existing-backups panel lists up to 30 files (name + size in
   KB) newest-first, or `"Keine Sicherungen gefunden."` when empty.
 - `FE-BACKUP-006` [INFERRED] `"Export als JSON herunterladen"` is a link to `/api/export`

@@ -16,9 +16,11 @@ export async function renderBackup(main) {
   const st = await api('GET', '/api/backup/status');
   const res = { ok: html`<span class="pos">erfolgreich</span>`, unchanged: 'keine Änderungen – nichts zu sichern', error: html`<span class="neg">FEHLER</span>` }[st.last_result] ?? '—';
   const run = async () => {
-    const r = await api('POST', '/api/backup/run');
-    if (r.last_result === 'error') toast('Sicherung fehlgeschlagen: ' + r.last_error, true);
-    else toast(r.last_result === 'unchanged' ? 'Keine Änderungen seit der letzten Sicherung' : 'Sicherung erstellt');
+    try {
+      const r = await api('POST', '/api/backup/run');
+      if (r.last_result === 'error') toast('Sicherung fehlgeschlagen: ' + r.last_error, true);
+      else toast(r.last_result === 'unchanged' ? 'Keine Änderungen seit der letzten Sicherung' : 'Sicherung erstellt');
+    } catch (ex) { toast('Sicherung fehlgeschlagen: ' + ex.message, true); }
     renderBackup(main); refreshBackupPill();
   };
   renderLit(html`<h2>Sicherung</h2>${st.last_result === 'error' ? html`<div class="banner err"><b>Letzte Sicherung fehlgeschlagen:</b> ${st.last_error}</div>` : ''}

@@ -144,3 +144,41 @@ def test_scheduled_backup_runs_once_per_day_at_backup_time():
 @pytest.mark.skip(reason="Testability gap TG-2: the hourly retry keys off datetime.now() minus last_attempt; no clock seam")
 def test_failed_backup_is_retried_about_hourly():
     """BKP-019: skipped, see ENVIRONMENT TG-2."""
+
+
+def staging_leftovers(db_path):
+    return [n for n in os.listdir(os.path.dirname(db_path)) if n.endswith(".tmp")]
+
+
+@pytest.mark.contract("BKP-024")
+def test_sqlite_never_touches_the_backup_dir(client, healthy, monkeypatch):
+    """BKP-024: sqlite3 opens only files outside BACKUP_DIR; the NAS only receives finished copies."""
+    import sqlite3
+    opened = []
+    real = sqlite3.connect
+    monkeypatch.setattr(backup.sqlite3, "connect", lambda p, *a, **k: (opened.append(str(p)), real(p, *a, **k))[1])
+    assert run(client)["last_result"] == "ok"
+    assert opened and not [p for p in opened if str(healthy.path) in p]
+
+
+@pytest.mark.contract("BKP-025")
+def test_staging_files_removed_after_success_and_failure(client, healthy, db_path, bump):
+    """BKP-025: no .tmp staging files stay in the DB directory after an ok run or a failed run."""
+    assert run(client)["last_result"] == "ok"
+    assert staging_leftovers(db_path) == []
+    bump()
+    healthy.remove_marker()
+    assert run(client)["last_result"] == "error"
+    assert staging_leftovers(db_path) == []
+
+
+@pytest.mark.contract("BKP-025", "BKP-017")
+def test_failed_copy_to_nas_cleans_staging_and_nas(client, healthy, db_path, monkeypatch):
+    """BKP-017/025: a failure while copying to the NAS leaves no temp files on either side and no final artifact."""
+    def boom(*a, **k):
+        raise OSError("copy failed")
+    monkeypatch.setattr(backup.shutil, "copyfile", boom)
+    st = run(client)
+    assert st["last_result"] == "error" and "copy failed" in st["last_error"]
+    assert staging_leftovers(db_path) == []
+    assert healthy.names() == [".nas-marker"]
