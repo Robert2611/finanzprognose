@@ -149,3 +149,22 @@ def test_backup_pill_opens_the_backup_view(one_account):
     pill.click()
     expect(page.locator("#main")).to_contain_text("Sicherung")
     assert page.evaluate("location.hash") == "#sicherung"
+
+
+@pytest.mark.contract("FE-NAV-011")
+def test_slow_forecast_does_not_clobber_the_view_navigated_to(one_account):
+    """FE-NAV-011: leaving the forecast while its data loads: the late response neither errors nor overwrites the new view."""
+    page = one_account.open("verlauf")
+    expect(page.locator("#main")).to_contain_text("Änderungsverlauf")
+    held = []
+    page.route("**/api/forecast*", lambda r: held.append(r))
+    page.locator('#nav button[data-view="prognose"]').click()
+    expect(page.locator("#main #chart")).to_have_count(1)      # skeleton is up, data request is held
+    page.locator('#nav button[data-view="verlauf"]').click()
+    expect(page.locator("#main")).to_contain_text("Änderungsverlauf")
+    assert len(held) == 1
+    with page.expect_response("**/api/forecast*"):
+        held[0].continue_()
+    page.wait_for_timeout(300)                                   # let the stale render run
+    expect(page.locator("#main")).to_contain_text("Änderungsverlauf")
+    expect(page.locator("#main .banner.err")).to_have_count(0)

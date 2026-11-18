@@ -47,6 +47,7 @@ function auditRowTpl(a, onDone) {
 
 export async function renderAudit(main) {
   let rows = await api('GET', '/api/audit?limit=200');
+  if (S.view !== 'verlauf') return; // navigated away while loading
   let hasMore = rows.length === 200;
   const draw = () => renderLit(html`<div class="toolbar"><h2 style="margin:0">Änderungsverlauf</h2><span class="muted small">Jede Änderung wird unveränderlich protokolliert – mit Vorher- und Nachher-Zustand.</span></div>
     <div class="panel table-wrap" style="max-height:none"><table><thead><tr><th>Zeitpunkt</th><th>Aktion</th><th>Objekt</th><th>Änderung</th><th></th></tr></thead>

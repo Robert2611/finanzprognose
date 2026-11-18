@@ -276,6 +276,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | FE-CORE-022..027 | I | — |
 | FE-FORM-001..015 | I | — |
 | FE-NAV-001..010 | I | — |
+| FE-NAV-011 | I | — |
 | FE-FORECAST-001..010 | I | — |
 | FE-FORECAST-011 | R | — |
 | FE-FORECAST-012 | R | — |

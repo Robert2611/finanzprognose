@@ -39,6 +39,8 @@ re-renders. The active view maps: `prognose→forecast`, `buchungen→entries`,
   `active` class; others do not.
 - `FE-NAV-005` [INFERRED] Changing `location.hash` (back/forward or manual) switches the
   view to match the hash.
+- `FE-NAV-011` [INFERRED] A view whose data is still loading when the user switches to another
+  view never draws over it: a late response is dropped and no error banner appears.
 - `FE-NAV-006` [INFERRED] An unknown/empty hash renders the forecast ("Prognose") view.
 - `FE-NAV-007` [INFERRED] If a view's render throws, `#main` shows a `.banner.err` with the
   error message instead of crashing the shell.

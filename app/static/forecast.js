@@ -17,6 +17,7 @@ export async function renderForecast(main) {
     <div id="warn"></div><div class="panel" style="margin-bottom:16px"><div id="chart"></div></div>
     <div class="fc-layout"><div class="panel table-wrap" id="ftable"></div><div class="panel detail" id="fdetail"></div></div>`, main);
   const fc = S.fc = await api('GET', `/api/forecast?start=${S.from}&months=${S.months}`);
+  if (S.view !== 'prognose') return; // navigated away while loading: #chart etc. are gone, don't clobber the new view
   if (!S.sel || !fc.months.some(m => m.month === S.sel)) S.sel = fc.months[0].month;
   const neg = fc.months.find(m => m.closing < 0);
   renderLit(html`${fc.warnings.map(w => html`<div class="banner warn">${warnMsg(w)}</div>`)}

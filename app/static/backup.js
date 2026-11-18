@@ -1,6 +1,6 @@
 // ------------------------------------------------------------ Sicherung
 import { html, render as renderLit } from './vendor/lit-html.js';
-import { $, eur, fTs, api, toast } from './core.js';
+import { $, eur, fTs, api, toast, S } from './core.js';
 
 export async function refreshBackupPill() {
   const pill = $('#backupPill');
@@ -14,6 +14,7 @@ export async function refreshBackupPill() {
 }
 export async function renderBackup(main) {
   const st = await api('GET', '/api/backup/status');
+  if (S.view !== 'sicherung') return; // navigated away while loading
   const res = { ok: html`<span class="pos">erfolgreich</span>`, unchanged: 'keine Änderungen – nichts zu sichern', error: html`<span class="neg">FEHLER</span>` }[st.last_result] ?? '—';
   const run = async () => {
     try {
