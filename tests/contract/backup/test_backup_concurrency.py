@@ -4,7 +4,7 @@ import pytest
 
 from app import backup, db
 from tests.contract.backend.conftest import make_entry
-from tests.contract.backup.conftest import table_rows
+from tests.contract.backup.conftest import table_rows, version_of
 from tests.contract.helpers.sqlite_view import integrity_check, scalar
 
 
@@ -68,7 +68,8 @@ def test_backup_taken_while_writes_happen_is_a_consistent_snapshot(client, nas, 
             w.wait_for(seen)                 # make sure more changes land before the next backup
     assert not w.errors, w.errors
     assert [r["last_result"] for r in results] == ["ok"] * 3
-    copies = [nas.path / n for n in sorted(nas.backups())]
+    # order by data version: names tie on the timestamp within one second, and v6 sorts after v45 as text
+    copies = [nas.path / n for n in sorted(nas.backups(), key=version_of)]
     assert len(copies) == 3
     sizes = [assert_consistent_snapshot(c) for c in copies]
     assert sizes == sorted(sizes) and sizes[0] >= 5 - 3          # snapshots grow as writes continue (loose: writers race)
