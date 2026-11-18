@@ -111,6 +111,8 @@ def test_revert_confirmation_toast_and_new_revert_row(s, app_page):
     assert s.state()["accounts"][0]["name"] == "Y"        # nothing happens before confirming
     dlg.locator("button.primary").click()
     expect(page.locator("#toast")).to_contain_text("Rückgängig gemacht")
+    # the toast shows before the list reloads, so wait for the new revert row on top
+    expect(rows(page).first).to_contain_text(f"Rückgängig gemacht: Protokolleintrag #{upd_id}")
     top = norm(rows(page).first.inner_text())
     assert "Rückgängig" in top and f"Rückgängig gemacht: Protokolleintrag #{upd_id}" in top
     assert s.state()["accounts"][0]["name"] == "X"
