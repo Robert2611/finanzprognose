@@ -100,3 +100,16 @@ Status values: `open`, `in progress`, `done`.
 - **Done when:** publishing a release produces the image and the `install.sh` asset; `install.sh` sets up a fresh Debian VM including the NAS backup; `update.sh` updates (and rolls back) with a database copy; the README describes setup, updates, rollback and moving from the LXC.
 - **Resolution so far:** `.github/workflows/release.yml` (tests → tag check → build/push `vX.Y.Z` + `latest` unless prerelease → upload `install.sh`). `deploy/` holds the production `docker-compose.yml` (image pinned by `APP_VERSION`), `install.sh` and `update.sh`. The Dockerfile copies `deploy/` into the image and sets the label `finanzprognose.version`. Both scripts copy the deploy files out of the image, so the VM only needs a classic token with `read:packages` and the scripts update themselves. `update.sh` keeps a DB copy in `data/pre-update/` (never deleted) and prints rollback commands if the new version does not become healthy. `deploy/docker-compose.yml` is the only compose file: the root build-from-source variant was removed and the contracts (`README`, `INVENTORY`) now point to `deploy/docker-compose.yml`; a local image test is `docker build` + that file with `--project-directory .`. `/healthz` is unchanged (its contract fixes the body to `{"ok": true}`), so the running version is visible via `.env` and the image label rather than the API. README (German) and `CLAUDE.md` are updated.
 - **Remaining:** publish a prerelease (e.g. `v0.1.0-rc1`) and check the workflow and package; run `install.sh` in a fresh Debian 13 test VM with an SMB share; test `update.sh` to a second prerelease and the rollback; then set this item to done.
+
+## B-012 Group bookings (maybe by category)
+
+- **Status:** open
+- **Problem:** Not yet specified. Rough idea: group bookings, possibly by category.
+- **Next step:** Ask the user before doing anything. Open questions: what "group" means (display only vs. a new entity), whether grouping is by category or something else, and where it should show up (forecast, entries list, monthly totals).
+
+## B-013 Make `category` a dropdown field
+
+- **Status:** open
+- **Problem:** `category` is free text, so known categories have to be retyped when editing an entry.
+- **Proposal:** Make it a dropdown that offers the known categories, so they are easier to insert on edit.
+- **Next step:** Ask the user before doing anything. Open questions: whether new categories can still be typed in (combobox vs. fixed list), where the list comes from (existing values vs. a managed list), and how this relates to B-012.
