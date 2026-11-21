@@ -113,3 +113,10 @@ Status values: `open`, `in progress`, `done`.
 - **Problem:** `category` is free text, so known categories have to be retyped when editing an entry.
 - **Proposal:** Make it a dropdown that offers the known categories, so they are easier to insert on edit.
 - **Next step:** Ask the user before doing anything. Open questions: whether new categories can still be typed in (combobox vs. fixed list), where the list comes from (existing values vs. a managed list), and how this relates to B-012.
+
+## B-014 Make the "Buchungen" page scroll as a whole
+
+- **Status:** open
+- **Problem:** On the "Buchungen" (entries) page only a part of the page scrolls (an inner scroll area).
+- **Proposal:** Let the page grow to its full length so the whole page scrolls instead of an inner part.
+- **Next step:** Not investigated yet. Check which element has the inner scroll (CSS in `app/static`, entries view in `entries.js`) and whether other views behave the same.
