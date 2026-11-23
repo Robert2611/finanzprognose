@@ -114,6 +114,9 @@ history dialog. Refreshes forecast/state after saves.
 - `FE-ENTRIES-027` [README] The base amount of an estimated booking is shown with a leading
   `"≈ "` (fixed ones without). A group's monthly sum (FE-ENTRIES-023) that includes an
   estimated booking is marked `"≈ "` as well; the transfer sum is marked the same way.
+- `FE-ENTRIES-028` [README] The bookings table has no inner vertical scroll area (no height
+  cap): it grows to its full length and the page itself scrolls (B-014). Its column headers
+  stay visible right below the sticky app header while scrolling.
 
 ## Examples
 - Create `"Miete"`, type Ausgabe, 1200, monthly, from 2026-01-01 → appears as an expense of

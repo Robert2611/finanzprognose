@@ -312,6 +312,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | FE-ENTRIES-020 | R | — |
 | FE-ENTRIES-021..025 | R | — |
 | FE-ENTRIES-026..027 | R | — |
+| FE-ENTRIES-028 | R | — |
 | FE-ACCOUNTS-001..003 | I | — |
 | FE-ACCOUNTS-004 | R/I | — |
 | FE-ACCOUNTS-005..012 | I | — |
@@ -319,6 +320,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | FE-AUDIT-001..009 | I | — |
 | FE-AUDIT-010 | R | — |
 | FE-AUDIT-011 | R | — |
+| FE-AUDIT-012 | R | — |
 | FE-BACKUP-001..002 | I | — |
 | FE-BACKUP-003 | R | — |
 | FE-BACKUP-004..006 | I | — |

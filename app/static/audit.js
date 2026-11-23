@@ -56,7 +56,7 @@ export async function renderAudit(main) {
   if (S.view !== 'verlauf') return; // navigated away while loading
   let hasMore = rows.length === 200;
   const draw = () => renderLit(html`<div class="toolbar"><h2 style="margin:0">Änderungsverlauf</h2><span class="muted small">Jede Änderung wird unveränderlich protokolliert – mit Vorher- und Nachher-Zustand.</span></div>
-    <div class="panel table-wrap" style="max-height:none"><table><thead><tr><th>Zeitpunkt</th><th>Aktion</th><th>Objekt</th><th>Änderung</th><th></th></tr></thead>
+    <div class="panel table-wrap page-scroll"><table><thead><tr><th>Zeitpunkt</th><th>Aktion</th><th>Objekt</th><th>Änderung</th><th></th></tr></thead>
     <tbody>${rows.map(a => auditRowTpl(a, () => renderAudit(main)))}</tbody></table>
     ${hasMore ? html`<div class="toolbar" style="margin-top:10px"><button @click=${loadMore}>Ältere laden</button></div>` : ''}
     </div>`, main);

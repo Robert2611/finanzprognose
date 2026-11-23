@@ -129,10 +129,10 @@ Status values: `open`, `in progress`, `done`.
 
 ## B-014 Make the "Buchungen" page scroll as a whole
 
-- **Status:** open
+- **Status:** done
 - **Problem:** On the "Buchungen" (entries) page only a part of the page scrolls (an inner scroll area).
 - **Proposal:** Let the page grow to its full length so the whole page scrolls instead of an inner part.
-- **Next step:** Not investigated yet. Check which element has the inner scroll (CSS in `app/static`, entries view in `entries.js`) and whether other views behave the same.
+- **Resolution:** the inner scroll came from `.table-wrap` (`overflow: auto; max-height: 70vh`). The Buchungen and Verlauf tables now use the new `.table-wrap.page-scroll` (no height cap, `overflow: visible`, so the page scrolls; below 900px width it keeps a horizontal scroll for the wide table). Their column headers stick at `top: var(--header-h)`, which `app.js` keeps equal to the app header's height with a `ResizeObserver` (the header wraps on narrow screens). The Verlauf view had already removed the height cap with an inline style, but still scrolled sideways inside its panel and its sticky headers had no effect. The Prognose table and its detail panel keep their own scroll areas, since they sit side by side. Clauses `FE-ENTRIES-028` and `FE-AUDIT-012`, browser tests in `tests/contract/frontend/test_page_scroll.py`.
 
 ## B-015 Mark bookings as estimated (variable spending)
 
