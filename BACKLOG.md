@@ -63,10 +63,11 @@ Status values: `open`, `in progress`, `done`.
 
 ## B-007 Split app/main.py into smaller modules
 
-- **Status:** open
+- **Status:** done
 - **Problem:** `main.py` combines several unrelated responsibilities in one 260+ line file: auth middleware, exception handlers, all Pydantic request models, and every route (generic CRUD, accounts, audit/revert, forecast, backup, export). This violates the file-size preference in `CLAUDE.md`.
 - **Proposal:** Split by responsibility, e.g. `app/schemas.py` (the Pydantic models and `MODELS` mapping), `app/auth.py` (the auth middleware), and keep `main.py` for route wiring only (or split routes further by area if that still ends up large). Keep the route paths and behavior unchanged.
 - **Done when:** `main.py` only wires routes/middleware together, the split-out modules each have a single clear responsibility, and the existing test suite passes unchanged.
+- **Resolution:** done in commit `6f546ec` (auth → `app/auth.py`, request models → `app/schemas.py`, exception handlers → `app/errors.py`); B-010 later moved the routes to `app/routes.py`. `main.py` is now only the app factory (47 lines). The status was not updated at the time.
 
 ## B-008 Split app/static/app.js into smaller modules
 
@@ -81,10 +82,11 @@ Status values: `open`, `in progress`, `done`.
 
 ## B-009 Split db.py into focused modules
 
-- **Status:** open
+- **Status:** done
 - **Problem:** `db.py` combines several responsibilities in one file: the schema and migration runner (B-002), the generic CRUD helpers, the audit log, and the transaction/connection plumbing. This violates the file-size preference in `CLAUDE.md`. It was carved out of B-002 so the migration runner could land as a small, contained change.
 - **Proposal:** Split `db.py` into smaller, well-scoped modules (e.g. schema + migrations, generic CRUD, audit log, connection/transaction helpers), keeping the public functions importable as they are today so callers (`main.py`, `backup.py`, tests) don't change. Preserve every data-safety invariant: DELETE-blocking triggers, append-only `audit_log`, optimistic locking, and the single-writer lock.
 - **Done when:** `db.py`'s responsibilities live in focused modules, the import surface used elsewhere is unchanged, and the existing test suite passes unchanged.
+- **Resolution:** done in commit `65e9673`: `app/db/` package with `connection.py`, `schema.py`, `crud.py`, `audit.py` and `errors.py`, re-exported from `app/db/__init__.py` so callers still use `db.<name>`. The status was not updated at the time.
 
 ## B-010 Per-app settings instead of import-time config
 
