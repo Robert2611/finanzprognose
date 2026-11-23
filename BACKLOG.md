@@ -150,3 +150,39 @@ Status values: `open`, `in progress`, `done`.
 - **Problem:** `.gitignore` had `data/`, which also matched `tests/contract/data/`, so the DATA-001..015 tests in that folder were never committed. An earlier `COVERAGE.md` lists them as passing (e.g. `test_fresh_database_user_version_is_one`), so they exist in some local checkout, but the repository has none and those clauses are uncovered.
 - **Done so far:** `.gitignore` now ignores only the root `/data/`, so the folder can be committed (found while doing B-015).
 - **Next step:** if a local checkout still has `tests/contract/data/`, commit it (check DATA-013 against the B-015 change: a fresh database is now at version 2). Otherwise rewrite the tests from `contracts/data/schema.md`.
+
+## B-017 API hardening: lock archive/restore, validate the forecast month, unify unknown_table
+
+- **Status:** open
+- **Decisions (with the user, open questions #3, #8, #9):** archive/restore honor `expected_updated_at` when given (409 on mismatch, still optional in the API; the frontend sends it). `GET /api/forecast?start=` accepts only months `01`–`12` and otherwise returns the usual 422 envelope. Archive/restore on an unknown table return the same `unknown_table` envelope as create/update.
+- **Done when:** the three behaviors are in the contracts (`DB-CRUD-013`, `API-RES-003`, `API-RES-015`, `API-RES-018`, `API-FC-007`), the skipped tests for #3 and #8 are real tests, and the frontend sends `expected_updated_at` on archive/restore.
+
+## B-018 Archived accounts: keep transfer outflows, warn before archiving a used account
+
+- **Status:** open
+- **Decisions (with the user, open questions #7, #10):** a transfer to an archived account still produces its −amount item on the (active) source account; only the target side is dropped, and the `transfer_target_archived` warning stays. Archiving an account stays allowed with no cascade, but the archive dialog lists the active bookings, transfers and Ist-Stände that still use it.
+- **Done when:** `FC-028` and `API-RES-020` are updated, the skipped #7 test becomes a real one, the forecast explanation stays accurate, and a browser test covers the dialog warning.
+
+## B-019 Write the settled "keep as is" decisions into the contracts
+
+- **Status:** open
+- **Decisions (with the user, open questions #2, #4, #5, #6, #14):** a no-op save is not an event (#2). Reverting a `revert` row is a redo, a new logged change; the confirmation says „wiederherstellen“ (#4). The `adjustments` mode/amount/percent coupling stays API-only (#5). An account without an Ist-Stand isn't forecast (#6). Browser tests keep text/role selectors (#14).
+- **Done when:** the clauses say so (drop the "open question" wording), the redo case has a test, and the redo confirmation text is in the frontend.
+
+## B-020 Backup status as codes instead of German text
+
+- **Status:** open
+- **Decision (with the user, open question #11):** `last_error`/`last_reason` become `{code, params}` and the frontend maps them to German (`ERROR_CODES`-style map). Old German strings in an existing `backup_status.json` still display as-is.
+- **Done when:** no German strings are left in `app/backup.py` or `app/routes.py`, the CLAUDE.md exception note is removed, and the contracts (`BKP-018`, `FE-BACKUP-003`) and tests are updated.
+
+## B-021 Testable backup schedule (clock seam)
+
+- **Status:** open
+- **Decision (with the user, open question #12):** keep the startup catch-up and the hourly retry after an error. Move the "is a run due?" decision into a pure function taking `now` and the status, called by the 60 s loop.
+- **Done when:** `BKP-001`/`BKP-019` have real tests for catch-up, no double run and the retry, replacing the TG-1/TG-2/TG-3 skips.
+
+## B-022 „Backup prüfen“ on the Sicherung page
+
+- **Status:** open
+- **Decision (with the user, open question #13):** restore stays manual; nothing in the app may overwrite the live database. Add a read-only check: pick a backup file, open it read-only (or as a temp copy), run `integrity_check`, and show its `data_version` and row counts per table.
+- **Done when:** an API endpoint and the Sicherung UI exist, they can't modify the backup or the live DB (tested), and the restore contract mentions the check.
