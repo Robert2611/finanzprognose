@@ -174,18 +174,21 @@ Status values: `open`, `in progress`, `done`.
 
 ## B-020 Backup status as codes instead of German text
 
-- **Status:** open
+- **Status:** done
 - **Decision (with the user, open question #11):** `last_error`/`last_reason` become `{code, params}` and the frontend maps them to German (`ERROR_CODES`-style map). Old German strings in an existing `backup_status.json` still display as-is.
 - **Done when:** no German strings are left in `app/backup.py` or `app/routes.py`, the CLAUDE.md exception note is removed, and the contracts (`BKP-018`, `FE-BACKUP-003`) and tests are updated.
+- **Resolution:** `backup.BackupError(code, **params)`; `last_error` is `{code, params}` (`backup_dir_missing`, `marker_missing`, `integrity_failed`, `backup_failed {detail}` for anything else) and `last_reason`/the `backups.log` column are `scheduled`/`manual`/`retry`. `BackupStatusOut.last_error` is `CodeOut | str`, so an old status file with German text is passed through; the frontend (`backupErrMsg`, `backupReason` in `core.js`) shows the German text, old strings as-is, and the reason after "Letzter Versuch". The CLAUDE.md exception is gone. Clauses `BKP-027`, `API-BKP-011`, `FE-BACKUP-011..012`; tests in `test_backup_codes.py` and `test_backup_codes_view.py`.
 
 ## B-021 Testable backup schedule (clock seam)
 
-- **Status:** open
+- **Status:** done
 - **Decision (with the user, open question #12):** keep the startup catch-up and the hourly retry after an error. Move the "is a run due?" decision into a pure function taking `now` and the status, called by the 60 s loop.
 - **Done when:** `BKP-001`/`BKP-019` have real tests for catch-up, no double run and the retry, replacing the TG-1/TG-2/TG-3 skips.
+- **Resolution:** new `app/backup_schedule.py`: pure `due_run(now, status, backup_time)`, `tick(s, now=None)` (runs the decided backup and records a scheduled run via `backup.mark_scheduled_run`) and the thread, which now only calls `tick` every 60 s. Behavior unchanged. Clause `BKP-026` (table-driven tests of the decision) plus real tests for `BKP-001`/`BKP-019` in `test_backup_schedule.py`, replacing the two TG skips.
 
 ## B-022 „Backup prüfen“ on the Sicherung page
 
-- **Status:** open
+- **Status:** done
 - **Decision (with the user, open question #13):** restore stays manual; nothing in the app may overwrite the live database. Add a read-only check: pick a backup file, open it read-only (or as a temp copy), run `integrity_check`, and show its `data_version` and row counts per table.
 - **Done when:** an API endpoint and the Sicherung UI exist, they can't modify the backup or the live DB (tested), and the restore contract mentions the check.
+- **Resolution:** new `app/backup_verify.py` and `GET /api/backup/verify?name=`: only an existing `finanzen_…_v<N>.sqlite` in `BACKUP_DIR` is accepted (else `404 backup_not_found`); the file is copied to a staging file next to the DB (BKP-024), opened `mode=ro&immutable=1`, and checked for integrity, data version vs. name, checksum vs. `backups.log`, missing tables; it returns row counts and the schema version (`BackupVerifyOut`). The Sicherung page has a „Prüfen“ button per file with a result dialog. Clauses `BKP-028..031`, `API-BKP-010`, `FE-BACKUP-013`; tests check that nothing on the NAS or in the live DB changes and that no staging file is left.

@@ -85,6 +85,7 @@ const VALIDATION_CODES = {
 };
 const ERROR_CODES = {
   not_found: p => `${ENTITY[p.entity] || p.entity} #${p.id} nicht gefunden`,
+  backup_not_found: p => `Sicherung „${p.name}“ nicht gefunden.`,
   conflict: () => 'Der Datensatz wurde inzwischen geändert. Bitte Seite neu laden und erneut versuchen.',
   unknown_table: () => 'Unbekannter Datentyp',
   ref_not_found: p => `Verweis ${p.field}=${p.id} existiert nicht.`,
@@ -118,6 +119,27 @@ const WARNING_CODES = {
   no_checkpoint: p => `Konto „${accName(p.account_id)}“ hat keinen Ist-Stand und kann nicht berechnet werden.`,
 };
 export const warnMsg = w => WARNING_CODES[w.code]?.(w) ?? w.code;
+
+// ------------------------------------------------------------ Sicherung: Codes -> Deutsch (B-020, B-022)
+const BACKUP_ERROR_CODES = {
+  backup_dir_missing: p => `Backup-Ziel ${p.dir} existiert nicht.`,
+  marker_missing: p => `Datei ${p.marker} fehlt im Backup-Ziel – ist das NAS eingebunden? Es wurde nichts gesichert.`,
+  integrity_failed: p => `Integritätsprüfung der Sicherung fehlgeschlagen: ${p.result}`,
+  backup_failed: p => `Unerwarteter Fehler: ${p.detail}`,
+};
+/** German text of a backup last_error: {code, params}, or a plain string from a status file written before B-020. */
+export const backupErrMsg = e => e == null ? '' : typeof e === 'string' ? e : BACKUP_ERROR_CODES[e.code]?.(e.params || {}) ?? e.code;
+const BACKUP_REASONS = { scheduled: 'Zeitplan', manual: 'manuell', retry: 'Wiederholung nach Fehler' };
+/** German label of a backup run reason; older status files hold German text already and show as-is. */
+export const backupReason = r => r ? BACKUP_REASONS[r] ?? r : '';
+const VERIFY_PROBLEMS = {
+  checksum_mismatch: () => 'Die Prüfsumme weicht vom Eintrag in backups.log ab – die Datei wurde nach dem Sichern verändert.',
+  integrity_failed: p => `Die Integritätsprüfung ist fehlgeschlagen: ${p.result}`,
+  not_a_database: p => `Die Datei ist keine lesbare SQLite-Datenbank (${p.detail}).`,
+  tables_missing: p => `Es fehlen Tabellen: ${p.tables}`,
+  version_mismatch: p => `Der Datenstand der Datei (Version ${p.data_version}) passt nicht zum Dateinamen (v${p.file_version}).`,
+};
+export const verifyProblemMsg = p => VERIFY_PROBLEMS[p.code]?.(p.params || {}) ?? p.code;
 
 // ------------------------------------------------------------ Zustand
 export const S = { view: location.hash.slice(1) || 'prognose', data: null, from: thisMonth(), months: 24, sel: null, showArchived: false, fc: null };

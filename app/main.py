@@ -12,7 +12,7 @@ from typing import Optional
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from . import auth, backup, db, errors
+from . import auth, backup_schedule, db, errors
 from .routes import router
 from .settings import Settings
 
@@ -25,7 +25,7 @@ STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 async def lifespan(app: FastAPI):
     s: Settings = app.state.settings
     db.init(s.db_path)
-    stop = backup.start_scheduler(s) if s.backup_scheduler else None
+    stop = backup_schedule.start_scheduler(s) if s.backup_scheduler else None
     try:
         yield
     finally:

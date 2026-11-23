@@ -101,7 +101,7 @@ def test_error_status_is_visible_via_get_status(client, nas, seed):
     seed.account()
     run(client)
     st = client.get("/api/backup/status").json()
-    assert st["last_result"] == "error" and ".nas-marker" in st["last_error"] and st["pending_changes"] is True
+    assert st["last_result"] == "error" and st["last_error"]["code"] == "marker_missing" and st["pending_changes"] is True
 
 
 @pytest.mark.contract("BKP-017")
@@ -132,18 +132,6 @@ def test_slow_nas_does_not_block_the_app():
 @pytest.mark.skip(reason="Testability gap TG-7: no seam to make PRAGMA integrity_check fail during a run")
 def test_failing_integrity_check_aborts_the_run_without_final_artifact():
     """BKP-010: skipped (abort half of the clause), see CONTRACT_FEEDBACK F-7."""
-
-
-@pytest.mark.contract("BKP-001")
-@pytest.mark.skip(reason="Testability gap TG-1/TG-3: no tick()/run_due(now) seam to drive the 60 s scheduler loop at a chosen wall-clock time")
-def test_scheduled_backup_runs_once_per_day_at_backup_time():
-    """BKP-001: skipped, see ENVIRONMENT TG-1."""
-
-
-@pytest.mark.contract("BKP-019")
-@pytest.mark.skip(reason="Testability gap TG-2: the hourly retry keys off datetime.now() minus last_attempt; no clock seam")
-def test_failed_backup_is_retried_about_hourly():
-    """BKP-019: skipped, see ENVIRONMENT TG-2."""
 
 
 def staging_leftovers(db_path):
@@ -179,6 +167,6 @@ def test_failed_copy_to_nas_cleans_staging_and_nas(client, healthy, db_path, mon
         raise OSError("copy failed")
     monkeypatch.setattr(backup.shutil, "copyfile", boom)
     st = run(client)
-    assert st["last_result"] == "error" and "copy failed" in st["last_error"]
+    assert st["last_result"] == "error" and st["last_error"] == {"code": "backup_failed", "params": {"detail": "copy failed"}}
     assert staging_leftovers(db_path) == []
     assert healthy.names() == [".nas-marker"]

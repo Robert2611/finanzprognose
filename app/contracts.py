@@ -6,7 +6,7 @@ migration) are silently dropped here unless also added to the matching model, so
 schema changes don't change the API. Internal-only columns (`created_at`) are dropped for
 the same reason; `archived` is exposed as a real boolean instead of the stored 0/1.
 """
-from typing import Optional
+from typing import Optional, Union
 
 from pydantic import BaseModel
 
@@ -86,6 +86,12 @@ class BackupFileOut(BaseModel):
     mtime: str
 
 
+class CodeOut(BaseModel):
+    """A language-neutral message: the frontend turns code + params into German text."""
+    code: str
+    params: dict = {}
+
+
 class BackupStatusOut(BaseModel):
     backup_dir: str
     backup_time: str
@@ -97,6 +103,21 @@ class BackupStatusOut(BaseModel):
     last_version: Optional[int] = None
     last_file: Optional[str] = None
     last_result: Optional[str] = None
-    last_error: Optional[str] = None
+    # {code, params}; a plain string only in a status file written before B-020
+    last_error: Optional[Union[CodeOut, str]] = None
     last_scheduled_run: Optional[str] = None
     files: list[BackupFileOut] = []
+
+
+class BackupVerifyOut(BaseModel):
+    """Result of the read-only check of one backup file (B-022)."""
+    name: str
+    ok: bool
+    problems: list[CodeOut]
+    size: int
+    file_version: int
+    data_version: Optional[int] = None
+    schema_version: Optional[int] = None
+    counts: dict[str, int]
+    sha256: Optional[str] = None
+    sha256_logged: Optional[str] = None

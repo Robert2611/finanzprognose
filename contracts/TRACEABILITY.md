@@ -238,6 +238,8 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | API-BKP-007 | T | bkp |
 | API-BKP-008 | I | — |
 | API-BKP-009 | I | bkp |
+| API-BKP-010 | R | — |
+| API-BKP-011 | R | — |
 | API-EXPORT-001 | I | — |
 | API-EXPORT-002 | I | — |
 | API-EXPORT-003 | I | — |
@@ -265,13 +267,19 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | BKP-016 | R | — |
 | BKP-017 | I | — |
 | BKP-018 | I | bkp (indirect) |
-| BKP-019 | R/O | — |
+| BKP-019 | R | — |
 | BKP-020 | I | bstat |
 | BKP-021 | R/I | — |
 | BKP-022 | I | — |
 | BKP-023 | R | — |
 | BKP-024 | R | — |
 | BKP-025 | I | — |
+| BKP-026 | R | — |
+| BKP-027 | R | — |
+| BKP-028 | R | — |
+| BKP-029 | R | — |
+| BKP-030 | R | — |
+| BKP-031 | R | — |
 | RESTORE-001 | R | — |
 | RESTORE-002 | R | — |
 | RESTORE-003 | I | — |
@@ -317,6 +325,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | FE-BACKUP-007 | R | — |
 | FE-BACKUP-008..009 | I | — |
 | FE-BACKUP-010 | I | — |
+| FE-BACKUP-011..013 | R | — |
 
 (No existing test covers any frontend clause — there is no browser/DOM harness today.)
 

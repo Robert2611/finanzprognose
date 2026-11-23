@@ -204,7 +204,7 @@ def test_marker_missing_run_fails_and_writes_no_file(client, nas, seed):
     """E2E-BKP-002: marker missing -> last_result 'error', last_error contains '.nas-marker', no backup file."""
     seed.account("Giro")
     st = client.post("/api/backup/run").json()
-    assert st["last_result"] == "error" and ".nas-marker" in st["last_error"] and nas.backups() == []
+    assert st["last_result"] == "error" and st["last_error"]["code"] == "marker_missing" and nas.backups() == []
 
 
 @pytest.mark.contract("E2E-BKP-004", "E2E-BKP-005", "E2E-BKP-006")

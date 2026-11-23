@@ -26,7 +26,7 @@ def test_manual_run_via_api_creates_a_backup(client, healthy):
     """BKP-002/API-BKP-005: POST /api/backup/run with pending changes -> last_result 'ok' and a manual attempt recorded."""
     st = post_run(client)
     assert st["last_result"] == "ok" and healthy.backups()
-    assert st["last_reason"]            # reason text is German (OQ #11): only presence is asserted
+    assert st["last_reason"] == "manual"
     assert st["last_attempt"] and st["last_success"]
 
 
@@ -86,7 +86,8 @@ def test_missing_marker_fails_and_writes_nothing(client, nas, seed):
     """BKP-006/API-BKP-004: marker required but missing -> 'error', last_error names .nas-marker, no artifact."""
     seed.account()
     st = post_run(client)
-    assert st["last_result"] == "error" and ".nas-marker" in st["last_error"]
+    assert st["last_result"] == "error"
+    assert st["last_error"] == {"code": "marker_missing", "params": {"marker": ".nas-marker", "dir": str(nas.path)}}
     assert nas.names() == []
 
 
@@ -127,7 +128,7 @@ def test_missing_backup_dir_fails_naming_the_target(client, nas, seed, settings,
     nas.remove()
     st = backup.run_backup(settings.__class__(**{**settings.__dict__, "backup_require_marker": require_marker}))
     assert st["last_result"] == "error" and st["last_error"]
-    assert str(nas.path) in st["last_error"] or nas.path.name in st["last_error"]
+    assert st["last_error"] == {"code": "backup_dir_missing", "params": {"dir": str(nas.path)}}
     assert not nas.path.exists()
 
 
