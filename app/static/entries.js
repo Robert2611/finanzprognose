@@ -2,26 +2,12 @@
 import { html, render as renderLit } from './vendor/lit-html.js';
 import { $, eur, signed, fDate, toInput, today, toast, api, RHYTHM, rhythm, accName, activeAccounts, S, formDialog, refresh, load, archiveDialog, restoreRow } from './core.js';
 import { historyDialog } from './audit.js';
+import { entryType, categoryNames, DIMENSIONS, groupItems, monthlyAmount, getDimension, isOpen, toggleGroup, dimensionSelect } from './grouping.js';
 
-/** Known categories for the entry form: one per case-insensitive name, spelled as used most often,
- *  most used first (archived entries count too). */
+/** Known categories for the entry form, most used first (see categoryNames). */
 function categorySuggestions() {
-  const groups = new Map();
-  for (const e of S.data.entries) {
-    const name = (e.category || '').trim();
-    if (!name) continue;
-    const key = name.toLocaleLowerCase('de');
-    const g = groups.get(key) ?? { total: 0, spellings: new Map() };
-    g.total++;
-    g.spellings.set(name, (g.spellings.get(name) ?? 0) + 1);
-    groups.set(key, g);
-  }
-  const top = g => [...g.spellings].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'de'))[0][0];
-  return [...groups.values()].map(g => ({ name: top(g), total: g.total }))
-    .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, 'de')).map(g => g.name);
+  return [...categoryNames().values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'de')).map(c => c.name);
 }
-
-function entryType(e) { return e.to_account_id ? 'transfer' : e.amount < 0 ? 'expense' : 'income'; }
 
 export async function entryDialog(e = null) {
   const accs = activeAccounts();
@@ -58,10 +44,20 @@ export async function entryDialog(e = null) {
   if (ok) { toast('Gespeichert'); refresh(); }
 }
 
+/** Monthly equivalent of a group's active recurring bookings; transfers shown separately, one-time bookings left out. */
+function groupSumTpl(entries) {
+  const active = entries.filter(e => !e.archived && monthlyAmount(e) != null);
+  const sum = list => Math.round(list.reduce((t, e) => t + monthlyAmount(e), 0));
+  const bookings = active.filter(e => entryType(e) !== 'transfer'), transfers = active.filter(e => entryType(e) === 'transfer');
+  return html`${bookings.length ? html` <span class="muted">·</span> <span class="group-sum">${signed(sum(bookings))}/Monat</span>` : ''}${
+    transfers.length ? html` <span class="muted">· Umbuchungen</span> <span class="group-transfers">${eur(sum(transfers))}/Monat</span>` : ''}`;
+}
+
 export async function renderEntries(main) {
   const entries = S.data.entries.filter(e => S.showArchived || !e.archived);
   const adjCount = id => S.data.adjustments.filter(a => a.entry_id === id && !a.archived).length;
   const typeLabel = { income: 'Einnahme', expense: 'Ausgabe', transfer: 'Umbuchung' };
+  const dim = getDimension('buchungen');
   const sorted = entries.slice().sort((a, b) => a.archived - b.archived || b.kind.localeCompare(a.kind) || a.name.localeCompare(b.name, 'de'));
   const rowTpl = e => html`<tr class="${e.archived ? 'archived' : ''}">
       <td><b>${e.name}</b>${e.category ? html`<span class="tag">${e.category}</span>` : ''}${e.note ? html`<div class="small muted">${e.note}</div>` : ''}</td>
@@ -77,9 +73,18 @@ export async function renderEntries(main) {
         <button class="small" title="Änderungsverlauf" @click=${() => historyDialog('entries', e.id)}>Verlauf</button></td></tr>`;
   renderLit(html`<div class="toolbar"><h2 style="margin:0">Buchungen</h2><span class="spacer"></span>
     <label><input type="checkbox" .checked=${S.showArchived} @change=${ev => { S.showArchived = ev.target.checked; renderEntries(main); }}> Archivierte zeigen</label>
+    ${dimensionSelect('buchungen', () => renderEntries(main))}
     <button class="primary" @click=${() => entryDialog()}>+ Neue Buchung</button></div>
     <div class="panel table-wrap"><table><thead><tr><th>Bezeichnung</th><th>Typ</th><th>Konto</th><th class="num">Grundbetrag</th><th>Rhythmus</th><th>Zeitraum</th><th>Anpassungen</th><th></th></tr></thead><tbody>
-    ${sorted.length ? sorted.map(rowTpl) : html`<tr><td colspan="8" class="muted">Noch keine Buchungen.</td></tr>`}
+    ${!sorted.length ? html`<tr><td colspan="8" class="muted">Noch keine Buchungen.</td></tr>`
+      : dim === 'none' ? sorted.map(rowTpl)
+      : groupItems(sorted, e => DIMENSIONS[dim].key(e)).map(g => {
+        const open = isOpen('buchungen', dim, g.key, true);
+        const toggle = () => { toggleGroup('buchungen', dim, g.key); renderEntries(main); };
+        return html`<tr class="group-head"><td colspan="8"><button class="link" aria-expanded=${open} @click=${toggle}>${open ? '▾' : '▸'} ${g.label}</button>
+          <span class="muted">· ${g.items.length} Buchung${g.items.length === 1 ? '' : 'en'}</span>${groupSumTpl(g.items)}</td></tr>
+          ${open ? g.items.map(rowTpl) : ''}`;
+      })}
     </tbody></table></div>`, main);
 }
 

@@ -286,10 +286,12 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | FE-FORECAST-011 | R | — |
 | FE-FORECAST-012 | R | — |
 | FE-FORECAST-013..017 | I | — |
+| FE-FORECAST-018..020 | R | — |
 | FE-ENTRIES-001..015 | I | — |
 | FE-ENTRIES-016 | R | — |
 | FE-ENTRIES-017..019 | I | — |
 | FE-ENTRIES-020 | R | — |
+| FE-ENTRIES-021..025 | R | — |
 | FE-ACCOUNTS-001..003 | I | — |
 | FE-ACCOUNTS-004 | R/I | — |
 | FE-ACCOUNTS-005..012 | I | — |
@@ -367,7 +369,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 
 ## Summary
 - **Units:** 34 (backend 10, api 7, frontend 8, data 1, backup 2, e2e 6).
-- **Clauses:** 415 total.
+- **Clauses:** 423 total.
 - **Already covered by an existing test (directly or indirectly):** ~45 clauses; the rest
   need new tests.
 - **`[OBSERVED]`-only clauses (treat with care, linked to open questions):** 11 —

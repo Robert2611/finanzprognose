@@ -12,8 +12,8 @@ accounts yet, it shows a welcome call-to-action.
 Rendered into `#main` when view = `prognose`. Fetches `GET /api/forecast?start=&months=`.
 Stable DOM:
 - `.toolbar` with: an `Ab` `<input type="month">` (start month), a `Zeitraum` `<select>`
-  (options `12/24/36/60/120 Monate`), a `"Heute"` button, a `"+ Buchung"` primary button,
-  and a `"+ Ist-Stand"` button.
+  (options `12/24/36/60/120 Monate`), a `"Heute"` button, a `Gruppieren nach` `<select>`
+  (FE-FORECAST-018), a `"+ Buchung"` primary button, and a `"+ Ist-Stand"` button.
 - `#warn` — warning/negative banners.
 - `#chart` — the SVG chart (`svg.chart`), with clickable month `<rect>`s and a `.legend`.
 - `#ftable` — the month table (`table` with header `"Monat (Monatsende)"`, per-account
@@ -70,6 +70,20 @@ state `S.from`, `S.months`, `S.sel`.
   dialog (pre-filled).
 - `FE-FORECAST-017` [INFERRED] `"+ Buchung"` opens the new-entry dialog; `"+ Ist-Stand"`
   opens the new-checkpoint dialog; both refresh the forecast after a successful save.
+
+### Grouping (B-012)
+- `FE-FORECAST-018` [README] The toolbar has a `Gruppieren nach` select with the same
+  options and group order as the Buchungen view (FE-ENTRIES-021/022). `Keine` (default) shows
+  the per-account cards. Any other option replaces them, in the selected month's detail, with
+  one card per group (class `group`): the group label and the sum of the group's booking
+  amounts in that month as forecast (adjustments included). Checkpoints are not listed.
+- `FE-FORECAST-019` [README] Transfers are listed in their group but kept out of the sum and
+  shown separately as `"Umbuchungen <eur>"`. A transfer counts once (its source side), except
+  for `Konto`, where each side is listed under its own account.
+- `FE-FORECAST-020` [README] Group cards are folded by default; clicking the header shows the
+  group's bookings (date, name, amount, explanation lines), each with its account as a tag
+  when there are several accounts (not for `Konto`). The choice is remembered separately
+  from the Buchungen view, like FE-ENTRIES-025.
 
 ## Examples
 - Account with a start checkpoint and a monthly salary → the first month's card shows

@@ -104,7 +104,7 @@ Status values: `open`, `in progress`, `done`.
 
 ## B-012 Group bookings in the Buchungen list and the forecast
 
-- **Status:** open (specified, ready to build)
+- **Status:** done
 - **Problem:** Bookings can only be seen as one flat list, so questions like "what does Wohnen cost me per month?" or "where does my money go in March?" need mental arithmetic.
 - **Decisions (with the user):**
   - Grouping is a **view only**: nothing new is stored, no API or schema change.
@@ -113,7 +113,8 @@ Status values: `open`, `in progress`, `done`.
   - **Buchungen list:** a header row per group, e.g. "Wohnen · 3 Buchungen · −1.240 €/Monat", groups can be folded. The sum is a **monthly equivalent**: amount ÷ `interval_months`, from the base amount. One-time bookings are left out of the monthly sum (they are still listed in the group).
   - **Prognose:** grouping applies to the detail of the selected month: subtotals per group from the forecast items (so adjustments are included), each group unfoldable to its bookings. Checkpoint items stay ungrouped.
   - The selection is remembered **per view** in the browser (`localStorage`, wrapped in try/catch).
-- **Open details (decide while building):** where transfers go under `Kategorie` (their own category, like any booking) and how the monthly sum shows transfers (shown, but not mixed into income/expense).
+- **Resolved while building:** under `Kategorie` a transfer goes into its own category like any booking. Transfers are never mixed into a group's sum; they appear as a separate "Umbuchungen …" figure. In the forecast a transfer counts once (its source side), except under `Konto`, where each side is listed under its own account. Archived bookings join their group when "Archivierte zeigen" is on, but are not summed.
+- **Resolution:** new `app/static/grouping.js` (dimension table, `groupItems`, monthly equivalent, the "Gruppieren nach" select, remembered choice and folded groups); `entryType` and the category spelling logic from B-013 moved there so both views and the entry form share them. `entries.js` renders group header rows with monthly sums; `forecast.js` replaces the account cards in the month detail with group cards when a dimension is chosen. Frontend only. Contract clauses `FE-ENTRIES-021..025` and `FE-FORECAST-018..020` with browser tests; the existing toolbar tests were updated for the second select.
 - **Done when:** both views have the selector with the dimensions above, group sums are correct (contract clauses + browser tests), and `Keine` renders exactly as today.
 
 ## B-013 Make `category` a dropdown field
