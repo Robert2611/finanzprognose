@@ -20,6 +20,9 @@ Self-hosted personal finance forecast app (replaces an Excel sheet). FastAPI + S
 # Dependencies (requirements-dev.txt = requirements.txt + pytest + httpx + pytest-playwright)
 pip install -r requirements-dev.txt
 python -m playwright install chromium   # one-time, only needed for the browser tests
+# Or use a Chromium that is already installed (e.g. the one preinstalled in a cloud container);
+# point it at the *headless shell* binary, since the full Chrome handles HTTP auth differently:
+# export PLAYWRIGHT_CHROMIUM_EXECUTABLE=/path/to/chrome-headless-shell
 
 # Run all tests (browser tests are deselected by default via pytest.ini)
 python -m pytest -q
