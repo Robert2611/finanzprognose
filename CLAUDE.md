@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Rules
 
-- Never push to the remote on your own.
+- `main` is protected: never commit to it or push to it directly. Do all work on a feature branch, push that branch, and open a pull request into `main`.
 - Never revert any commits.
 - Open work items are tracked in `BACKLOG.md`. When you finish one, update its status there.
 - Prefer several smaller files with a well-defined scope over one big file that combines everything. When a file grows unrelated responsibilities, split it rather than adding to the pile.
@@ -17,14 +17,21 @@ Self-hosted personal finance forecast app (replaces an Excel sheet). FastAPI + S
 ## Commands
 
 ```bash
-# Dependencies (requirements-dev.txt = requirements.txt + pytest + httpx)
+# Dependencies (requirements-dev.txt = requirements.txt + pytest + httpx + pytest-playwright)
 pip install -r requirements-dev.txt
+python -m playwright install chromium   # one-time, only needed for the browser tests
 
-# Run all tests
+# Run all tests (browser tests are deselected by default via pytest.ini)
 python -m pytest -q
 
+# Including the Playwright browser tests (what the release pipeline runs)
+python -m pytest -q -m ""
+
 # Run a single test
-python -m pytest -q tests/test_app.py::test_full_flow
+python -m pytest -q tests/contract/api/test_accounts.py::test_create_account_returns_row
+
+# All tests for one contract clause
+python -m pytest -q --contract BKP-004
 
 # Run locally (defaults point to /data and /backup, so override them; an empty APP_PASSWORD disables auth;
 # BACKUP_DIR must exist). Easiest: use the dev container (.devcontainer/) and press F5 (.vscode/launch.json).
@@ -78,4 +85,4 @@ API docs are served at `/api/docs`. There is no linter or formatter configured.
 
 ### Tests
 
-There is a single file, `tests/test_app.py`. It builds the app with `create_app(Settings(db_path=<tmp>, backup_dir=<tmp>, backup_scheduler=False, ...))` and wraps it in `TestClient`; no env vars are involved. For a different config (auth on, marker off, other DB), build another app in the same process instead of starting a server. Most tests share one module-scoped DB, so later tests see data created by earlier ones.
+All tests live in `tests/contract/`, a black-box suite written against the specs in `contracts/` (`tests/contract/TEST_PLAN.md` describes it). Every test carries `@pytest.mark.contract("<ID>")` with a clause ID from `contracts/TRACEABILITY.md`; collection fails for a missing or unknown ID (only `tests/contract/harness/` is exempt). When you change behavior, update the clause in `contracts/` and its row in `TRACEABILITY.md` along with the test. Each test builds its own app via `create_app(Settings(...))` with a temp DB and backup dir and wraps it in `TestClient` (fixtures in `tests/contract/conftest.py`; per-test overrides with `@pytest.mark.app_settings(...)`); no env vars are involved. Tests that use a browser fixture are marked `browser` automatically and skipped by default. The run writes `tests/contract/results.json` (gitignored); `python -m tests.contract.helpers.report` turns it into `COVERAGE.md` and `TEST_REPORT.md`.

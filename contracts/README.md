@@ -48,7 +48,8 @@ clauses at the end.
 Every clause ends-tagged with exactly one origin:
 
 - `[README]` — stated in the README or other project docs.
-- `[TEST]` — asserted by an existing test in `tests/test_app.py`.
+- `[TEST]` — asserted by a test in the former `tests/test_app.py` (since removed; the
+  contract suite in `tests/contract/` covers these clauses now).
 - `[INFERRED]` — inferred from names, structure, or obvious purpose.
 - `[OBSERVED]` — only evident from what the code currently does, nothing else confirming
   intent. Where an `[OBSERVED]` behavior looks wrong or arbitrary, the clause points to an
@@ -65,8 +66,9 @@ E2E clauses additionally carry a verification tag:
 **You may read:** everything in `contracts/`, the project `README.md`, and the public
 entry points needed to *start and configure* the app — `deploy/docker-compose.yml`, `Dockerfile`,
 `.env.example`, `.devcontainer/devcontainer.json`, `.vscode/launch.json`, `requirements*.txt`,
-and the environment-variable names those expose. You may read `tests/test_app.py` to see
-the existing harness (but you are writing a fresh, independent suite).
+and the environment-variable names those expose.
+(`tests/test_app.py`, the old hand-written suite, has been removed; `tests/contract/` is
+the only test suite.)
 
 **You may NOT read:** the implementation under `app/` — not `app/main.py`, `app/db/*`,
 `app/forecast.py`, `app/backup.py`, `app/schemas.py`, `app/auth.py`, `app/errors.py`,

@@ -1,3 +1,6 @@
 -r requirements.txt
 pytest==9.2.0
 httpx==0.28.1
+# Browser tests of the contract suite (brings playwright). Fetch the browser once:
+#   python -m playwright install chromium
+pytest-playwright==0.10.0

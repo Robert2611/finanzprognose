@@ -33,7 +33,7 @@ Opens/holds SQLite connections. `tx()` holds an in-process
   mapping-style (`row['col']` works) because `row_factory` is `sqlite3.Row`.
 - `DB-CONN-002` [INFERRED] `connect(path)` opens exactly the database at `path`; there is
   no hidden global path, so two different paths can be used side by side in one process.
-  [TEST: `test_migrations_upgrade_preserves_data` and `test_settings_are_per_app` rely on this]
+  [TEST: the former `test_migrations_upgrade_preserves_data` and `test_settings_are_per_app` relied on this]
 - `DB-CONN-003` [README] Within a `tx()` block, all statements commit together on normal
   exit and roll back entirely if the block raises — partial writes never persist.
 - `DB-CONN-004` [README] `tx()` serializes writers: two `tx()` blocks cannot run their

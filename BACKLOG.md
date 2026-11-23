@@ -29,10 +29,11 @@ Status values: `open`, `in progress`, `done`.
 
 ## B-004 Make tests independent of each other
 
-- **Status:** open
+- **Status:** done
 - **Problem:** All tests in `tests/test_app.py` share one module-scoped temp database. Later tests see data created by earlier ones (e.g. `test_backup` expects exactly 2 backup files), so tests can break when run alone, reordered, or extended.
 - **Proposal:** Give each test its own temp database and backup directory through a fixture. Since B-010 this is just `TestClient(create_app(Settings(db_path=tmp_path / ..., backup_dir=..., backup_scheduler=False)))` per test (about 100 ms each, mostly SQLite init); no patching needed.
 - **Done when:** Every test passes when run on its own and when the suite runs in random order (e.g. with `pytest-randomly`).
+- **Resolution:** Solved by removing `tests/test_app.py`, the only file with the shared database. The contract suite in `tests/contract/` already builds a fresh app with its own temp DB and backup dir per test and covers everything the old file tested. Its one uncovered test, `test_settings_from_env`, became the `SETTINGS-001..003` clauses (`contracts/backend/settings.md`) and `tests/contract/backend/test_settings.py`.
 
 ## B-005 Define an explicit, language-neutral API contract (and make backend output testable)
 
@@ -94,12 +95,12 @@ Status values: `open`, `in progress`, `done`.
 
 ## B-011 Release-based delivery to a Debian VM (GHCR image + install/update scripts)
 
-- **Status:** in progress (implemented; waiting for the first CI run and a test installation in a VM)
+- **Status:** done
 - **Problem:** Deploying meant copying the source into a Proxmox LXC and running `docker compose up -d --build` there, and every update meant copying files again and rebuilding on the server. The NAS had to be mounted on the Proxmox host by hand and bind-mounted into the LXC.
 - **Proposal:** Build the image in GitHub Actions when a release is published and push it to ghcr.io (private, like the repo). Run the app in a Debian VM instead of an LXC: Proxmox recommends VMs for Docker, and a VM can mount the NAS itself, so one script can do the whole setup. `install.sh` (a release asset) installs Docker, logs in to ghcr.io, mounts the NAS, writes `.env` and starts the app. `update.sh` pulls a release, copies the database first and switches the version.
 - **Done when:** publishing a release produces the image and the `install.sh` asset; `install.sh` sets up a fresh Debian VM including the NAS backup; `update.sh` updates (and rolls back) with a database copy; the README describes setup, updates, rollback and moving from the LXC.
 - **Resolution so far:** `.github/workflows/release.yml` (tests → tag check → build/push `vX.Y.Z` + `latest` unless prerelease → upload `install.sh`). `deploy/` holds the production `docker-compose.yml` (image pinned by `APP_VERSION`), `install.sh` and `update.sh`. The Dockerfile copies `deploy/` into the image and sets the label `finanzprognose.version`. Both scripts copy the deploy files out of the image, so the VM only needs a classic token with `read:packages` and the scripts update themselves. `update.sh` keeps a DB copy in `data/pre-update/` (never deleted) and prints rollback commands if the new version does not become healthy. `deploy/docker-compose.yml` is the only compose file: the root build-from-source variant was removed and the contracts (`README`, `INVENTORY`) now point to `deploy/docker-compose.yml`; a local image test is `docker build` + that file with `--project-directory .`. `/healthz` is unchanged (its contract fixes the body to `{"ok": true}`), so the running version is visible via `.env` and the image label rather than the API. README (German) and `CLAUDE.md` are updated.
-- **Remaining:** publish a prerelease (e.g. `v0.1.0-rc1`) and check the workflow and package; run `install.sh` in a fresh Debian 13 test VM with an SMB share; test `update.sh` to a second prerelease and the rollback; then set this item to done.
+- **Verified:** the release workflow, `install.sh` on a fresh VM and `update.sh` were tested successfully by the user.
 
 ## B-012 Group bookings (maybe by category)
 

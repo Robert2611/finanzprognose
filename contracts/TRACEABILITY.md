@@ -2,7 +2,9 @@
 
 Every clause ID × layer × source tag × existing test coverage. This is the checklist for
 the test-writing agent: a row with `—` in **Covered by** has no existing test and needs a
-new one. Existing tests all live in `tests/test_app.py`.
+new one. **Covered by** is a historical snapshot of the former `tests/test_app.py`, which has
+since been removed; today every clause is tested in `tests/contract/` (see
+`tests/contract/COVERAGE.md`).
 
 Source tags: `R`=README, `T`=TEST, `I`=INFERRED, `O`=OBSERVED. (A clause tagged `R`/`I` can
 still be *covered* by an existing test — the two columns are independent.)
@@ -10,7 +12,7 @@ still be *covered* by an existing test — the two columns are independent.)
 Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_audit,
 `state`=test_state_contract, `audit`=test_audit_contract, `bstat`=test_backup_status_contract,
 `nodel`=test_nothing_can_be_deleted, `pct`=test_percent_yearly, `bkp`=test_backup,
-`mig`=test_migrations_upgrade_preserves_data.
+`mig`=test_migrations_upgrade_preserves_data, `env`=test_settings_from_env.
 
 ## Data layer
 | Clause | Tag | Covered by |
@@ -155,6 +157,9 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | ERRENV-007 | I | — |
 | ERRENV-008 | I | — |
 | ERRENV-009 | I | — |
+| SETTINGS-001 | T | env |
+| SETTINGS-002 | T | env |
+| SETTINGS-003 | T | env |
 
 ## HTTP API
 | Clause | Tag | Covered by |
@@ -360,8 +365,8 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | E2E-AUTH-010 | BR | — |
 
 ## Summary
-- **Units:** 33 (backend 9, api 7, frontend 8, data 1, backup 2, e2e 6).
-- **Clauses:** 411 total.
+- **Units:** 34 (backend 10, api 7, frontend 8, data 1, backup 2, e2e 6).
+- **Clauses:** 414 total.
 - **Already covered by an existing test (directly or indirectly):** ~45 clauses; the rest
   need new tests.
 - **`[OBSERVED]`-only clauses (treat with care, linked to open questions):** 11 —
