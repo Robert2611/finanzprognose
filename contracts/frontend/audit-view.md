@@ -41,6 +41,8 @@ template) with a `"Schließen"` button.
   record will be reset and the reset itself logged; confirming POSTs the revert.
 - `FE-AUDIT-007` [INFERRED] After a successful revert, a `"Rückgängig gemacht"` toast is
   shown and the list re-renders with the new `revert` entry at the top.
+- `FE-AUDIT-012` [README] Like the Buchungen table (FE-ENTRIES-028), the history table has no
+  inner vertical scroll area; the page scrolls and the column headers stay below the app header (B-014).
 - `FE-AUDIT-011` [README] On a `revert` row the confirmation is worded as a redo (B-019):
   title `"Änderung #<reverts_id> wiederherstellen"`, an intro saying the undone change
   #<reverts_id> is restored and that this is logged as a new change, submit button

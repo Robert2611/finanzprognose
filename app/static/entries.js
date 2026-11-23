@@ -81,7 +81,7 @@ export async function renderEntries(main) {
     <label><input type="checkbox" .checked=${S.showArchived} @change=${ev => { S.showArchived = ev.target.checked; renderEntries(main); }}> Archivierte zeigen</label>
     ${dimensionSelect('buchungen', () => renderEntries(main))}
     <button class="primary" @click=${() => entryDialog()}>+ Neue Buchung</button></div>
-    <div class="panel table-wrap"><table><thead><tr><th>Bezeichnung</th><th>Typ</th><th>Konto</th><th class="num">Grundbetrag</th><th>Rhythmus</th><th>Zeitraum</th><th>Anpassungen</th><th></th></tr></thead><tbody>
+    <div class="panel table-wrap page-scroll"><table><thead><tr><th>Bezeichnung</th><th>Typ</th><th>Konto</th><th class="num">Grundbetrag</th><th>Rhythmus</th><th>Zeitraum</th><th>Anpassungen</th><th></th></tr></thead><tbody>
     ${!sorted.length ? html`<tr><td colspan="8" class="muted">Noch keine Buchungen.</td></tr>`
       : dim === 'none' ? sorted.map(rowTpl)
       : groupItems(sorted, e => DIMENSIONS[dim].key(e)).map(g => {

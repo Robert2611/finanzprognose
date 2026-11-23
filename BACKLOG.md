@@ -129,10 +129,10 @@ Status values: `open`, `in progress`, `done`.
 
 ## B-014 Make the "Buchungen" page scroll as a whole
 
-- **Status:** open
+- **Status:** done
 - **Problem:** On the "Buchungen" (entries) page only a part of the page scrolls (an inner scroll area).
 - **Proposal:** Let the page grow to its full length so the whole page scrolls instead of an inner part.
-- **Next step:** Not investigated yet. Check which element has the inner scroll (CSS in `app/static`, entries view in `entries.js`) and whether other views behave the same.
+- **Resolution:** the inner scroll came from `.table-wrap` (`overflow: auto; max-height: 70vh`). The Buchungen and Verlauf tables now use the new `.table-wrap.page-scroll` (no height cap, `overflow: visible`, so the page scrolls; below 900px width it keeps a horizontal scroll for the wide table). Their column headers stick at `top: var(--header-h)`, which `app.js` keeps equal to the app header's height with a `ResizeObserver` (the header wraps on narrow screens). The Verlauf view had already removed the height cap with an inline style, but still scrolled sideways inside its panel and its sticky headers had no effect. The Prognose table and its detail panel keep their own scroll areas, since they sit side by side. Clauses `FE-ENTRIES-028` and `FE-AUDIT-012`, browser tests in `tests/contract/frontend/test_page_scroll.py`.
 
 ## B-015 Mark bookings as estimated (variable spending)
 
@@ -146,10 +146,11 @@ Status values: `open`, `in progress`, `done`.
 
 ## B-016 Restore the missing data-layer tests (DATA-001..015)
 
-- **Status:** open
+- **Status:** done
 - **Problem:** `.gitignore` had `data/`, which also matched `tests/contract/data/`, so the DATA-001..015 tests in that folder were never committed. An earlier `COVERAGE.md` lists them as passing (e.g. `test_fresh_database_user_version_is_one`), so they exist in some local checkout, but the repository has none and those clauses are uncovered.
 - **Done so far:** `.gitignore` now ignores only the root `/data/`, so the folder can be committed (found while doing B-015).
 - **Next step:** if a local checkout still has `tests/contract/data/`, commit it (check DATA-013 against the B-015 change: a fresh database is now at version 2). Otherwise rewrite the tests from `contracts/data/schema.md`.
+- **Resolution:** PR #7 committed `tests/contract/data/` (`test_schema_shape.py`, `test_constraints.py`, `test_triggers.py`, `test_audit_storage.py`, 64 tests). Every clause DATA-001..015 has at least one test; DATA-013 is aligned with migration 2 (a fresh database is at the latest migration target, currently `2`). DATA-016 (B-015) is covered in `tests/contract/backend/test_db_migrations.py`.
 
 ## B-017 API hardening: lock archive/restore, validate the forecast month, unify unknown_table
 
