@@ -428,3 +428,38 @@ def test_adjustment_can_be_archived_and_restored_from_its_list(world, app_page, 
     expect(page.locator("dialog").last.get_by_role("button", name="Wiederherstellen")).to_have_count(1)
     assert world["s"].state()["adjustments"][0]["archived"] is True
     expect(page.locator("dialog").last.get_by_role("button", name="Wiederherstellen")).to_have_count(1)
+
+
+# ---------------------------------------------------------------------------- category suggestions
+
+@pytest.mark.contract("FE-ENTRIES-020")
+def test_category_field_suggests_known_categories(world, app_page):
+    """FE-ENTRIES-020: one suggestion per case-insensitive name, majority spelling, most used first, archived count."""
+    s, giro = world["s"], world["giro"]["id"]
+    for name, cat in [("A", "Lebensmittel"), ("B", "Lebensmittel"), ("C", "lebensmittel"),
+                      ("D", "Wohnen"), ("E", "Auto"), ("F", "Auto"), ("G", "")]:
+        s.entry(giro, name, -100, category=cat)
+    old = s.entry(giro, "H", -100, category="Urlaub")
+    s.c.post(f"/api/entries/{old['id']}/archive", json={})
+    page = open_entries(app_page)
+    dlg = new_entry(page)
+    inp = field(dlg, "Kategorie").locator("input")
+    list_id = inp.get_attribute("list")
+    assert list_id
+    options = dlg.locator(f"datalist[id='{list_id}'] option").evaluate_all("os => os.map(o => o.value)")
+    assert options == ["Lebensmittel", "Auto", "Urlaub", "Wohnen"]
+
+
+@pytest.mark.contract("FE-ENTRIES-020")
+def test_category_field_accepts_a_new_category(world, app_page):
+    """FE-ENTRIES-020: the field stays free text, so a category nobody used yet can be saved."""
+    world["s"].entry(world["giro"]["id"], "Miete", -100, category="Wohnen")
+    page = open_entries(app_page)
+    dlg = new_entry(page)
+    put_value(dlg, "Bezeichnung", "Kino")
+    put_value(dlg, "Betrag", "12,50")
+    put_value(dlg, "Kategorie", "Freizeit")
+    dlg.get_by_role("button", name="Speichern").click()
+    expect(page.locator("dialog")).to_have_count(0)
+    saved = [e for e in world["s"].state()["entries"] if e["name"] == "Kino"]
+    assert [e["category"] for e in saved] == ["Freizeit"]

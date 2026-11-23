@@ -110,10 +110,11 @@ Status values: `open`, `in progress`, `done`.
 
 ## B-013 Make `category` a dropdown field
 
-- **Status:** open
+- **Status:** done
 - **Problem:** `category` is free text, so known categories have to be retyped when editing an entry.
 - **Proposal:** Make it a dropdown that offers the known categories, so they are easier to insert on edit.
-- **Next step:** Ask the user before doing anything. Open questions: whether new categories can still be typed in (combobox vs. fixed list), where the list comes from (existing values vs. a managed list), and how this relates to B-012.
+- **Decisions:** free text with suggestions (new categories can still be typed); the list comes from the categories already used by any entry, archived ones included (no managed list); names that differ only in case are offered once, in the spelling used most often; most used first. Existing data is not touched. B-012 stays open and independent.
+- **Resolution:** `formDialog` (`core.js`) gained a `suggestions` option for text fields, rendered as a native `<datalist>` bound to the input. `entries.js` builds the category list (`categorySuggestions()`) from `S.data.entries`. Frontend only, no API or schema change. New clause `FE-ENTRIES-020` (`contracts/frontend/entries-view.md`) with two browser tests in `tests/contract/frontend/test_entries_view.py`.
 
 ## B-014 Make the "Buchungen" page scroll as a whole
 

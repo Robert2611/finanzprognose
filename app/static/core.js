@@ -146,7 +146,9 @@ export function formDialog({ title, fields, values = {}, submitLabel = 'Speicher
       } else {
         input = html`<input name=${f.name} type=${f.type === 'money' ? 'text' : f.type || 'text'}
           inputmode=${f.type === 'money' ? 'decimal' : nothing} placeholder=${f.type === 'money' ? '0,00' : nothing}
-          step=${f.step ?? nothing} autocomplete="off" .value=${v ?? ''}>`;
+          step=${f.step ?? nothing} autocomplete="off" list=${f.suggestions ? `fd-list-${f.name}` : nothing} .value=${v ?? ''}>`;
+        // Free text with a pick list: the browser offers matching suggestions while typing.
+        if (f.suggestions) input = html`${input}<datalist id=${`fd-list-${f.name}`}>${f.suggestions.map(s => html`<option value=${s}></option>`)}</datalist>`;
       }
       return html`<label class="field ${f.type === 'checkbox' ? 'check' : ''}" data-name=${f.name}>
         <span>${f.label}${f.required ? ' *' : ''}</span>${input}${f.hint ? html`<small class="muted">${f.hint}</small>` : ''}

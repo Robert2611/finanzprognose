@@ -3,6 +3,24 @@ import { html, render as renderLit } from './vendor/lit-html.js';
 import { $, eur, signed, fDate, toInput, today, toast, api, RHYTHM, rhythm, accName, activeAccounts, S, formDialog, refresh, load, archiveDialog, restoreRow } from './core.js';
 import { historyDialog } from './audit.js';
 
+/** Known categories for the entry form: one per case-insensitive name, spelled as used most often,
+ *  most used first (archived entries count too). */
+function categorySuggestions() {
+  const groups = new Map();
+  for (const e of S.data.entries) {
+    const name = (e.category || '').trim();
+    if (!name) continue;
+    const key = name.toLocaleLowerCase('de');
+    const g = groups.get(key) ?? { total: 0, spellings: new Map() };
+    g.total++;
+    g.spellings.set(name, (g.spellings.get(name) ?? 0) + 1);
+    groups.set(key, g);
+  }
+  const top = g => [...g.spellings].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'de'))[0][0];
+  return [...groups.values()].map(g => ({ name: top(g), total: g.total }))
+    .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, 'de')).map(g => g.name);
+}
+
 function entryType(e) { return e.to_account_id ? 'transfer' : e.amount < 0 ? 'expense' : 'income'; }
 
 export async function entryDialog(e = null) {
@@ -24,7 +42,7 @@ export async function entryDialog(e = null) {
       { name: 'interval_months', label: 'Rhythmus', type: 'select', options: Object.entries(RHYTHM).map(([k, l]) => ({ value: k, label: l })), showIf: v => v.kind === 'recurring' },
       { name: 'start_date', label: 'Datum der (ersten) Fälligkeit', type: 'date', required: true, hint: 'Der Tag wird für alle Folgetermine übernommen (bei kürzeren Monaten der Monatsletzte).' },
       { name: 'end_date', label: 'Letzte Fälligkeit (optional)', type: 'date', showIf: v => v.kind === 'recurring', hint: 'Leer lassen = unbegrenzt' },
-      { name: 'category', label: 'Kategorie (optional)', type: 'text' },
+      { name: 'category', label: 'Kategorie (optional)', type: 'text', suggestions: categorySuggestions() },
       { name: 'note', label: 'Notiz (optional)', type: 'textarea' },
     ],
     onSubmit: v => {

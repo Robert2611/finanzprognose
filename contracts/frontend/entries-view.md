@@ -78,6 +78,11 @@ history dialog. Refreshes forecast/state after saves.
   keeps the entry's sign (an expense stays negative); for a transfer it is positive.
 - `FE-ENTRIES-019` [INFERRED] Saving an adjustment refreshes the entry's adjustment list and
   (on dialog close) the forecast.
+- `FE-ENTRIES-020` [README] The `Kategorie` field stays free text and offers the categories
+  already used by any entry (archived ones included) as suggestions (a `datalist`). Names
+  that differ only in case appear once, spelled the way they are used most often; the list
+  is ordered by how often a category is used (most first, ties alphabetically). Empty
+  categories are not offered.
 
 ## Examples
 - Create `"Miete"`, type Ausgabe, 1200, monthly, from 2026-01-01 → appears as an expense of
