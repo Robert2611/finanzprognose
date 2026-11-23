@@ -114,7 +114,7 @@ const EXPLANATION_CODES = {
 };
 export const explLine = e => EXPLANATION_CODES[e.code]?.(e) ?? e.code;
 const WARNING_CODES = {
-  transfer_target_archived: p => `Umbuchung „${entryName(p.entry_id)}“ ignoriert: Zielkonto „${accName(p.account_id)}“ ist archiviert.`,
+  transfer_target_archived: p => `Umbuchung „${entryName(p.entry_id)}“: Zielkonto „${accName(p.account_id)}“ ist archiviert – berücksichtigt wird nur die Abbuchung vom Quellkonto.`,
   no_checkpoint: p => `Konto „${accName(p.account_id)}“ hat keinen Ist-Stand und kann nicht berechnet werden.`,
 };
 export const warnMsg = w => WARNING_CODES[w.code]?.(w) ?? w.code;
@@ -200,16 +200,25 @@ export function formDialog({ title, fields, values = {}, submitLabel = 'Speicher
   });
 }
 
-export async function archiveDialog(table, row, label) {
+/** Archive dialog; `notice` is an optional extra template shown below the intro (e.g. what still uses an account).
+ *  Sends expected_updated_at, so archiving a record changed elsewhere is refused with a conflict. */
+export async function archiveDialog(table, row, label, notice = '') {
   const ok = await formDialog({
     title: `${ENTITY[table]} archivieren`, submitLabel: 'Archivieren',
-    intro: html`<p class="muted">„${label}“ wird archiviert und fließt nicht mehr in die Prognose ein. Nichts wird gelöscht – du kannst es jederzeit wiederherstellen.</p>`,
+    intro: html`<p class="muted">„${label}“ wird archiviert und fließt nicht mehr in die Prognose ein. Nichts wird gelöscht – du kannst es jederzeit wiederherstellen.</p>${notice}`,
     fields: [{ name: 'comment', label: 'Grund (optional)', type: 'textarea' }],
-    onSubmit: v => api('POST', `/api/${table}/${row.id}/archive`, { comment: v.comment || '' }),
+    onSubmit: v => api('POST', `/api/${table}/${row.id}/archive`, { comment: v.comment || '', expected_updated_at: row.updated_at }),
   });
   if (ok) { toast('Archiviert'); refresh(); }
 }
-export async function restoreRow(table, row) { await api('POST', `/api/${table}/${row.id}/restore`, {}); toast('Wiederhergestellt'); refresh(); }
+/** POST archive/restore without a dialog (sends expected_updated_at); returns false and toasts the error on failure. */
+export async function setArchived(table, row, archived) {
+  try {
+    await api('POST', `/api/${table}/${row.id}/${archived ? 'archive' : 'restore'}`, { expected_updated_at: row.updated_at });
+    return true;
+  } catch (err) { toast(err.message, true); return false; }
+}
+export async function restoreRow(table, row) { if (await setArchived(table, row, false)) toast('Wiederhergestellt'); refresh(); }
 
 // ------------------------------------------------------------ Navigation
 // Importing the view renderers here closes an import cycle (each view module imports

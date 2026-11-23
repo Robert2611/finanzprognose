@@ -39,6 +39,23 @@ export async function checkpointDialog(accountId = null, cp = null) {
   if (ok) { toast('Gespeichert'); refresh(); }
 }
 
+/** What still uses an account, shown in its archive dialog (B-018). Nothing is archived along with it. */
+function usageNotice(acc) {
+  const live = S.data.entries.filter(e => !e.archived);
+  const own = live.filter(e => e.account_id === acc.id && !e.to_account_id);
+  const outgoing = live.filter(e => e.account_id === acc.id && e.to_account_id);
+  const incoming = live.filter(e => e.to_account_id === acc.id);
+  const cps = S.data.checkpoints.filter(c => c.account_id === acc.id && !c.archived);
+  if (!own.length && !outgoing.length && !incoming.length) return '';
+  const names = list => list.map(e => `„${e.name}“`).join(', ');
+  const n = (k, one, many) => `${k} ${k === 1 ? one : many}`;
+  return html`<div class="banner warn usage"><b>Dieses Konto wird noch verwendet.</b> Diese Einträge bleiben aktiv, werden aber nicht mit archiviert:<ul>
+    ${own.length ? html`<li>${n(own.length, 'Buchung', 'Buchungen')}: ${names(own)} – fließen nicht mehr in die Prognose ein.</li>` : ''}
+    ${outgoing.length ? html`<li>${n(outgoing.length, 'Umbuchung', 'Umbuchungen')} von diesem Konto: ${names(outgoing)} – fließen nicht mehr in die Prognose ein, auch nicht beim Zielkonto.</li>` : ''}
+    ${incoming.length ? html`<li>${n(incoming.length, 'Umbuchung', 'Umbuchungen')} auf dieses Konto: ${names(incoming)} – werden weiter vom Quellkonto abgebucht.</li>` : ''}
+    ${cps.length ? html`<li>${n(cps.length, 'Ist-Stand', 'Ist-Stände')}</li>` : ''}</ul></div>`;
+}
+
 export async function renderAccounts(main) {
   const accs = S.data.accounts.filter(a => S.showArchived || !a.archived);
   const cpRowTpl = (c, startId) => html`<tr class="${c.archived ? 'archived' : ''}"><td>${fDate(c.date)}${c.id === startId ? html` <span class="tag">Startstand</span>` : ''}</td><td class="num ${eurCls(c.balance)}">${eur(c.balance)}</td><td class="small muted">${c.note}</td>
@@ -54,7 +71,7 @@ export async function renderAccounts(main) {
         <div class="toolbar" style="margin-bottom:6px"><h3 style="margin:0">${a.name}</h3><span class="tag">${KINDS[a.kind] || a.kind}</span><span class="spacer"></span>
         ${a.archived
           ? html`<button class="small" @click=${() => restoreRow('accounts', a)}>Wiederherstellen</button>`
-          : html`<button class="small" @click=${() => accountDialog(a)}>Bearbeiten</button><button class="small" @click=${() => archiveDialog('accounts', a, a.name)}>Archivieren</button>`}</div>
+          : html`<button class="small" @click=${() => accountDialog(a)}>Bearbeiten</button><button class="small" @click=${() => archiveDialog('accounts', a, a.name, usageNotice(a))}>Archivieren</button>`}</div>
         ${a.note ? html`<p class="small muted">${a.note}</p>` : ''}
         <div class="kv"><span class="muted">Letzter Ist-Stand</span><span>${last ? html`<b>${eur(last.balance)}</b> am ${fDate(last.date)}` : html`<span class="neg">keiner – Konto wird nicht berechnet</span>`}</span></div>
         <div class="toolbar" style="margin:12px 0 4px"><b class="small">Ist-Stände</b><span class="spacer"></span>${a.archived ? '' : html`<button class="small primary" @click=${() => checkpointDialog(a.id)}>+ Ist-Stand</button>`}</div>

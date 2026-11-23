@@ -93,10 +93,22 @@ def test_warnings_are_present_and_language_neutral(seed):
     assert w == [{"code": "no_checkpoint", "account_id": a["id"]}]
 
 
-@pytest.mark.skip(reason="Open question #8 (possible bug): out-of-range months such as 2026-13/2026-00 are unspecified; behavior not asserted")
 @pytest.mark.contract("API-FC-007")
-def test_out_of_range_month_in_start():
-    """API-FC-007: skipped, see OPEN_QUESTIONS #8."""
+@pytest.mark.parametrize("start", ["2026-13", "2026-00", "2026-99"])
+def test_out_of_range_month_in_start_is_rejected(client, start):
+    """API-FC-007: an out-of-range month is a 422 validation error on 'start', not a wrapped month."""
+    r = client.get(f"/api/forecast?start={start}&months=1")
+    assert r.status_code == 422
+    body = r.json()
+    assert body["code"] == "validation_error"
+    assert [(e["field"], e["code"]) for e in body["params"]["errors"]] == [("start", "string_pattern_mismatch")]
+
+
+@pytest.mark.contract("API-FC-007")
+@pytest.mark.parametrize("start", ["2026-01", "2026-12"])
+def test_boundary_months_are_accepted(client, start):
+    """API-FC-007: January and December are valid."""
+    assert client.get(f"/api/forecast?start={start}&months=1").json()["months"][0]["month"] == start
 
 
 @pytest.mark.contract("API-FC-008")

@@ -74,19 +74,23 @@ row.
 - `API-RES-014` [INFERRED] `POST /api/{table}/{id}/restore` sets `archived=false` and writes
   a `restore` audit row.
 - `API-RES-015` [INFERRED] archive/restore for a table not in the whitelist returns `404`
-  (plain, no `{code}` envelope — see OPEN_QUESTIONS #9 for the inconsistency).
+  `{code:'unknown_table', params:{table}}`, the same envelope as create/update (B-017,
+  OPEN_QUESTIONS #9).
 - `API-RES-016` [OBSERVED] archive/restore on a non-existent `{id}` surfaces a `not_found`
   from the data layer (`404` with `{code:'not_found'}`).
 - `API-RES-017` [INFERRED] The optional `comment` on archive/restore (≤500 chars; truncated
   if longer) is stored on the audit row.
-- `API-RES-018` [OBSERVED] archive/restore take no `expected_updated_at` and are therefore
-  not optimistic-locked. See OPEN_QUESTIONS #3.
+- `API-RES-018` [README] archive/restore accept an optional `expected_updated_at` in the body
+  (B-017, OPEN_QUESTIONS #3). If it doesn't match the row's `updated_at` the response is
+  `409 {code:'conflict'}` and nothing changes (no audit row); if it is omitted the call is not
+  locked. The frontend always sends it.
 - `API-RES-019` [README] Nothing is deleted anywhere in this API; archive is the only
   removal, and it is always reversible via restore. [TEST: `test_nothing_can_be_deleted`
   at the DB level]
-- `API-RES-020` [OBSERVED] Archiving an account that is still referenced by active
-  entries/checkpoints is permitted (no cascade, no referential check); the forecast simply
-  drops it and may emit warnings. See OPEN_QUESTIONS #10.
+- `API-RES-020` [README] Archiving an account that is still referenced by active
+  entries/checkpoints is permitted, with no cascade and no referential check (B-018,
+  OPEN_QUESTIONS #10): the referencing rows stay active, and the forecast handles them per
+  `FC-028`/`FC-029`. The frontend warns before archiving (`FE-ACCOUNTS-013`).
 - `API-RES-021` [README] `POST`/`PUT /api/entries` accept `estimated` (boolean, B-015). When
   it is omitted the entry is fixed (`estimated = 0`); a `PUT` that flips it is a normal
   update with one audit row whose `before`/`after` differ in `estimated`.

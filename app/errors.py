@@ -1,17 +1,21 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 from . import db
 
 
-def validation_detail(ex: ValidationError) -> dict:
+def validation_detail(ex: ValidationError | RequestValidationError) -> dict:
     """Turns a Pydantic ValidationError into a {code, params} envelope: built-in constraint
     violations keep Pydantic's own machine-readable `type`/`ctx`; our custom model_validators
     raise ValueError(<short code>), which becomes the `code` with no params."""
     errors = []
     for e in ex.errors():
-        field = ".".join(str(p) for p in e["loc"])
+        loc = list(e["loc"])
+        if isinstance(ex, RequestValidationError) and loc and loc[0] in ("query", "path", "body"):
+            loc = loc[1:]  # request parameters: the field is the parameter name, e.g. "start"
+        field = ".".join(str(p) for p in loc)
         if e["type"] == "value_error":
             code, params = e["msg"].removeprefix("Value error, "), {}
         else:
@@ -29,6 +33,11 @@ def register(app: FastAPI) -> None:
     @app.exception_handler(db.Conflict)
     async def _cf(_, ex):
         return JSONResponse({"code": ex.code, "params": ex.params}, status_code=409)
+
+    @app.exception_handler(RequestValidationError)
+    async def _req_invalid(_, ex):
+        """Invalid query/path parameters (e.g. ?start=2026-13) get the same envelope as invalid bodies."""
+        return JSONResponse(validation_detail(ex), status_code=422)
 
     @app.exception_handler(HTTPException)
     async def _http_err(_, ex):

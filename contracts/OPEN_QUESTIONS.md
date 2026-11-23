@@ -33,7 +33,7 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
   restore in a way the user doesn't expect.
 - **Options:** (a) intended — archive/restore are idempotent flips, locking adds little;
   (b) bug — they should honor `expected_updated_at` like updates.
-- **Decision (2026-11-23):** Archive/restore honor `expected_updated_at` when it is given (409 on mismatch), like PUT; it stays optional in the API and the frontend always sends it. → B-017
+- **Decision (2026-11-23):** Archive/restore honor `expected_updated_at` when it is given (409 on mismatch), like PUT; it stays optional in the API and the frontend always sends it. → B-017 (done)
 
 ### 4. Revert of a `revert` row is unspecified
 - **Clauses:** `DB-AUDIT` (out-of-scope note), `API-AUDIT-007`.
@@ -74,7 +74,7 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
   time). See also #10.
 - **Options:** (a) intended — drop both sides and warn; (b) keep the source outflow; (c)
   prevent archiving an account that is a transfer target.
-- **Decision (2026-11-23):** Option (b): keep the source outflow. The source account still gets the −amount item; only the archived target side is dropped, and the `transfer_target_archived` warning stays. → B-018
+- **Decision (2026-11-23):** Option (b): keep the source outflow. The source account still gets the −amount item; only the archived target side is dropped, and the `transfer_target_archived` warning stays. → B-018 (done)
 
 ### 8. Forecast `start` month regex allows out-of-range months — *possible bug*
 - **Clauses:** `API-FC-007`, `FC` (out-of-scope note).
@@ -84,7 +84,7 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
 - **Why suspicious:** A client sending a bad month gets a plausible-looking but shifted
   forecast with no error.
 - **Options:** (a) validate `01`–`12` and return 422; (b) document the wrap as intended.
-- **Decision (2026-11-23):** Option (a): validate the month as `01`–`12` and return the usual 422 validation envelope. → B-017
+- **Decision (2026-11-23):** Option (a): validate the month as `01`–`12` and return the usual 422 validation envelope. → B-017 (done)
 
 ### 9. archive/restore unknown-table error shape differs from create/update
 - **Clauses:** `API-RES-002`, `API-RES-015`.
@@ -93,7 +93,7 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
   no `{code}` envelope for an unknown table.
 - **Why unclear:** Inconsistent error contract for the "unknown table" case across endpoints.
 - **Options:** make archive/restore emit the same `unknown_table` envelope.
-- **Decision (2026-11-23):** Unify: archive/restore on an unknown table return the same `unknown_table` envelope as create/update. → B-017
+- **Decision (2026-11-23):** Unify: archive/restore on an unknown table return the same `unknown_table` envelope as create/update. → B-017 (done)
 
 ### 10. Archiving an account referenced by active entries/checkpoints has no guard/cascade
 - **Clauses:** `API-RES-020`, `FC-028`.
@@ -104,7 +104,7 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
   bookings on an archived account?
 - **Options:** (a) allow and warn (current); (b) block archive while referenced; (c) cascade-
   archive dependents.
-- **Decision (2026-11-23):** Option (a) plus a warning: archiving stays allowed with no cascade, but the archive dialog lists the active bookings, transfers and Ist-Stände that still use the account. → B-018
+- **Decision (2026-11-23):** Option (a) plus a warning: archiving stays allowed with no cascade, but the archive dialog lists the active bookings, transfers and Ist-Stände that still use the account. → B-018 (done)
 
 ### 11. Backup status still carries German text (`last_error`, `last_reason`)
 - **Clauses:** `API-BKP` (out-of-scope note), `BKP-018`, `FE-BACKUP-003`.

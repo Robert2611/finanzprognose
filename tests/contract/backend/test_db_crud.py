@@ -200,10 +200,41 @@ def test_archive_and_restore_flip_flag_and_log_actions(path):
     assert [r["action"] for r in audit(path)] == ["restore", "archive", "create"]
 
 
-@pytest.mark.skip(reason="Open question #3 (possible bug): archive/restore not optimistic-locked; behavior not asserted pending resolution")
 @pytest.mark.contract("DB-CRUD-013")
-def test_set_archived_has_no_expected_updated_at():
-    """DB-CRUD-013: skipped, see OPEN_QUESTIONS #3."""
+@pytest.mark.parametrize("archived", [True, False])
+def test_set_archived_with_stale_expected_updated_at_conflicts(path, archived):
+    """DB-CRUD-013: a stale expected_updated_at raises Conflict and changes nothing, for archive and restore."""
+    with db.tx(path) as c:
+        a = make_account(c, "x")
+        if not archived:
+            a = db.set_archived(c, "accounts", a["id"], True)
+        n = len(db.audit_list(c))
+    with pytest.raises(db.Conflict):
+        with db.tx(path) as c:
+            db.set_archived(c, "accounts", a["id"], archived, expected_updated_at="1999-01-01T00:00:00.000+00:00")
+    with db.read(path) as r:
+        assert db.get(r, "accounts", a["id"])["archived"] == (0 if archived else 1)
+        assert len(db.audit_list(r)) == n
+
+
+@pytest.mark.contract("DB-CRUD-013")
+def test_set_archived_with_matching_or_missing_expected_updated_at(path):
+    """DB-CRUD-013: a matching expected_updated_at archives; None skips the check."""
+    with db.tx(path) as c:
+        a = make_account(c, "x")
+        arch = db.set_archived(c, "accounts", a["id"], True, expected_updated_at=a["updated_at"])
+        rest = db.set_archived(c, "accounts", a["id"], False, expected_updated_at=None)
+    assert arch["archived"] == 1 and rest["archived"] == 0
+
+
+@pytest.mark.contract("DB-CRUD-013", "DB-CRUD-014")
+def test_stale_lock_is_checked_before_the_noop_path(path):
+    """DB-CRUD-013: archiving an already-archived row with a stale expected_updated_at still conflicts."""
+    with db.tx(path) as c:
+        a = db.set_archived(c, "accounts", make_account(c, "x")["id"], True)
+    with pytest.raises(db.Conflict):
+        with db.tx(path) as c:
+            db.set_archived(c, "accounts", a["id"], True, expected_updated_at="stale")
 
 
 @pytest.mark.contract("DB-CRUD-014")

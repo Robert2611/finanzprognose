@@ -297,14 +297,14 @@ def test_warn_msg_no_checkpoint_resolves_account_name(app_page):
 
 @pytest.mark.contract("FE-CORE-024")
 def test_warn_msg_transfer_target_archived(app_page):
-    """FE-CORE-024: transfer_target_archived -> 'Umbuchung „<entry>“ ignoriert: Zielkonto „<account>“ ist archiviert.'."""
+    """FE-CORE-024: transfer_target_archived -> 'Umbuchung „<entry>“: Zielkonto „<account>“ ist archiviert – berücksichtigt wird nur die Abbuchung vom Quellkonto.'."""
     s = app_page.seed
     a, b = s.account("Giro"), s.account("Spar")
     e = s.entry(a["id"], "Sparen", 100, "2026-02-01", to_account_id=b["id"])
     page = app_page.open()
     expect(page.locator("#main")).to_be_visible()
     assert call(page, "warnMsg", {"code": "transfer_target_archived", "entry_id": e["id"], "account_id": b["id"]}) == \
-        "Umbuchung „Sparen“ ignoriert: Zielkonto „Spar“ ist archiviert."
+        "Umbuchung „Sparen“: Zielkonto „Spar“ ist archiviert – berücksichtigt wird nur die Abbuchung vom Quellkonto."
 
 
 @pytest.mark.contract("FE-CORE-025")

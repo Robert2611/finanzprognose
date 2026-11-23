@@ -153,15 +153,17 @@ Status values: `open`, `in progress`, `done`.
 
 ## B-017 API hardening: lock archive/restore, validate the forecast month, unify unknown_table
 
-- **Status:** open
+- **Status:** done
 - **Decisions (with the user, open questions #3, #8, #9):** archive/restore honor `expected_updated_at` when given (409 on mismatch, still optional in the API; the frontend sends it). `GET /api/forecast?start=` accepts only months `01`–`12` and otherwise returns the usual 422 envelope. Archive/restore on an unknown table return the same `unknown_table` envelope as create/update.
 - **Done when:** the three behaviors are in the contracts (`DB-CRUD-013`, `API-RES-003`, `API-RES-015`, `API-RES-018`, `API-FC-007`), the skipped tests for #3 and #8 are real tests, and the frontend sends `expected_updated_at` on archive/restore.
+- **Resolution:** `db.set_archived()` takes `expected_updated_at` and passes it to `_write`, so the lock is checked before the no-op path; the archive/restore routes share `_set_archived()` in `routes.py`, which also raises the `unknown_table` envelope. The forecast `start` pattern is now `^\d{4}-(0[1-9]|1[0-2])$`. While doing this it turned out that invalid query/path parameters returned FastAPI's default `{detail: [...]}` body, so `app/errors.py` now also handles `RequestValidationError` with the `validation_error` envelope (`field` = parameter name, new clause `ERRENV-010`). Frontend: `archiveDialog`, `restoreRow` and the new `setArchived()` (`core.js`) send `expected_updated_at`; a conflict shows in the dialog or as an error toast (`FE-FORM-016`); the adjustments dialog uses `setArchived()`. The skipped tests for `DB-CRUD-013`, `API-RES-018` and `API-FC-007` are now real tests.
 
 ## B-018 Archived accounts: keep transfer outflows, warn before archiving a used account
 
-- **Status:** open
+- **Status:** done
 - **Decisions (with the user, open questions #7, #10):** a transfer to an archived account still produces its −amount item on the (active) source account; only the target side is dropped, and the `transfer_target_archived` warning stays. Archiving an account stays allowed with no cascade, but the archive dialog lists the active bookings, transfers and Ist-Stände that still use it.
 - **Done when:** `FC-028` and `API-RES-020` are updated, the skipped #7 test becomes a real one, the forecast explanation stays accurate, and a browser test covers the dialog warning.
+- **Resolution:** `forecast.compute()` keeps the source item of a transfer whose target is archived and only skips the target side (warning unchanged, once per entry); the warning text in `core.js` now says only the debit from the source account is counted. `accounts.js` builds a `usageNotice()` for the archive dialog (own bookings, transfers from/to the account, Ist-Stände; shown only when bookings or transfers use it), passed to `archiveDialog` as its new `notice` argument. Clauses `FC-028`, `API-RES-020`, `FE-CORE-024` updated, `FE-ACCOUNTS-013` added; the skipped `FC-028` test is now real, with browser tests in `tests/contract/frontend/test_archive_safety.py`.
 
 ## B-019 Write the settled "keep as is" decisions into the contracts
 

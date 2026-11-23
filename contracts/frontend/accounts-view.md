@@ -55,6 +55,12 @@ Dialogs: `accountDialog(acc?)`, `checkpointDialog(accountId?, cp?)` (both via `f
   archive dialog / restore action and refreshes.
 - `FE-ACCOUNTS-012` [INFERRED] An archived account's card hides its edit/add actions and
   offers only `"Wiederherstellen"`.
+- `FE-ACCOUNTS-013` [README] When an account still has active bookings or transfers, its
+  archive dialog shows a warning (`.banner.warn.usage`) "Dieses Konto wird noch verwendet."
+  listing, by name: its own bookings (no longer in the forecast), transfers from it (no
+  longer in the forecast, not at the target either), transfers to it (still debited from the
+  source account), and the count of its active Ist-Stände. Nothing is archived along with it.
+  Without active bookings or transfers there is no warning (B-018).
 
 ## Examples
 - New account `"Giro"`, kind Girokonto, 1.000,00 € on 2026-01-15 → a card for Giro with a

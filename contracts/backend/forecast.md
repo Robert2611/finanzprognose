@@ -136,10 +136,12 @@ None. Pure computation over the passed `state`. Does not read the DB or the cloc
 - `FC-027` [INFERRED] The source transfer item's `label` names the target
   (`"<entry name> → <target name>"`); the target item's `label` names the source
   (`"<entry name> ← <source name>"`).
-- `FC-028` [OBSERVED] If a transfer's `to_account_id` points to an archived account, the
-  entry is skipped entirely (no items on either side) and a
-  `{code:'transfer_target_archived', entry_id, account_id}` warning is emitted. See
-  OPEN_QUESTIONS #7.
+- `FC-028` [README] If a transfer's `to_account_id` points to an archived account, the
+  (active) source account still gets its −amount transfer item every time it falls due
+  (label `'<name> → <target>'`, with the usual explanation), because the money still leaves;
+  only the target side is dropped. A `{code:'transfer_target_archived', entry_id,
+  account_id}` warning is emitted once per entry (B-018, OPEN_QUESTIONS #7). If the source
+  account itself is archived, the whole entry is ignored (`FC-029`).
 
 ### Archiving & scope
 - `FC-029` [INFERRED] Archived accounts, entries, adjustments and checkpoints are excluded

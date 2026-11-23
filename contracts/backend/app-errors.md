@@ -49,6 +49,10 @@ Registers handlers for `db.NotFound`, `db.Conflict`, and `HTTPException`. No DB/
   (e.g. the generic 404/405).
 - `ERRENV-009` [INFERRED] No handled error response contains German text; all human text is
   the frontend's responsibility.
+- `ERRENV-010` [README] An invalid query or path parameter (e.g. `?start=2026-13`,
+  `?months=0`, a non-numeric `{id}`) returns `422` with the same `validation_error` envelope
+  as an invalid body; `field` is the parameter name without the `query`/`path` prefix
+  (B-017).
 
 ## Examples
 - POST an entry with `amount=0` → `422`,

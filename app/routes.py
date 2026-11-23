@@ -81,20 +81,23 @@ def update(table: str, id_: int, body: dict = Body(...), s: Settings = Depends(g
         return db.update(conn, table, id_, d, m.expected_updated_at, m.comment)
 
 
+def _set_archived(table: str, id_: int, body: dict, archived: bool, s: Settings) -> dict:
+    if table not in db.TABLES:
+        raise HTTPException(404, detail={"code": "unknown_table", "params": {"table": table}})
+    expected = body.get("expected_updated_at") or None
+    with db.tx(s.db_path) as conn:
+        return db.set_archived(conn, table, id_, archived, str(body.get("comment", ""))[:500],
+                               str(expected) if expected is not None else None)
+
+
 @router.post("/api/{table}/{id_}/archive")
 def archive(table: str, id_: int, body: dict = Body(default={}), s: Settings = Depends(get_settings)):
-    if table not in db.TABLES:
-        raise HTTPException(404)
-    with db.tx(s.db_path) as conn:
-        return db.set_archived(conn, table, id_, True, str(body.get("comment", ""))[:500])
+    return _set_archived(table, id_, body, True, s)
 
 
 @router.post("/api/{table}/{id_}/restore")
 def restore(table: str, id_: int, body: dict = Body(default={}), s: Settings = Depends(get_settings)):
-    if table not in db.TABLES:
-        raise HTTPException(404)
-    with db.tx(s.db_path) as conn:
-        return db.set_archived(conn, table, id_, False, str(body.get("comment", ""))[:500])
+    return _set_archived(table, id_, body, False, s)
 
 
 @router.get("/api/audit", response_model=list[AuditEntryOut])
@@ -112,7 +115,7 @@ def revert(audit_id: int, s: Settings = Depends(get_settings)):
 
 
 @router.get("/api/forecast")
-def get_forecast(start: Optional[str] = Query(None, pattern=r"^\d{4}-\d{2}$"), months: int = Query(24, ge=1, le=240),
+def get_forecast(start: Optional[str] = Query(None, pattern=r"^\d{4}-(0[1-9]|1[0-2])$"), months: int = Query(24, ge=1, le=240),
                  s: Settings = Depends(get_settings)):
     start = start or date.today().strftime("%Y-%m")
     with db.read(s.db_path) as conn:

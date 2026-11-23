@@ -88,3 +88,4 @@ dialog form, dialog .body { padding: 18px; }
 tr.group-head td { background: var(--bg); font-weight: 600; }
 tr.group-head button.link, .acc-card.group > .head button.link { color: var(--ink); font-weight: 600; padding: 0; }
 .acc-card.group > .head { align-items: center; gap: 8px; }
+.usage ul { margin: 6px 0 0 18px; padding: 0; }

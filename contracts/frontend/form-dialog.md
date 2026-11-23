@@ -14,10 +14,12 @@ Exported from `core.js`:
 - `formDialog({title, fields, values?, submitLabel?, onSubmit, intro?}) -> Promise<result|null>`
   — opens a modal `<dialog>` (native `showModal`). Resolves to `onSubmit`'s return value on
   success, or `null` on cancel/close.
-- `archiveDialog(table, row, label) -> Promise` — confirmation form (optional reason) that
-  POSTs `/api/{table}/{id}/archive`.
+- `archiveDialog(table, row, label, notice?) -> Promise` — confirmation form (optional reason)
+  that POSTs `/api/{table}/{id}/archive`; `notice` is an optional extra template below the intro.
 - `restoreRow(table, row) -> Promise` — POSTs `/api/{table}/{id}/restore` (no dialog) and
   refreshes.
+- `setArchived(table, row, archived) -> Promise<bool>` — POSTs archive/restore without a
+  dialog; on an error it toasts the German message and resolves `false`.
 
 **Field descriptor:** `{name, label, type?, options?, required?, showIf?, hint?, step?}`.
 `type` ∈ (default text) `select`, `textarea`, `checkbox`, `money`, `number`, `date`, `text`.
@@ -70,6 +72,10 @@ Mutates the DOM (appends/removes a `<dialog>`). `onSubmit` typically calls `api(
   then toasts `"Archiviert"` and refreshes.
 - `FE-FORM-015` [INFERRED] `restoreRow(table,row)` POSTs the restore endpoint without a
   dialog, toasts `"Wiederhergestellt"`, and refreshes.
+- `FE-FORM-016` [README] Every archive/restore request from the frontend (`archiveDialog`,
+  `restoreRow`, `setArchived`, including adjustments) sends the row's `updated_at` as
+  `expected_updated_at` (B-017). A `409` shows the conflict message (`ERROR_CODES.conflict`):
+  inside the archive dialog as its error, otherwise as an error toast, and the view reloads.
 
 ## Examples
 - `formDialog({title:'Neues Konto', fields:[{name:'name',label:'Name',required:true}],

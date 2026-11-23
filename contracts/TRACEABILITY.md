@@ -70,7 +70,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | DB-CRUD-010 | O | — |
 | DB-CRUD-011 | R | lock |
 | DB-CRUD-012 | I | — |
-| DB-CRUD-013 | O | — |
+| DB-CRUD-013 | R | — |
 | DB-CRUD-014 | I | — |
 | DB-CRUD-015 | I | — |
 | DB-CRUD-016 | I | — |
@@ -120,7 +120,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | FC-025 | I | — |
 | FC-026 | R/T | flow |
 | FC-027 | I | — |
-| FC-028 | O | — |
+| FC-028 | R | — |
 | FC-029 | I | — |
 | FC-030 | I | flow |
 | FC-031 | I | flow |
@@ -161,6 +161,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | ERRENV-007 | I | — |
 | ERRENV-008 | I | — |
 | ERRENV-009 | I | — |
+| ERRENV-010 | R | — |
 | SETTINGS-001 | T | env |
 | SETTINGS-002 | T | env |
 | SETTINGS-003 | T | env |
@@ -204,9 +205,9 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | API-RES-015 | I | — |
 | API-RES-016 | O | — |
 | API-RES-017 | I | — |
-| API-RES-018 | O | — |
+| API-RES-018 | R | — |
 | API-RES-019 | R | nodel (DB-level) |
-| API-RES-020 | O | — |
+| API-RES-020 | R | — |
 | API-RES-021 | R | — |
 | API-AUDIT-001 | T | lock |
 | API-AUDIT-002 | T | audit |
@@ -224,7 +225,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | API-FC-004 | I | — |
 | API-FC-005 | T | flow |
 | API-FC-006 | I | — |
-| API-FC-007 | O | — |
+| API-FC-007 | R | — |
 | API-FC-008 | I | — |
 | API-BKP-001 | T | bstat |
 | API-BKP-002 | I | — |
@@ -286,6 +287,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | FE-CORE-021 | R | — |
 | FE-CORE-022..027 | I | — |
 | FE-FORM-001..015 | I | — |
+| FE-FORM-016 | R | — |
 | FE-NAV-001..010 | I | — |
 | FE-NAV-011 | I | — |
 | FE-FORECAST-001..010 | I | — |
@@ -303,6 +305,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | FE-ACCOUNTS-001..003 | I | — |
 | FE-ACCOUNTS-004 | R/I | — |
 | FE-ACCOUNTS-005..012 | I | — |
+| FE-ACCOUNTS-013 | R | — |
 | FE-AUDIT-001..009 | I | — |
 | FE-AUDIT-010 | R | — |
 | FE-BACKUP-001..002 | I | — |
