@@ -25,6 +25,10 @@ In der Monatsansicht steht zu jeder Buchung, wie ihr Betrag entsteht:
 
 Bei Ist-Ständen siehst du den prognostizierten Wert, den tatsächlichen Wert und die Abweichung. Ein Klick auf eine Buchung öffnet sie zum Bearbeiten.
 
+### Feste und geschätzte Beträge
+
+Nicht jede Ausgabe ist eine feste Abbuchung. Für Lebensmittel, Tanken oder Freizeit trägst du einfach einen Schätzwert als wiederkehrende Buchung ein (z. B. „ca. 450 € im Monat“) und stellst bei **Art** auf **Geschätzt**. Solche Beträge werden mit „≈“ angezeigt, und die Monatsansicht zeigt, wie viel der Einnahmen und Ausgaben geschätzt ist. Einzelne Einkäufe musst du nicht erfassen: Der nächste Ist-Stand gleicht die Schätzung mit der Wirklichkeit ab und zeigt die Abweichung. Unter „Gruppieren nach → Art“ siehst du feste und geschätzte Buchungen getrennt.
+
 ### Datensicherheit
 
 1. **Nichts wird gelöscht.** Datensätze lassen sich nur archivieren und jederzeit wiederherstellen. Die Datenbank selbst verbietet `DELETE` per Trigger.

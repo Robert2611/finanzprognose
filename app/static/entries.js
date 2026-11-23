@@ -1,6 +1,6 @@
 // ------------------------------------------------------------ Buchungen
 import { html, render as renderLit } from './vendor/lit-html.js';
-import { $, eur, signed, fDate, toInput, today, toast, api, RHYTHM, rhythm, accName, activeAccounts, S, formDialog, refresh, load, archiveDialog, restoreRow } from './core.js';
+import { $, eur, signed, approx, fDate, toInput, today, toast, api, RHYTHM, rhythm, accName, activeAccounts, S, formDialog, refresh, load, archiveDialog, restoreRow } from './core.js';
 import { historyDialog } from './audit.js';
 import { entryType, categoryNames, DIMENSIONS, groupItems, monthlyAmount, getDimension, isOpen, toggleGroup, dimensionSelect } from './grouping.js';
 
@@ -15,6 +15,7 @@ export async function entryDialog(e = null) {
   const accOpts = accs.map(a => ({ value: a.id, label: a.name }));
   const values = e ? { ...e, type: entryType(e), amount: toInput(Math.abs(e.amount)), to_account_id: e.to_account_id ?? '', end_date: e.end_date ?? '' }
     : { type: 'expense', kind: 'recurring', interval_months: 1, start_date: today(), account_id: accs[0].id };
+  values.estimated = e?.estimated ? '1' : '0';
   const ok = await formDialog({
     title: e ? `Buchung „${e.name}“ bearbeiten` : 'Neue Buchung', values,
     intro: e ? html`<p class="small muted">Änderungen am Grundbetrag wirken rückwirkend auf alle Termine. Für eine Änderung <i>ab einem Datum</i> (z. B. Gehaltserhöhung) nutze stattdessen „Anpassungen“.</p>` : '',
@@ -24,6 +25,8 @@ export async function entryDialog(e = null) {
       { name: 'account_id', label: 'Konto', type: 'select', options: accOpts },
       { name: 'to_account_id', label: 'Zielkonto', type: 'select', options: accOpts, showIf: v => v.type === 'transfer' },
       { name: 'amount', label: 'Betrag (positiv eingeben)', type: 'money', required: true },
+      { name: 'estimated', label: 'Art', type: 'select', options: [{ value: '0', label: 'Fest (z. B. Miete, Abo)' }, { value: '1', label: 'Geschätzt (z. B. Lebensmittel)' }],
+        hint: 'Geschätzte Beträge werden mit „≈“ angezeigt. Die Abweichung zur Wirklichkeit zeigt der nächste Ist-Stand.' },
       { name: 'kind', label: 'Häufigkeit', type: 'select', options: [{ value: 'recurring', label: 'Wiederkehrend' }, { value: 'once', label: 'Einmalig' }] },
       { name: 'interval_months', label: 'Rhythmus', type: 'select', options: Object.entries(RHYTHM).map(([k, l]) => ({ value: k, label: l })), showIf: v => v.kind === 'recurring' },
       { name: 'start_date', label: 'Datum der (ersten) Fälligkeit', type: 'date', required: true, hint: 'Der Tag wird für alle Folgetermine übernommen (bei kürzeren Monaten der Monatsletzte).' },
@@ -37,6 +40,7 @@ export async function entryDialog(e = null) {
         name: v.name, account_id: +v.account_id, to_account_id: v.type === 'transfer' ? +v.to_account_id : null,
         amount: v.type === 'expense' ? -abs : abs, kind: v.kind, interval_months: +(v.interval_months || 1),
         start_date: v.start_date, end_date: v.end_date || null, category: v.category || '', note: v.note || '',
+        estimated: v.estimated === '1',
       };
       return e ? api('PUT', `/api/entries/${e.id}`, { ...body, expected_updated_at: e.updated_at }) : api('POST', '/api/entries', body);
     },
@@ -44,13 +48,15 @@ export async function entryDialog(e = null) {
   if (ok) { toast('Gespeichert'); refresh(); }
 }
 
-/** Monthly equivalent of a group's active recurring bookings; transfers shown separately, one-time bookings left out. */
+/** Monthly equivalent of a group's active recurring bookings; transfers shown separately, one-time bookings left out.
+ *  A sum that contains an estimated booking is marked "≈" itself. */
 function groupSumTpl(entries) {
   const active = entries.filter(e => !e.archived && monthlyAmount(e) != null);
   const sum = list => Math.round(list.reduce((t, e) => t + monthlyAmount(e), 0));
+  const est = list => approx(list.some(e => e.estimated));
   const bookings = active.filter(e => entryType(e) !== 'transfer'), transfers = active.filter(e => entryType(e) === 'transfer');
-  return html`${bookings.length ? html` <span class="muted">·</span> <span class="group-sum">${signed(sum(bookings))}/Monat</span>` : ''}${
-    transfers.length ? html` <span class="muted">· Umbuchungen</span> <span class="group-transfers">${eur(sum(transfers))}/Monat</span>` : ''}`;
+  return html`${bookings.length ? html` <span class="muted">·</span> <span class="group-sum">${est(bookings)}${signed(sum(bookings))}/Monat</span>` : ''}${
+    transfers.length ? html` <span class="muted">· Umbuchungen</span> <span class="group-transfers">${est(transfers)}${eur(sum(transfers))}/Monat</span>` : ''}`;
 }
 
 export async function renderEntries(main) {
@@ -63,7 +69,7 @@ export async function renderEntries(main) {
       <td><b>${e.name}</b>${e.category ? html`<span class="tag">${e.category}</span>` : ''}${e.note ? html`<div class="small muted">${e.note}</div>` : ''}</td>
       <td>${typeLabel[entryType(e)]}</td>
       <td>${accName(e.account_id)}${e.to_account_id ? html` → ${accName(e.to_account_id)}` : ''}</td>
-      <td class="num">${entryType(e) === 'transfer' ? eur(e.amount) : signed(e.amount)}</td>
+      <td class="num">${approx(e.estimated)}${entryType(e) === 'transfer' ? eur(e.amount) : signed(e.amount)}</td>
       <td>${e.kind === 'once' ? 'einmalig' : rhythm(e.interval_months)}</td>
       <td>${e.kind === 'once' ? fDate(e.start_date) : `ab ${fDate(e.start_date)}${e.end_date ? ` bis ${fDate(e.end_date)}` : ''}`}</td>
       <td><button class="small" @click=${() => adjustmentsDialog(e)}>${adjCount(e.id)} Anpassung${adjCount(e.id) === 1 ? '' : 'en'}</button></td>

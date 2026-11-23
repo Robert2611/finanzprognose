@@ -1,6 +1,6 @@
 // ------------------------------------------------------------ Prognose
 import { html, svg, render as renderLit, nothing } from './vendor/lit-html.js';
-import { $, eur, eurCls, signed, fShort, fMonth, thisMonth, api, KINDS, COLORS, warnMsg, explLine, S } from './core.js';
+import { $, eur, eurCls, signed, approx, ESTIMATE_NOTE, fShort, fMonth, thisMonth, api, KINDS, COLORS, warnMsg, explLine, S } from './core.js';
 import { entryDialog } from './entries.js';
 import { accountDialog, checkpointDialog } from './accounts.js';
 import { DIMENSIONS, groupItems, getDimension, isOpen, toggleGroup, dimensionSelect } from './grouping.js';
@@ -83,15 +83,29 @@ function itemTpl(it) {
           : html`<div class="expl"><div>Ausgangspunkt der Berechnung für dieses Konto</div></div>`}
       </div>`;
   }
-  return html`<div class="row"><span>${fShort(it.date)}</span><span><button class="link" title="Buchung bearbeiten" @click=${() => entryDialog(S.data.entries.find(e => e.id === it.entry_id))}>${it.label}</button>${it.category ? html`<span class="tag">${it.category}</span>` : ''}</span><span class="num">${signed(it.amount)}</span>
-      <div class="expl">${it.explanation.map(e => html`<div>${explLine(e)}</div>`)}<div>Kontostand danach: ${eur(it.balance)}</div></div></div>`;
+  return html`<div class="row"><span>${fShort(it.date)}</span><span><button class="link" title="Buchung bearbeiten" @click=${() => entryDialog(S.data.entries.find(e => e.id === it.entry_id))}>${it.label}</button>${it.category ? html`<span class="tag">${it.category}</span>` : ''}</span><span class="num">${approx(it.estimated)}${signed(it.amount)}</span>
+      <div class="expl">${explTpl(it)}<div>Kontostand danach: ${eur(it.balance)}</div></div></div>`;
+}
+
+/** The explanation lines of a booking/transfer item, plus a note when its amount is an estimate. */
+const explTpl = it => html`${it.explanation.map(e => html`<div>${explLine(e)}</div>`)}${it.estimated ? html`<div>${ESTIMATE_NOTE}</div>` : ''}`;
+
+/** The estimated part of the month's income and expense (bookings only, like the totals). */
+function estimatedTotals(m) {
+  const t = { income: 0, expense: 0 };
+  for (const a of Object.values(m.accounts)) for (const it of a.items) {
+    if (it.type === 'booking' && it.estimated) t[it.amount > 0 ? 'income' : 'expense'] += it.amount;
+  }
+  return t;
 }
 
 function detailTpl(fc) {
   const m = fc.months.find(x => x.month === S.sel); if (!m) return html``;
+  const est = estimatedTotals(m);
+  const estRow = (c, cls) => c ? html`<span class="muted est-part">davon geschätzt</span><span class="num ${cls} est-part" style="text-align:left">≈ ${eur(c)}</span>` : nothing;
   return html`<h2>${fMonth(m.month)}</h2><div class="kv" style="margin-bottom:12px">
-      <span class="muted">Einnahmen</span><span class="num pos" style="text-align:left">${eur(m.income)}</span>
-      <span class="muted">Ausgaben</span><span class="num neg" style="text-align:left">${eur(m.expense)}</span>
+      <span class="muted">Einnahmen</span><span class="num pos" style="text-align:left">${eur(m.income)}</span>${estRow(est.income, 'pos')}
+      <span class="muted">Ausgaben</span><span class="num neg" style="text-align:left">${eur(m.expense)}</span>${estRow(est.expense, 'neg')}
       <span class="muted">Gesamtstand Monatsende</span><b class="${eurCls(m.closing)}">${eur(m.closing)}</b></div>
     ${getDimension('prognose') !== 'none' ? groupedTpl(fc, m) : fc.accounts.map(a => {
       const am = m.accounts[a.id]; if (!am) return nothing;
@@ -120,11 +134,12 @@ function groupedTpl(fc, m) {
     const toggle = () => { toggleGroup('prognose', dim, g.key); drawDetail(S.fc); };
     const bookings = g.items.filter(it => it.type === 'booking'), transfers = g.items.filter(it => it.type === 'transfer');
     const sum = bookings.reduce((t, it) => t + it.amount, 0);
+    const est = list => approx(list.some(it => it.estimated));
     return html`<div class="acc-card group"><div class="head"><button class="link" aria-expanded=${open} @click=${toggle}>${open ? '▾' : '▸'} ${g.label}</button>
-        <span class="num">${bookings.length ? html`<span class="group-sum">${signed(sum)}</span>` : ''}${transfers.length
-          ? html` <span class="muted small">Umbuchungen</span> <span class="group-transfers">${eur(transfers.reduce((t, it) => t + Math.abs(it.amount), 0))}</span>` : ''}</span></div>
-      ${open ? g.items.map(it => html`<div class="row"><span>${fShort(it.date)}</span><span><button class="link" title="Buchung bearbeiten" @click=${() => entryDialog(entryOf(it))}>${it.label}</button>${multi && dim !== 'account' ? html`<span class="tag">${fc.accounts.find(a => a.id === it.accountId)?.name}</span>` : ''}</span><span class="num">${signed(it.amount)}</span>
-          <div class="expl">${it.explanation.map(e => html`<div>${explLine(e)}</div>`)}</div></div>`) : ''}</div>`;
+        <span class="num">${bookings.length ? html`<span class="group-sum">${est(bookings)}${signed(sum)}</span>` : ''}${transfers.length
+          ? html` <span class="muted small">Umbuchungen</span> <span class="group-transfers">${est(transfers)}${eur(transfers.reduce((t, it) => t + Math.abs(it.amount), 0))}</span>` : ''}</span></div>
+      ${open ? g.items.map(it => html`<div class="row"><span>${fShort(it.date)}</span><span><button class="link" title="Buchung bearbeiten" @click=${() => entryDialog(entryOf(it))}>${it.label}</button>${multi && dim !== 'account' ? html`<span class="tag">${fc.accounts.find(a => a.id === it.accountId)?.name}</span>` : ''}</span><span class="num">${approx(it.estimated)}${signed(it.amount)}</span>
+          <div class="expl">${explTpl(it)}</div></div>`) : ''}</div>`;
   });
 }
 

@@ -82,6 +82,8 @@ dialog form, dialog .body { padding: 18px; }
 #toast div { background: var(--ink); color: var(--panel); padding: 8px 14px; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
 #toast div.e { background: var(--neg); color: #fff; }
 .tag { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--bg); color: var(--muted); margin-left: 6px; }
+.approx { color: var(--muted); }
+.est-part { font-size: 12px; }
 /* Grouping (Buchungen list + forecast month detail) */
 tr.group-head td { background: var(--bg); font-weight: 600; }
 tr.group-head button.link, .acc-card.group > .head button.link { color: var(--ink); font-weight: 600; padding: 0; }

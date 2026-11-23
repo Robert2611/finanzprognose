@@ -493,10 +493,10 @@ def group_heads(page):
 
 @pytest.mark.contract("FE-ENTRIES-021")
 def test_group_select_defaults_to_none_and_lists_the_dimensions(grouped, app_page):
-    """FE-ENTRIES-021: 'Gruppieren nach' offers Keine/Kategorie/Typ/Konto/Rhythmus; Keine is the flat list."""
+    """FE-ENTRIES-021: 'Gruppieren nach' offers Keine/Kategorie/Typ/Konto/Rhythmus/Art; Keine is the flat list."""
     page = open_entries(app_page)
     sel = page.locator("select[name=group-by]")
-    assert sel.evaluate("s => [...s.options].map(o => o.text)") == ["Keine", "Kategorie", "Typ", "Konto", "Rhythmus"]
+    assert sel.evaluate("s => [...s.options].map(o => o.text)") == ["Keine", "Kategorie", "Typ", "Konto", "Rhythmus", "Art"]
     assert sel.evaluate("s => s.options[s.selectedIndex].text") == "Keine"
     expect(page.locator("#main tr.group-head")).to_have_count(0)
     expect(rows(page)).to_have_count(7)

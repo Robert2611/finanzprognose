@@ -21,7 +21,7 @@ presentation-neutral shape that does **not** track internal schema churn.
   ```
   **AccountOut:** `{id, name, kind, note, archived: bool, updated_at}`
   **EntryOut:** `{id, account_id, to_account_id|null, name, category, kind, amount,
-  start_date, end_date|null, interval_months, note, archived: bool, updated_at}`
+  start_date, end_date|null, interval_months, estimated: bool, note, archived: bool, updated_at}`
   **AdjustmentOut:** `{id, entry_id, effective_date, mode, amount|null, percent|null,
   repeat_yearly: bool, note, archived: bool, updated_at}`
   **CheckpointOut:** `{id, account_id, date, balance, note, archived: bool, updated_at}`
@@ -51,6 +51,8 @@ Read-only. Reads all four data tables and the audit max-id (`data_version`).
   (`MAX(audit_log.id)`), increasing as data changes.
 - `API-STATE-009` [INFERRED] On an empty database, all four arrays are empty and
   `data_version` is `0`.
+- `API-STATE-010` [README] `EntryOut.estimated` is a real boolean (not the stored `0/1`):
+  `false` for a fixed amount, `true` for an estimate (B-015).
 
 ## Examples
 - Fresh DB → `{"accounts":[],"entries":[],"adjustments":[],"checkpoints":[],"data_version":0}`.

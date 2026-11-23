@@ -32,6 +32,7 @@ class EntryIn(Base):
     start_date: date
     end_date: Optional[date] = None
     interval_months: int = Field(1, ge=1, le=120)
+    estimated: bool = False
     note: str = Field("", max_length=2000)
 
     @model_validator(mode="after")

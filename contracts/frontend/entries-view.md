@@ -21,7 +21,8 @@ Stable DOM:
 
 Dialogs (via `formDialog`):
 - `entryDialog(entry?)` — fields: `Bezeichnung`, `Typ` (Einnahme/Ausgabe/Umbuchung zwischen
-  Konten), `Konto`, `Zielkonto` (only for transfer), `Betrag (positiv eingeben)`,
+  Konten), `Konto`, `Zielkonto` (only for transfer), `Betrag (positiv eingeben)`, `Art`
+  (Fest/Geschätzt),
   `Häufigkeit` (Wiederkehrend/Einmalig), `Rhythmus` (only recurring), `Datum der (ersten)
   Fälligkeit`, `Letzte Fälligkeit (optional)` (only recurring), `Kategorie`, `Notiz`.
 - `adjustmentsDialog(entry)` — a sub-dialog listing adjustments with `+ Anpassung`.
@@ -87,14 +88,15 @@ history dialog. Refreshes forecast/state after saves.
 
 ### Grouping (B-012)
 - `FE-ENTRIES-021` [README] The toolbar has a `Gruppieren nach` select with the options
-  `Keine`, `Kategorie`, `Typ`, `Konto`, `Rhythmus`. `Keine` is the default and renders the
+  `Keine`, `Kategorie`, `Typ`, `Konto`, `Rhythmus`, `Art`. `Keine` is the default and renders the
   flat list exactly as without grouping.
 - `FE-ENTRIES-022` [README] With any other option the table shows one header row
   (class `group-head`) per group, `"<label> · N Buchung(en)"`, followed by the group's rows
   in the usual order. Groups: `Kategorie` — case-insensitive, labeled with the most-used
   spelling (as in FE-ENTRIES-020), alphabetical, `Ohne Kategorie` last; `Typ` — `Einnahmen`,
   `Ausgaben`, `Umbuchungen`; `Konto` — the booking's (source) account, in account order;
-  `Rhythmus` — by interval (`monatlich` first), `einmalig` last.
+  `Rhythmus` — by interval (`monatlich` first), `einmalig` last; `Art` — `fest`, then
+  `geschätzt` (B-015).
 - `FE-ENTRIES-023` [README] A group header shows the monthly equivalent of the group's
   non-archived recurring bookings as `"<±eur>/Monat"` (amount ÷ interval in months, from the
   base amount, rounded to the cent). One-time bookings are listed but not summed. Transfers
@@ -104,6 +106,14 @@ history dialog. Refreshes forecast/state after saves.
 - `FE-ENTRIES-025` [README] The chosen option is remembered in the browser across reloads,
   separately from the forecast view's choice. Without browser storage the view still works
   (the choice then lasts until the next reload).
+
+### Estimated bookings (B-015)
+- `FE-ENTRIES-026` [README] The entry form has an `Art` select with `Fest (…)` (default for a
+  new booking) and `Geschätzt (…)`; it is pre-filled from the booking when editing and
+  saved as `estimated: false/true`.
+- `FE-ENTRIES-027` [README] The base amount of an estimated booking is shown with a leading
+  `"≈ "` (fixed ones without). A group's monthly sum (FE-ENTRIES-023) that includes an
+  estimated booking is marked `"≈ "` as well; the transfer sum is marked the same way.
 
 ## Examples
 - Create `"Miete"`, type Ausgabe, 1200, monthly, from 2026-01-01 → appears as an expense of

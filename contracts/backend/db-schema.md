@@ -17,8 +17,8 @@ Import: `from app import db`.
 - `db.TABLES: dict[str, list[str]]` — the writable-column whitelist, keys
   `accounts`, `entries`, `adjustments`, `checkpoints` (see `data/schema.md` for the lists).
 - `db.SCHEMA: str` — the idempotent baseline DDL (`CREATE TABLE/TRIGGER/INDEX IF NOT EXISTS`).
-- `db.MIGRATIONS: list[tuple[int, callable]]` — ordered `(target_version, fn)`; empty by
-  default. Patchable by tests.
+- `db.MIGRATIONS: list[tuple[int, callable]]` — ordered `(target_version, fn)`; currently
+  `[(2, add entries.estimated)]` (see `DB-SCHEMA-012`). Patchable by tests.
 - `db._has_column(conn, table, col) -> bool` — helper used to guard idempotent `ALTER`s.
 
 ## Dependencies & side effects
@@ -32,10 +32,10 @@ Creates the parent directory of `path`. Creates/alters the SQLite schema. Reads
 - `DB-SCHEMA-002` [INFERRED] `init()` is idempotent: calling it again on an existing
   database makes no destructive change and does not error.
 - `DB-SCHEMA-003` [TEST] After `init()` with no pending migrations, `PRAGMA user_version`
-  is `1`. [TEST: `test_migrations_upgrade_preserves_data`]
-- `DB-SCHEMA-004` [TEST] Given a version-1 database with existing rows and a migration
-  `(2, fn)` registered in `MIGRATIONS`, `init()` applies `fn`, advances `user_version` to
-  `2`, and preserves all existing rows. [TEST: `test_migrations_upgrade_preserves_data`]
+  is the target of the latest migration in `MIGRATIONS`, or `1` if the list is empty. [TEST: `test_migrations_upgrade_preserves_data`]
+- `DB-SCHEMA-004` [TEST] Given a database at version N with existing rows and a migration
+  `(N+1, fn)` registered in `MIGRATIONS`, `init()` applies `fn`, advances `user_version` to
+  `N+1`, and preserves all existing rows. [TEST: `test_migrations_upgrade_preserves_data`]
 - `DB-SCHEMA-005` [TEST] Re-running `init()` after a migration is a no-op: `user_version`
   stays at the latest target and the migration is not re-applied (migrations are expected
   to be idempotent, e.g. guarding `ALTER` with `_has_column`).
@@ -55,10 +55,16 @@ Creates the parent directory of `path`. Creates/alters the SQLite schema. Reads
   database gets a new column from `SCHEMA` while an existing one gets it from the matching
   migration — both converge to the same shape (the migration must therefore guard against
   the column already existing).
+- `DB-SCHEMA-012` [README] Migration `2` (B-015) adds `entries.estimated INTEGER NOT NULL
+  DEFAULT 0 CHECK IN (0,1)` to a version-1 database: every existing row (entries, other
+  tables, `audit_log`) is kept unchanged and existing entries become `estimated = 0`
+  (fixed); `user_version` becomes `2`, and the upgraded database has the same `entries`
+  columns as a fresh one. It is guarded with `_has_column`, so it is a no-op where the
+  column already exists.
 
 ## Examples
 - Fresh dir, `init()` → empty DB, `user_version=1`, `SELECT COUNT(*) FROM accounts` = 0.
-- `MIGRATIONS=[(2, add_color)]`, `init()` twice → `user_version=2`, column added once.
+- `MIGRATIONS=[*real, (3, add_color)]`, `init()` twice → `user_version=3`, column added once.
 
 ## Out of scope / not specified
 - The concrete contents of `SCHEMA` beyond what `data/schema.md` specifies.

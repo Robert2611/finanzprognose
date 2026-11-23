@@ -87,7 +87,7 @@ def test_init_on_a_restored_database_preserves_all_rows(settings, lost):
     before = counts()
     db.init(settings.db_path)
     db.init(settings.db_path)
-    assert counts() == before and scalar(settings.db_path, "PRAGMA user_version") == 1
+    assert counts() == before and scalar(settings.db_path, "PRAGMA user_version") == max((t for t, _ in db.MIGRATIONS), default=1)
 
 
 @pytest.mark.contract("RESTORE-005")

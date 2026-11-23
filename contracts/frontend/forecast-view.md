@@ -76,7 +76,8 @@ state `S.from`, `S.months`, `S.sel`.
   options and group order as the Buchungen view (FE-ENTRIES-021/022). `Keine` (default) shows
   the per-account cards. Any other option replaces them, in the selected month's detail, with
   one card per group (class `group`): the group label and the sum of the group's booking
-  amounts in that month as forecast (adjustments included). Checkpoints are not listed.
+  amounts in that month as forecast (adjustments included), marked `"≈ "` when it includes
+  an estimated booking (FE-FORECAST-021). Checkpoints are not listed.
 - `FE-FORECAST-019` [README] Transfers are listed in their group but kept out of the sum and
   shown separately as `"Umbuchungen <eur>"`. A transfer counts once (its source side), except
   for `Konto`, where each side is listed under its own account.
@@ -84,6 +85,14 @@ state `S.from`, `S.months`, `S.sel`.
   group's bookings (date, name, amount, explanation lines), each with its account as a tag
   when there are several accounts (not for `Konto`). The choice is remembered separately
   from the Buchungen view, like FE-ENTRIES-025.
+- `FE-FORECAST-021` [README] The amount of a booking or transfer item whose `estimated` is
+  true has a leading `"≈ "`, and its explanation ends with the line `"Geschätzter Betrag –
+  die Abweichung zur Wirklichkeit zeigt der nächste Ist-Stand."` Fixed items are unchanged.
+  This applies to the per-account cards and the group cards alike (B-015).
+- `FE-FORECAST-022` [README] When the selected month contains estimated bookings, the
+  month summary shows `"davon geschätzt ≈ <eur>"` right after `Einnahmen` and/or `Ausgaben`
+  (the estimated part of each, bookings only, transfers excluded like in the totals). Without
+  estimated bookings in that direction the line is absent.
 
 ## Examples
 - Account with a start checkpoint and a monthly salary → the first month's card shows

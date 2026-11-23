@@ -5,6 +5,9 @@ export const $ = (s, el = document) => el.querySelector(s);
 export const eur = c => c == null ? '–' : (c / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 export const eurCls = c => c == null ? '' : c < 0 ? 'neg' : '';
 export const signed = c => html`<span class="${c < 0 ? 'neg' : 'pos'}">${c > 0 ? '+' : ''}${eur(c)}</span>`;
+/** The "≈" mark in front of an estimated amount (B-015); empty for a fixed one. */
+export const approx = estimated => estimated ? html`<span class="approx" title="geschätzter Betrag">≈ </span>` : '';
+export const ESTIMATE_NOTE = 'Geschätzter Betrag – die Abweichung zur Wirklichkeit zeigt der nächste Ist-Stand.';
 export const fDate = iso => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('de-DE') : '';
 export const fShort = iso => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }) : '';
 export const fFull = iso => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
@@ -47,7 +50,7 @@ export const FIELD = {
   name: 'Name', kind: 'Art', note: 'Notiz', account_id: 'Konto', to_account_id: 'Zielkonto', category: 'Kategorie',
   amount: 'Betrag', start_date: 'Start', end_date: 'Ende', interval_months: 'Rhythmus (Monate)', entry_id: 'Buchung',
   effective_date: 'Gültig ab', mode: 'Art', percent: 'Prozent', repeat_yearly: 'Jährlich wiederholen', date: 'Datum',
-  balance: 'Kontostand', archived: 'Archiviert',
+  balance: 'Kontostand', archived: 'Archiviert', estimated: 'Fest/geschätzt',
 };
 export const COLORS = ['#2f6fdb', '#1a9e77', '#d9822b', '#8e5bd9', '#c94f6d', '#2aa1b3', '#7a8b2b'];
 

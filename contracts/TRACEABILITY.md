@@ -32,6 +32,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | DATA-013 | T | mig |
 | DATA-014 | I | — |
 | DATA-015 | O | — |
+| DATA-016 | R | — |
 
 ## Backend
 | Clause | Tag | Covered by |
@@ -56,6 +57,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | DB-SCHEMA-009 | I | mig |
 | DB-SCHEMA-010 | R | — |
 | DB-SCHEMA-011 | I | — |
+| DB-SCHEMA-012 | R | — |
 | DB-CRUD-001 | I | — |
 | DB-CRUD-002 | I | — |
 | DB-CRUD-003 | I | flow |
@@ -123,6 +125,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | FC-030 | I | flow |
 | FC-031 | I | flow |
 | FC-032 | I | flow |
+| FC-033 | R | — |
 | SCH-001 | I | — |
 | SCH-002 | I | — |
 | SCH-003 | I | — |
@@ -141,6 +144,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | SCH-016 | I | — |
 | SCH-017 | I | lock (indirect) |
 | SCH-018 | I | — |
+| SCH-019 | R | — |
 | AUTH-001 | R | — |
 | AUTH-002 | R | (all tests run with auth off) |
 | AUTH-003 | I | — |
@@ -173,6 +177,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | API-STATE-007 | I | — |
 | API-STATE-008 | I | — |
 | API-STATE-009 | I | — |
+| API-STATE-010 | R | — |
 | API-ACC-001 | T | flow, state |
 | API-ACC-002 | I | — |
 | API-ACC-003 | R | — |
@@ -202,6 +207,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | API-RES-018 | O | — |
 | API-RES-019 | R | nodel (DB-level) |
 | API-RES-020 | O | — |
+| API-RES-021 | R | — |
 | API-AUDIT-001 | T | lock |
 | API-AUDIT-002 | T | audit |
 | API-AUDIT-003 | T | lock |
@@ -287,15 +293,18 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | FE-FORECAST-012 | R | — |
 | FE-FORECAST-013..017 | I | — |
 | FE-FORECAST-018..020 | R | — |
+| FE-FORECAST-021..022 | R | — |
 | FE-ENTRIES-001..015 | I | — |
 | FE-ENTRIES-016 | R | — |
 | FE-ENTRIES-017..019 | I | — |
 | FE-ENTRIES-020 | R | — |
 | FE-ENTRIES-021..025 | R | — |
+| FE-ENTRIES-026..027 | R | — |
 | FE-ACCOUNTS-001..003 | I | — |
 | FE-ACCOUNTS-004 | R/I | — |
 | FE-ACCOUNTS-005..012 | I | — |
 | FE-AUDIT-001..009 | I | — |
+| FE-AUDIT-010 | R | — |
 | FE-BACKUP-001..002 | I | — |
 | FE-BACKUP-003 | R | — |
 | FE-BACKUP-004..006 | I | — |

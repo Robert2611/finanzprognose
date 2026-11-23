@@ -45,8 +45,8 @@ Import: `from app import forecast`. Pure functions, no I/O.
 }
 ```
 **Item shapes (inside `accounts.<id>.items`):**
-- booking: `{type:'booking', entry_id, date, category, label, amount, balance, explanation}`
-- transfer: `{type:'transfer', entry_id, date, category, label, amount, balance, explanation}`
+- booking: `{type:'booking', entry_id, date, category, estimated, label, amount, balance, explanation}`
+- transfer: `{type:'transfer', entry_id, date, category, estimated, label, amount, balance, explanation}`
 - checkpoint: `{type:'checkpoint', checkpoint_id, date, balance, note[, expected, deviation]}`
 
 **Explanation step shapes (list on each booking/transfer item):**
@@ -149,11 +149,15 @@ None. Pure computation over the passed `state`. Does not read the DB or the cloc
 
 ### Item invariants
 - `FC-031` [INFERRED] Every booking/transfer item carries its `entry_id`, ISO `date`,
-  `category`, a `label`, the signed `amount`, the running `balance` after it, and a
+  `category`, `estimated`, a `label`, the signed `amount`, the running `balance` after it, and a
   non-empty `explanation` list.
 - `FC-032` [INFERRED] Within an account, items are ordered by `(date, kind-order, id)` with
   bookings before checkpoints on the same day (per `FC-007`), and each item's `balance`
   reflects all prior items plus any checkpoint resets.
+- `FC-033` [README] Every booking/transfer item carries `estimated: bool`, copied from its
+  entry (missing or `0` → `false`). The mark is informational only (B-015): amounts,
+  balances, explanations and the monthly `income`/`expense` are the same as for a fixed
+  entry.
 
 ## Examples
 - `amount_at({'amount':-100000,'start_date':'2026-01-01'}, [{'effective_date':'2026-01-01',

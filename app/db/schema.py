@@ -15,7 +15,7 @@ TABLES = {
     "accounts": ["name", "kind", "note"],
     "entries": [
         "account_id", "to_account_id", "name", "category", "kind", "amount",
-        "start_date", "end_date", "interval_months", "note",
+        "start_date", "end_date", "interval_months", "estimated", "note",
     ],
     "adjustments": ["entry_id", "effective_date", "mode", "amount", "percent", "repeat_yearly", "note"],
     "checkpoints": ["account_id", "date", "balance", "note"],
@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS entries(
   start_date TEXT NOT NULL,
   end_date TEXT,
   interval_months INTEGER NOT NULL DEFAULT 1 CHECK(interval_months >= 1),
+  estimated INTEGER NOT NULL DEFAULT 0 CHECK(estimated IN (0,1)),  -- 1 = an estimate, not a fixed debit (B-015)
   note TEXT NOT NULL DEFAULT '',
   archived INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
@@ -100,13 +101,19 @@ def _has_column(conn, table: str, col: str) -> bool:
     return any(r["name"] == col for r in conn.execute(f"PRAGMA table_info({table})"))
 
 
+def _v2_entries_estimated(conn) -> None:
+    """B-015: mark entries as estimated (variable spending) instead of fixed; existing rows stay fixed."""
+    if not _has_column(conn, "entries", "estimated"):
+        conn.execute("ALTER TABLE entries ADD COLUMN estimated INTEGER NOT NULL DEFAULT 0 CHECK(estimated IN (0,1))")
+
+
 # Ordered schema migrations, each `(target_version, migrate_fn)`. Version 1 is the
 # baseline created by SCHEMA above, so real migrations start at 2. A migration must be
 # idempotent (e.g. guard ALTERs with _has_column): a fresh database already gets the
 # change from SCHEMA, while an existing one gets it here. SCHEMA stays the living picture
 # of the current schema; every change to an existing table also needs a migration here.
 MIGRATIONS: list[tuple[int, "callable"]] = [
-    # (2, _v2_add_color),
+    (2, _v2_entries_estimated),
 ]
 
 
