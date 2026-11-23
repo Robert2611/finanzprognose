@@ -2,8 +2,9 @@
 
 Ambiguities, under-specified behavior, and suspected bugs found while writing the contracts.
 Each entry: the related clause(s), what was observed, why it's unclear/suspicious, and the
-options. **Suspected bugs are marked.** All questions were decided on 2026-11-23 (see the **Decision** line of each entry); the work they need is tracked in `BACKLOG.md` (B-017..B-022). The test-writing agent should treat the linked
-clauses as not-yet-settled (write them `xfail`/skipped until resolved).
+options. **Suspected bugs are marked.** All questions were decided on 2026-11-23 (see the **Decision** line of each entry), and the work they needed (B-017..B-022 in `BACKLOG.md`) is done, so the linked clauses are settled
+and tested like any other. This file is kept as the record of those decisions; a new question
+gets a new numbered entry here, and its clauses stay `xfail`/skipped only until it is decided.
 
 ---
 

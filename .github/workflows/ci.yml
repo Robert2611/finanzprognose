@@ -1,0 +1,32 @@
+# Runs the full contract suite (including the browser tests) on every pull request and on pushes
+# to main, so a broken main shows up before a release is cut (B-023). Same setup as release.yml.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Run tests (including the browser tests of the contract suite)
+        run: |
+          pip install -r requirements-dev.txt
+          python -m playwright install --with-deps chromium
+          python -m pytest -q -m ""

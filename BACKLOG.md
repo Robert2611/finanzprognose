@@ -193,3 +193,15 @@ Status values: `open`, `in progress`, `done`.
 - **Decision (with the user, open question #13):** restore stays manual; nothing in the app may overwrite the live database. Add a read-only check: pick a backup file, open it read-only (or as a temp copy), run `integrity_check`, and show its `data_version` and row counts per table.
 - **Done when:** an API endpoint and the Sicherung UI exist, they can't modify the backup or the live DB (tested), and the restore contract mentions the check.
 - **Resolution:** new `app/backup_verify.py` and `GET /api/backup/verify?name=`: only an existing `finanzen_…_v<N>.sqlite` in `BACKUP_DIR` is accepted (else `404 backup_not_found`); the file is copied to a staging file next to the DB (BKP-024), opened `mode=ro&immutable=1`, and checked for integrity, data version vs. name, checksum vs. `backups.log`, missing tables; it returns row counts and the schema version (`BackupVerifyOut`). The Sicherung page has a „Prüfen“ button per file with a result dialog. Clauses `BKP-028..031`, `API-BKP-010`, `FE-BACKUP-013`; tests check that nothing on the NAS or in the live DB changes and that no staging file is left.
+
+## B-023 Run the tests on pull requests
+
+- **Status:** done
+- **Problem:** the only workflow was `release.yml`, so the tests ran only when a release was published; a PR or a push to `main` was never tested, and a broken `main` showed up only at release time.
+- **Resolution:** new `.github/workflows/ci.yml` runs `python -m pytest -q -m ""` (including the browser tests) on every pull request and on pushes to `main`, with the same Python/Playwright setup as `release.yml`. To enforce it, add the `CI / test` check as required in the `main` branch protection (GitHub settings, by hand).
+
+## B-024 Update the stale intro of `contracts/OPEN_QUESTIONS.md`
+
+- **Status:** done
+- **Problem:** the intro still told the test writer to treat the linked clauses as not-yet-settled (`xfail`/skipped), although every question was decided and its work (B-017..B-022) is done.
+- **Resolution:** the intro now says the decisions are implemented and the file is the record of them; only a new, undecided question keeps its clauses `xfail`/skipped.
