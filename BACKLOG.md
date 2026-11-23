@@ -102,11 +102,19 @@ Status values: `open`, `in progress`, `done`.
 - **Resolution so far:** `.github/workflows/release.yml` (tests → tag check → build/push `vX.Y.Z` + `latest` unless prerelease → upload `install.sh`). `deploy/` holds the production `docker-compose.yml` (image pinned by `APP_VERSION`), `install.sh` and `update.sh`. The Dockerfile copies `deploy/` into the image and sets the label `finanzprognose.version`. Both scripts copy the deploy files out of the image, so the VM only needs a classic token with `read:packages` and the scripts update themselves. `update.sh` keeps a DB copy in `data/pre-update/` (never deleted) and prints rollback commands if the new version does not become healthy. `deploy/docker-compose.yml` is the only compose file: the root build-from-source variant was removed and the contracts (`README`, `INVENTORY`) now point to `deploy/docker-compose.yml`; a local image test is `docker build` + that file with `--project-directory .`. `/healthz` is unchanged (its contract fixes the body to `{"ok": true}`), so the running version is visible via `.env` and the image label rather than the API. README (German) and `CLAUDE.md` are updated.
 - **Verified:** the release workflow, `install.sh` on a fresh VM and `update.sh` were tested successfully by the user.
 
-## B-012 Group bookings (maybe by category)
+## B-012 Group bookings in the Buchungen list and the forecast
 
-- **Status:** open
-- **Problem:** Not yet specified. Rough idea: group bookings, possibly by category.
-- **Next step:** Ask the user before doing anything. Open questions: what "group" means (display only vs. a new entity), whether grouping is by category or something else, and where it should show up (forecast, entries list, monthly totals).
+- **Status:** open (specified, ready to build)
+- **Problem:** Bookings can only be seen as one flat list, so questions like "what does Wohnen cost me per month?" or "where does my money go in March?" need mental arithmetic.
+- **Decisions (with the user):**
+  - Grouping is a **view only**: nothing new is stored, no API or schema change.
+  - A **"Gruppieren nach"** selector in the toolbar of **both** the Buchungen list and the Prognose. Options: `Keine` (default, today's flat list), `Kategorie` (plus "Ohne Kategorie"), `Typ` (Einnahmen / Ausgaben / Umbuchungen), `Konto`, `Rhythmus` (monatlich / vierteljährlich / jährlich / einmalig). Later `Art` (fest / geschätzt, see B-015).
+  - The options are one small table of dimensions (key, label, function entry → group), so adding a dimension is a one-line change.
+  - **Buchungen list:** a header row per group, e.g. "Wohnen · 3 Buchungen · −1.240 €/Monat", groups can be folded. The sum is a **monthly equivalent**: amount ÷ `interval_months`, from the base amount. One-time bookings are left out of the monthly sum (they are still listed in the group).
+  - **Prognose:** grouping applies to the detail of the selected month: subtotals per group from the forecast items (so adjustments are included), each group unfoldable to its bookings. Checkpoint items stay ungrouped.
+  - The selection is remembered **per view** in the browser (`localStorage`, wrapped in try/catch).
+- **Open details (decide while building):** where transfers go under `Kategorie` (their own category, like any booking) and how the monthly sum shows transfers (shown, but not mixed into income/expense).
+- **Done when:** both views have the selector with the dimensions above, group sums are correct (contract clauses + browser tests), and `Keine` renders exactly as today.
 
 ## B-013 Make `category` a dropdown field
 
@@ -122,3 +130,12 @@ Status values: `open`, `in progress`, `done`.
 - **Problem:** On the "Buchungen" (entries) page only a part of the page scrolls (an inner scroll area).
 - **Proposal:** Let the page grow to its full length so the whole page scrolls instead of an inner part.
 - **Next step:** Not investigated yet. Check which element has the inner scroll (CSS in `app/static`, entries view in `entries.js`) and whether other views behave the same.
+
+## B-015 Mark bookings as estimated (variable spending)
+
+- **Status:** open
+- **Problem:** Some recurring expenses are not fixed debits but estimates, e.g. "about 450 €/month for food". They can already be entered as recurring bookings, and checkpoints (Ist-Stände) already absorb the difference to reality as Abweichung, but the app cannot tell a fixed amount from an estimate.
+- **Decisions (with the user):** only a **mark**, no budget tracking. A new field **Art: fest / geschätzt** on bookings (default fest). Individual purchases are deliberately **not** recorded against the estimate; checkpoints stay the source of truth.
+- **Proposal:** new column on `entries` (first real use of the migration runner from B-002: `SCHEMA` for fresh DBs plus an idempotent migration for existing ones; update `TABLES`, the Pydantic model and the response contract). The UI shows estimated amounts with "≈", the entry form gets the Art selector, and B-012 gets the `Art` grouping dimension. Optionally the forecast month detail shows how much of the month is estimated.
+- **Depends on:** B-012 (grouping by Art is where the mark pays off).
+- **Done when:** an existing database is upgraded without data loss, bookings can be marked as geschätzt, the mark is visible in the list and the forecast, and B-012 offers `Art` as a dimension.
