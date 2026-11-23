@@ -7,8 +7,8 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
-from . import backup, db, errors, forecast
-from .contracts import AuditEntryOut, BackupStatusOut, StateResponse
+from . import backup, backup_verify, db, errors, forecast
+from .contracts import AuditEntryOut, BackupStatusOut, BackupVerifyOut, StateResponse
 from .schemas import AccountCreate, Base, MODELS
 from .settings import Settings, get_settings
 
@@ -130,7 +130,16 @@ def backup_status(s: Settings = Depends(get_settings)):
 
 @router.post("/api/backup/run", response_model=BackupStatusOut)
 def backup_run(s: Settings = Depends(get_settings)):
-    return backup.run_backup(s, force=False, reason="manuell") | {"files": backup.list_backups(s, 30)}
+    return backup.run_backup(s, force=False, reason=backup.REASON_MANUAL) | {"files": backup.list_backups(s, 30)}
+
+
+@router.get("/api/backup/verify", response_model=BackupVerifyOut)
+def backup_verify_file(name: str = Query(..., max_length=200), s: Settings = Depends(get_settings)):
+    """Read-only check of one backup file (B-022); never writes to BACKUP_DIR or the live DB."""
+    try:
+        return backup_verify.verify_backup(s, name)
+    except backup_verify.BackupNotFound:
+        raise HTTPException(404, detail={"code": "backup_not_found", "params": {"name": name}})
 
 
 @router.get("/api/export")

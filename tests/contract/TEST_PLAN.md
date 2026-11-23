@@ -71,7 +71,7 @@ off with `backup_scheduler=False`, so there is no background thread and no catch
 (OPEN_QUESTIONS #12) to disturb a test. Only the browser tests need a real socket; they use an
 in-process uvicorn thread instead of a subprocess.
 
-**What the commit does not change:** the clock (TG-1/2/3: no `tick()`/`run_due(now)`), disk full
+**What the commit does not change:** the clock (TG-1/2/3, since solved by B-021: `backup_schedule.due_run(now, …)`/`tick(s, now)`), disk full
 / slow NAS (TG-4), and the integrity-check injection (new TG-7). `Settings` is not specified in
 the contracts beyond five fields (see F-11).
 
@@ -107,7 +107,7 @@ suggested, or logged in `CONTRACT_FEEDBACK.md` when the clause is ambiguous/unob
 
 | Clause(s) | Reason | Class |
 |---|---|---|
-| BKP-001, BKP-019 (and the hourly retry) | Scheduler timing: TG-1/TG-2. `start_scheduler(s)` now returns a stop `Event`, but there is still no `tick()`/`run_due(now)` seam, so the 60 s wall-clock loop cannot be driven. | TG-1/2 (skip stub) |
+| BKP-001, BKP-019 (and the hourly retry) | Solved by B-021: `due_run(now, …)` is pure and `tick(s, now)` runs a decided backup, so both are tested at chosen times (`test_backup_schedule.py`). Only the 60 s loop around `tick` is untested. | Covered |
 | BKP-013 exact timestamp value; `last_*` timestamps | No clock injection (TG-3). I assert only the `finanzen_YYYY-MM-DD_HHMMSS_v<N>.sqlite` pattern and that `<N>` equals `data_version`. | Partial |
 | Disk full, slow NAS (ENVIRONMENT table) | TG-4: no ENOSPC/latency seam; no root/mount rights for a loopback or tmpfs in this container. | TG-4 (skip stub) |
 | BKP-010 "failing integrity check aborts, no final artifact" | No seam to inject a failing `integrity_check`. The success half (valid artifact) is tested. | **TG-7 (new)**: skip stub |

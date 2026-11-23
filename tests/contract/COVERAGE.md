@@ -232,6 +232,8 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | API-BKP-007 | passed | 1: `test_change_after_backup_creates_second_backup_and_keeps_first` |
 | API-BKP-008 | passed | 3: `test_list_backups_ignores_non_backup_files`, `test_list_backups_limit`, `test_no_retention_and_files_list_is_capped_at_30_newest_first` |
 | API-BKP-009 | passed | 1: `test_unchanged_run_keeps_last_success_data` |
+| API-BKP-010 | passed | 1: `test_a_good_backup_is_ok_with_its_numbers` |
+| API-BKP-011 | passed | 1: `test_error_and_reason_are_codes` |
 | API-EXPORT-001 | passed | 3: `test_export_has_all_sections`, `test_export_is_valid_json_with_unicode`, `test_export_of_empty_database` |
 | API-EXPORT-002 | passed | 1: `test_export_is_an_attachment_named_after_today` |
 | API-EXPORT-003 | passed | 2: `test_export_includes_archived_rows_with_integer_cents`, `test_export_is_valid_json_with_unicode` |
@@ -242,7 +244,7 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 
 | Clause | Status | Tests |
 |---|---|---|
-| BKP-001 | skipped | 1: `test_scheduled_backup_runs_once_per_day_at_backup_time` |
+| BKP-001 | passed | 2: `test_tick_on_the_next_day_backs_up_the_new_changes`, `test_tick_runs_the_daily_backup_once` |
 | BKP-002 | passed | 1: `test_manual_run_via_api_creates_a_backup` |
 | BKP-003 | passed | 2: `test_second_run_without_changes_is_unchanged_and_writes_nothing`, `test_unchanged_run_keeps_last_success_data` |
 | BKP-004 | passed | 1: `test_missing_last_backup_file_is_rewritten_even_if_nothing_changed` |
@@ -255,18 +257,24 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | BKP-011 | passed | 2: `test_backup_taken_while_writes_happen_is_a_consistent_snapshot`, `test_snapshot_rows_are_a_prefix_of_the_live_history` |
 | BKP-012 | passed | 3: `test_later_changes_are_not_in_an_earlier_backup`, `test_snapshot_rows_are_a_prefix_of_the_live_history`, `test_sqlite_artifact_matches_source_at_snapshot_time` |
 | BKP-013 | passed | 2: `test_filename_carries_local_time_and_data_version`, `test_success_writes_exactly_a_sqlite_and_a_json_with_the_documented_name` |
-| BKP-014 | passed | 2: `test_backups_log_gets_one_line_per_successful_backup`, `test_failed_run_adds_no_log_line` |
+| BKP-014 | passed | 3: `test_backups_log_gets_one_line_per_successful_backup`, `test_backups_log_records_the_reason_code`, `test_failed_run_adds_no_log_line` |
 | BKP-015 | passed | 1: `test_change_after_backup_creates_second_backup_and_keeps_first` |
 | BKP-016 | passed (some skipped) | 2: `test_interrupted_run_never_leaves_a_half_written_final_artifact`, `test_no_temporary_files_remain_after_success` |
 | BKP-017 | passed (some skipped) | 5: `test_disk_full_is_reported_as_error`, `test_failed_copy_to_nas_cleans_staging_and_nas`, `test_failure_in_the_middle_of_a_write_leaves_no_final_artifact`, `test_permission_denied_keeps_previous_success_and_recovers` (+1 more) |
 | BKP-018 | passed (some skipped) | 7: `test_error_status_is_visible_via_get_status`, `test_nas_becoming_unreachable_after_a_success`, `test_permission_denied_keeps_previous_success_and_recovers`, `test_status_after_error_sets_last_error` (+3 more) |
-| BKP-019 | skipped | 1: `test_failed_backup_is_retried_about_hourly` |
+| BKP-019 | passed | 1: `test_failed_backup_is_retried_after_an_hour` |
 | BKP-020 | passed | 1: `test_pending_changes_follow_data_version` |
 | BKP-021 | passed (some skipped) | 5: `test_app_keeps_serving_during_and_after_a_backup`, `test_backup_taken_while_writes_happen_is_a_consistent_snapshot`, `test_overlapping_runs_are_serialized`, `test_reads_and_writes_succeed_while_a_backup_runs` (+1 more) |
 | BKP-022 | passed | 1: `test_reads_and_writes_succeed_while_a_backup_runs` |
 | BKP-023 | passed | 1: `test_no_retention_and_files_list_is_capped_at_30_newest_first` |
 | BKP-024 | passed | 1: `test_sqlite_never_touches_the_backup_dir` |
 | BKP-025 | passed | 2: `test_failed_copy_to_nas_cleans_staging_and_nas`, `test_staging_files_removed_after_success_and_failure` |
+| BKP-026 | passed | 12: `test_backup_time_is_honored`, `test_retry_is_due_an_hour_after_a_failed_attempt[since0-error-retry]`, `test_retry_is_due_an_hour_after_a_failed_attempt[since1-error-None]`, `test_retry_is_due_an_hour_after_a_failed_attempt[since2-ok-None]` (+8 more) |
+| BKP-027 | passed | 4: `test_an_old_german_status_is_passed_through`, `test_backups_log_records_the_reason_code`, `test_error_and_reason_are_codes`, `test_success_clears_the_error` |
+| BKP-028 | passed | 7: `test_a_path_to_a_real_backup_is_rejected`, `test_unknown_or_foreign_names_are_not_found[../data/finanzen.sqlite]`, `test_unknown_or_foreign_names_are_not_found[.nas-marker]`, `test_unknown_or_foreign_names_are_not_found[]` (+3 more) |
+| BKP-029 | passed | 1: `test_verify_changes_nothing` |
+| BKP-030 | passed | 1: `test_a_good_backup_is_ok_with_its_numbers` |
+| BKP-031 | passed | 4: `test_a_database_without_the_app_tables`, `test_a_modified_file_fails_the_checksum`, `test_a_renamed_backup_has_a_version_mismatch`, `test_garbage_is_not_a_database` |
 | RESTORE-001 | passed | 2: `test_backup_file_is_the_database_after_the_manual_steps`, `test_backup_opens_directly_in_a_fresh_location` |
 | RESTORE-002 | passed | 1: `test_old_database_and_its_sidecar_files_are_set_aside_not_lost` |
 | RESTORE-003 | passed | 2: `test_backup_file_is_the_database_after_the_manual_steps`, `test_forecast_after_restore_equals_forecast_at_backup_time` |
@@ -408,7 +416,7 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | FE-AUDIT-011 | passed | 2: `test_undoing_a_normal_change_keeps_the_undo_wording`, `test_undoing_an_undo_is_worded_as_restore` |
 | FE-BACKUP-001 | passed | 1: `test_status_block_shows_target_schedule_version` |
 | FE-BACKUP-002 | passed | 1: `test_run_backup_ok_then_unchanged_with_toasts_list_and_pill` |
-| FE-BACKUP-003 | passed | 1: `test_failed_backup_shows_error_toast_banner_and_pill` |
+| FE-BACKUP-003 | passed | 2: `test_failed_backup_shows_error_toast_banner_and_pill`, `test_marker_error_is_shown_in_german` |
 | FE-BACKUP-004 | passed | 2: `test_failed_backup_shows_error_toast_banner_and_pill`, `test_run_backup_ok_then_unchanged_with_toasts_list_and_pill` |
 | FE-BACKUP-005 | passed | 2: `test_backup_list_is_capped_at_thirty`, `test_empty_backup_list` |
 | FE-BACKUP-006 | passed | 1: `test_export_link_points_to_the_json_export` |
@@ -416,6 +424,9 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | FE-BACKUP-008 | passed | 1: `test_pill_says_server_unreachable_when_status_fails` |
 | FE-BACKUP-009 | passed | 1: `test_pill_refreshes_periodically` |
 | FE-BACKUP-010 | passed | 2: `test_failed_run_request_shows_error_toast[chromium-http]`, `test_failed_run_request_shows_error_toast[chromium-network]` |
+| FE-BACKUP-011 | passed | 2: `test_marker_error_is_shown_in_german`, `test_old_german_status_is_shown_as_is` |
+| FE-BACKUP-012 | passed | 2: `test_last_attempt_shows_the_reason`, `test_old_german_status_is_shown_as_is` |
+| FE-BACKUP-013 | passed | 2: `test_checking_a_damaged_backup_lists_the_problems`, `test_checking_a_good_backup` |
 
 ## End-to-end
 

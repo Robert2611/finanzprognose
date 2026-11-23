@@ -14,14 +14,22 @@ Import: `from app import backup`. Every function takes the app's `Settings` `s`
 (env `BACKUP_TIME`, default `03:00`), `s.backup_require_marker` (env `BACKUP_REQUIRE_MARKER`,
 default `1`; `MARKER = ".nas-marker"`), `s.db_path`. Nothing is captured at import.
 
-- `backup.run_backup(s, force=False, reason="zeitplan") -> dict` — attempt a backup; returns
-  the resulting status dict.
+- `backup.run_backup(s, force=False, reason="scheduled") -> dict` — attempt a backup; returns
+  the resulting status dict. `reason` is a code: `scheduled`, `manual` or `retry`
+  (`backup.REASON_*`).
+- `backup.mark_scheduled_run(s, when)` — record `last_scheduled_run = when`.
 - `backup.status(s) -> dict` — current status (persisted fields + live `backup_dir`,
   `backup_time`, `current_version`, `pending_changes`).
 - `backup.list_backups(s, limit=100) -> list[dict]` — `{name, size, mtime}` for
   `finanzen_*.sqlite` files, newest-first.
-- `backup.start_scheduler(s) -> threading.Event` — start the daemon scheduler thread;
-  setting the returned event stops it. The app lifespan starts it only when
+- `backup_verify.verify_backup(s, name) -> dict` — the read-only check of one backup file
+  (B-022, `BKP-028..031`); raises `backup_verify.BackupNotFound` for an unknown name.
+- `backup_schedule.due_run(now, status, backup_time) -> 'scheduled'|'retry'|None` — the pure
+  schedule decision (B-021, `BKP-026`).
+- `backup_schedule.tick(s, now=None) -> reason|None` — run the backup that is due at `now`
+  (default: the current local time) and, for a scheduled run, record it.
+- `backup_schedule.start_scheduler(s) -> threading.Event` — start the daemon thread that calls
+  `tick(s)` about every 60 seconds; setting the returned event stops it. The app lifespan starts it only when
   `s.backup_scheduler` is true (env `BACKUP_SCHEDULER`, default `1`) and stops it on shutdown.
 
 **Artifacts in `BACKUP_DIR`** for a run at data-version `v`, local timestamp
@@ -44,7 +52,7 @@ and scheduling. Serializes runs with an internal lock.
 - `BKP-001` [README] A scheduled backup runs once per day at `BACKUP_TIME` (local time),
   driven by a daemon thread that checks roughly every 60 seconds.
 - `BKP-002` [README] A backup can be triggered manually via `POST /api/backup/run`
-  (`reason="manuell"`). [TEST: `test_backup`]
+  (`reason="manual"`). [TEST: `test_backup`]
 - `BKP-003` [README][TEST] A backup only produces a new artifact if `data_version` differs
   from the last successful backup's version; otherwise the run result is `"unchanged"` and
   no file is written. [TEST: `test_backup`]
@@ -56,12 +64,12 @@ and scheduling. Serializes runs with an internal lock.
 
 ### NAS-marker guard & target checks
 - `BKP-006` [README][TEST] With `BACKUP_REQUIRE_MARKER=1`, if `BACKUP_DIR/.nas-marker` is
-  missing, the run fails: `last_result="error"`, `last_error` mentions `.nas-marker`, and
-  **no** artifact is written. [TEST: `test_backup`]
+  missing, the run fails: `last_result="error"`, `last_error` is
+  `{code:'marker_missing', params:{marker:'.nas-marker', dir}}`, and **no** artifact is written. [TEST: `test_backup`]
 - `BKP-007` [INFERRED] With `BACKUP_REQUIRE_MARKER=0`, no marker file is required (local dev
   mode).
-- `BKP-008` [INFERRED] If `BACKUP_DIR` does not exist, the run fails with an error naming
-  the missing target and writes nothing.
+- `BKP-008` [INFERRED] If `BACKUP_DIR` does not exist, the run fails with
+  `last_error = {code:'backup_dir_missing', params:{dir}}` and writes nothing.
 
 ### Artifact contract
 - `BKP-009` [README] On success, exactly two artifacts are written for the run: the
@@ -79,7 +87,8 @@ and scheduling. Serializes runs with an internal lock.
 - `BKP-013` [README] Backup filenames encode the local timestamp and the data-version:
   `finanzen_YYYY-MM-DD_HHMMSS_v<version>.sqlite` (and `.json`).
 - `BKP-014` [README] `backups.log` gains one appended line per successful backup containing
-  the stamp, `v<version>`, the `.sqlite` filename, its `sha256=` checksum, and the reason.
+  the stamp, `v<version>`, the `.sqlite` filename, its `sha256=` checksum, and the reason
+  code, tab-separated (`BKP-030` reads it back).
 
 ### Never destroy
 - `BKP-015` [README][TEST] Older backups are never deleted or overwritten; each successful
@@ -101,11 +110,25 @@ and scheduling. Serializes runs with an internal lock.
 - `BKP-018` [INFERRED] After a run, `status()` reflects `last_attempt`, `last_reason`,
   `last_result` (`ok`/`unchanged`/`error`), and on success `last_success`, `last_version`,
   `last_file`; on error `last_error` is set and `last_success`/`last_version` are unchanged.
-- `BKP-019` [README] After a failed backup, the scheduler retries about once an hour
-  (in addition to the daily run). [OBSERVED: retry keys off `last_result=='error'` and
-  `now - last_attempt > 1h`; see OPEN_QUESTIONS #12.]
+- `BKP-019` [README] After a failed backup, the scheduler retries once more than an hour has
+  passed since the failed attempt (in addition to the daily run); the retry has
+  `last_reason='retry'` (B-021, `BKP-026`).
 - `BKP-020` [INFERRED] `pending_changes` in `status()` is `true` when `current_version`
   differs from the last backed-up version.
+
+- `BKP-026` [README] The schedule decision `due_run(now, status, backup_time)` (B-021,
+  OPEN_QUESTIONS #12): a **scheduled** run is due when `now` is at or after today's
+  `BACKUP_TIME` and `last_scheduled_run` is before it, so it runs once per day, and an app
+  started after `BACKUP_TIME` makes up a missed run right away (it reports `unchanged` if
+  nothing changed). Otherwise a **retry** is due when `last_result == 'error'` and more than
+  one hour has passed since `last_attempt`. A scheduled run takes precedence, so one tick
+  never runs twice; after `ok`/`unchanged` no retry is due.
+- `BKP-027` [README] `last_error` is language-neutral (B-020, OPEN_QUESTIONS #11):
+  `{code, params}` with `backup_dir_missing {dir}`, `marker_missing {marker, dir}`,
+  `integrity_failed {result}`, or `backup_failed {detail}` for any other failure (`detail` is
+  the exception text). `last_reason` is `scheduled`, `manual` or `retry`. A status file
+  written before B-020 may still hold German strings in both fields; they are passed through
+  unchanged. The backend writes no German text.
 
 ### Effect on the running app
 - `BKP-021` [README][INFERRED] Backups do not require stopping the app: the online backup
@@ -119,19 +142,38 @@ and scheduling. Serializes runs with an internal lock.
 - `BKP-023` [README] There is **no** retention/rotation/pruning: nothing is ever removed
   automatically. External NAS snapshots are recommended but out of this subsystem's scope.
 
+### Read-only check of a backup („Backup prüfen“, B-022)
+- `BKP-028` [README] `verify_backup(s, name)` accepts only a bare file name matching
+  `finanzen_YYYY-MM-DD_HHMMSS_v<N>.sqlite` that exists directly in `BACKUP_DIR`. Anything
+  else (no such file, another name, any path such as `../x` or `sub/x`) raises
+  `BackupNotFound`.
+- `BKP-029` [README] The check is read-only: no file in `BACKUP_DIR` is created, changed or
+  removed, and the live database is not touched. As per `BKP-024`, SQLite never opens the
+  file on the NAS: it is copied to a dot-prefixed `.tmp` staging file in the directory of
+  `DB_PATH`, opened read-only (`mode=ro&immutable=1`), and the staging file is removed
+  afterwards.
+- `BKP-030` [README] The result is `{name, ok, problems, size, file_version, data_version,
+  schema_version, counts, sha256, sha256_logged}`: `file_version` is the `<N>` from the name,
+  `data_version` is `MAX(audit_log.id)` inside the file, `schema_version` its `user_version`,
+  `counts` the row count per data table and `audit_log`, `sha256` the file's checksum and
+  `sha256_logged` the one `backups.log` recorded for that name (last matching line, `null`
+  if none). `ok` is true iff `problems` is empty.
+- `BKP-031` [README] `problems` is a list of `{code, params}`: `checksum_mismatch` (logged
+  checksum differs), `integrity_failed {result}`, `not_a_database {detail}`,
+  `tables_missing {tables}` (comma-separated, in the order accounts, entries, adjustments,
+  checkpoints, audit_log) and `version_mismatch {file_version, data_version}`. A file with
+  no `backups.log` entry is not a problem by itself.
+
 ## Examples
-- Marker missing → `run_backup()` → `{last_result:'error', last_error:'…​.nas-marker…'}`,
+- Marker missing → `run_backup()` → `{last_result:'error', last_error:{code:'marker_missing', …}}`,
   dir unchanged. [TEST]
 - Marker present, v5 pending → `run_backup()` → writes `finanzen_<stamp>_v5.sqlite` + `.json`,
   appends `backups.log`, `{last_result:'ok', last_version:5}`. [TEST]
 - No change since v5 → `run_backup()` → `{last_result:'unchanged'}`, no new file. [TEST]
 
 ## Out of scope / not specified
-- Scheduler wall-clock behavior in tests (uncontrollable; see ENVIRONMENT gaps #1–#3).
-  Verify backup mechanics via the manual run, not the schedule.
-- Exact German text of `last_error`/`reason` (see OPEN_QUESTIONS #11).
+- The 60-second loop itself (it only calls `tick`; the decision is tested via `due_run`/`tick`).
 - Disk-full / slow-NAS behavior details (no seam to reproduce reliably; ENVIRONMENT gap #4).
 
 ## Open questions
-- OPEN_QUESTIONS #11 (German text in backup status fields).
-- OPEN_QUESTIONS #12 (hourly-retry trigger conditions and whether it can double-run).
+- None open. (#11 and #12 were settled, see `BKP-027` and `BKP-026`; #13 see `BKP-028..031`.)

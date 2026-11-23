@@ -34,7 +34,8 @@ status on an interval and after actions.
   `erfolgreich` (ok), `"keine Änderungen – nichts zu sichern"` (unchanged), or `FEHLER`
   (error).
 - `FE-BACKUP-003` [README] When the last result was an error, a red `.banner.err` shows
-  `"Letzte Sicherung fehlgeschlagen:"` followed by the server `last_error`.
+  `"Letzte Sicherung fehlgeschlagen:"` followed by the German text of `last_error`
+  (`FE-BACKUP-011`).
 - `FE-BACKUP-004` [INFERRED] `"Jetzt sichern"` POSTs `/api/backup/run`, then toasts the
   outcome: `"Sicherung erstellt"` (ok), `"Keine Änderungen seit der letzten Sicherung"`
   (unchanged), or an error toast `"Sicherung fehlgeschlagen: <error>"`; the panel and pill
@@ -53,6 +54,26 @@ status on an interval and after actions.
   the pill shows `err` with `"Server nicht erreichbar"`.
 - `FE-BACKUP-009` [INFERRED] The pill refreshes on a periodic interval and after a manual
   backup run.
+- `FE-BACKUP-011` [README] Backup codes are shown in German (B-020): `marker_missing` →
+  `"Datei <marker> fehlt im Backup-Ziel – ist das NAS eingebunden? Es wurde nichts
+  gesichert."`, `backup_dir_missing` → `"Backup-Ziel <dir> existiert nicht."`,
+  `integrity_failed` → `"Integritätsprüfung der Sicherung fehlgeschlagen: <result>"`,
+  `backup_failed` → `"Unerwarteter Fehler: <detail>"`; an unknown code shows the code; a
+  plain string (status from before B-020) shows as-is. The same text is used in the error
+  toast of `"Jetzt sichern"`.
+- `FE-BACKUP-012` [README] `"Letzter Versuch"` shows the reason after the time in brackets:
+  `scheduled` → `Zeitplan`, `manual` → `manuell`, `retry` → `Wiederholung nach Fehler`
+  (other values as-is).
+- `FE-BACKUP-013` [README] Each row of the backups list has a `"Prüfen"` button. It opens a
+  dialog `"Sicherung prüfen"` with the file name that loads `GET /api/backup/verify`. On
+  `ok` it shows a `.banner.ok` `"In Ordnung – diese Sicherung ist vollständig lesbar und
+  lässt sich wiederherstellen."`; otherwise a `.banner.err` `"Probleme gefunden:"` with one
+  German line per problem code. Below: `Datenstand` (`Version <data_version> (laut
+  Dateiname v<file_version>)`), `Schema-Version`, `Größe`, `Prüfsumme` (`stimmt mit
+  backups.log überein` / `weicht von backups.log ab` / `nicht in backups.log eingetragen`)
+  and the row counts (`Konten`, `Buchungen`, `Anpassungen`, `Ist-Stände`,
+  `Protokolleinträge`). A note says only a copy is checked and points to the README for
+  restoring. `"Schließen"` closes it.
 
 ## Examples
 - Marker missing, run backup → error toast + red banner with the `.nas-marker` message +

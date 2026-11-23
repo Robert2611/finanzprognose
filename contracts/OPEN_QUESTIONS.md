@@ -116,7 +116,7 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
   (B-005). Was backup intentionally left out of that refactor?
 - **Guidance for tests:** match stable substrings (e.g. `.nas-marker`) or the `last_result`
   enum (`ok`/`unchanged`/`error`), **not** full German sentences.
-- **Decision (2026-11-23):** Convert to codes: `last_error`/`last_reason` become `{code, params}` and the frontend maps them to German. Old German strings in an existing status file still display as-is. → B-020
+- **Decision (2026-11-23):** Convert to codes: `last_error`/`last_reason` become `{code, params}` and the frontend maps them to German. Old German strings in an existing status file still display as-is. → B-020 (done)
 
 ### 12. Backup scheduler: startup catch-up and hourly-retry conditions
 - **Clauses:** `BKP-001`, `BKP-019`.
@@ -128,7 +128,7 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
   after 03:00)? These timing paths are also untestable in a black-box setting (ENVIRONMENT
   gaps #1–#3).
 - **Options:** confirm the catch-up behavior; add a seam so the schedule decision is testable.
-- **Decision (2026-11-23):** Keep the startup catch-up and the hourly retry. Refactor the schedule decision into a function that takes `now`, so both paths get real tests (un-skipping the TG-1/TG-2/TG-3 placeholders). → B-021
+- **Decision (2026-11-23):** Keep the startup catch-up and the hourly retry. Refactor the schedule decision into a function that takes `now`, so both paths get real tests (un-skipping the TG-1/TG-2/TG-3 placeholders). → B-021 (done)
 
 ### 13. No automated restore and no built-in post-restore verification
 - **Clauses:** `RESTORE-001`..`RESTORE-007`.
@@ -138,7 +138,7 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
 - **Why noted:** The task asks for a restore acceptance contract so a test can verify
   restorability. That test must be built around the manual steps (there is no API to exercise).
 - **Options:** keep manual (document + external test), or add a verified restore path later.
-- **Decision (2026-11-23):** Keep restore manual (nothing in the app can overwrite the live DB). Add a read-only „Backup prüfen“ action on the Sicherung page: it opens a chosen backup, runs `integrity_check` and shows its `data_version` and row counts. → B-022
+- **Decision (2026-11-23):** Keep restore manual (nothing in the app can overwrite the live DB). Add a read-only „Backup prüfen“ action on the Sicherung page: it opens a chosen backup, runs `integrity_check` and shows its `data_version` and row counts. → B-022 (done)
 
 ### 14. Frontend has no stable test hooks (`data-testid`)
 - **Clauses:** `FE-CORE-...`, `FE-FORM`, all `FE-*` and `[BROWSER-REQUIRED]` E2E clauses.

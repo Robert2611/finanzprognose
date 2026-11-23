@@ -57,5 +57,5 @@ assert `GET /api/state` matches the known data and `data_version` matches the `_
 - Merging a backup with newer live changes (not supported; restore is whole-file).
 
 ## Open questions
-None (but see OPEN_QUESTIONS #13: no automated restore / no built-in post-restore
-verification beyond this manual procedure).
+None. Restore stays manual by decision (OPEN_QUESTIONS #13). Before restoring, a backup can
+be checked read-only on the Sicherung page („Prüfen“, `BKP-028..031`).

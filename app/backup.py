@@ -7,7 +7,8 @@
     integrity_check) and a human-readable JSON export. Checksums go to backups.log.
   * Protection against "NAS not mounted": the target folder must contain the file .nas-marker,
     otherwise NOTHING is backed up and the app shows a red error.
-  * If a backup fails, it is retried every hour.
+  * If a backup fails, it is retried every hour (the schedule lives in backup_schedule.py).
+  * Errors and run reasons are language-neutral codes (B-020); the frontend shows German text.
 
 All configuration comes from the `Settings` passed in by the caller (the app's settings),
 never from module globals, so tests can use several configurations in one process.
@@ -19,7 +20,7 @@ import os
 import shutil
 import sqlite3
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from . import db
 from .settings import Settings
@@ -28,7 +29,24 @@ log = logging.getLogger("backup")
 
 MARKER = ".nas-marker"
 
+# Why a run happened (stored as last_reason and in backups.log).
+REASON_SCHEDULED, REASON_MANUAL, REASON_RETRY = "scheduled", "manual", "retry"
+
 _lock = threading.Lock()
+
+
+class BackupError(Exception):
+    """A known backup failure, stored in the status as last_error = {code, params}."""
+
+    def __init__(self, code: str, **params):
+        super().__init__(code)
+        self.code, self.params = code, params
+
+
+def _error_of(ex: Exception) -> dict:
+    if isinstance(ex, BackupError):
+        return {"code": ex.code, "params": ex.params}
+    return {"code": "backup_failed", "params": {"detail": str(ex)}}
 
 
 def _data_version(s: Settings) -> int:
@@ -73,7 +91,7 @@ def _sha256(path: str) -> str:
     return h.hexdigest()
 
 
-def run_backup(s: Settings, force: bool = False, reason: str = "zeitplan") -> dict:
+def run_backup(s: Settings, force: bool = False, reason: str = REASON_SCHEDULED) -> dict:
     backup_dir = s.backup_dir
     with _lock:
         st = status(s)
@@ -81,11 +99,9 @@ def run_backup(s: Settings, force: bool = False, reason: str = "zeitplan") -> di
         st["last_reason"] = reason
         try:
             if not os.path.isdir(backup_dir):
-                raise RuntimeError(f"Backup-Ziel {backup_dir} existiert nicht.")
+                raise BackupError("backup_dir_missing", dir=backup_dir)
             if s.backup_require_marker and not os.path.exists(os.path.join(backup_dir, MARKER)):
-                raise RuntimeError(
-                    f"Datei {MARKER} fehlt im Backup-Ziel – ist das NAS eingebunden? "
-                    "Es wurde nichts gesichert.")
+                raise BackupError("marker_missing", marker=MARKER, dir=backup_dir)
             version = _data_version(s)
             last_file = st.get("last_file")
             if (not force and version == st.get("last_version") and last_file
@@ -121,7 +137,7 @@ def run_backup(s: Settings, force: bool = False, reason: str = "zeitplan") -> di
             finally:
                 chk.close()
             if res != "ok":
-                raise RuntimeError(f"Integritätsprüfung der Sicherung fehlgeschlagen: {res}")
+                raise BackupError("integrity_failed", result=res)
 
             with open(loc_json, "w", encoding="utf-8") as f:
                 json.dump(export, f, ensure_ascii=False, indent=1)
@@ -142,8 +158,8 @@ def run_backup(s: Settings, force: bool = False, reason: str = "zeitplan") -> di
             log.info("Backup created: %s", final_db)
         except Exception as ex:  # noqa: BLE001
             st["last_result"] = "error"
-            st["last_error"] = str(ex)
-            log.error("Backup failed: %s", ex)
+            st["last_error"] = _error_of(ex)
+            log.error("Backup failed: %s", st["last_error"])
             for p in ("tmp_db", "tmp_json", "loc_db", "loc_json"):
                 path = locals().get(p)
                 if path and os.path.exists(path):
@@ -177,30 +193,9 @@ def list_backups(s: Settings, limit: int = 100) -> list[dict]:
     return files[:limit]
 
 
-def _scheduler(s: Settings, stop: threading.Event) -> None:
-    while not stop.is_set():
-        try:
-            now = datetime.now()
-            hh, mm = map(int, s.backup_time.split(":"))
-            due = now.replace(hour=hh, minute=mm, second=0, microsecond=0)
-            st = status(s)
-            last_sched = st.get("last_scheduled_run")
-            last_sched = datetime.fromisoformat(last_sched) if last_sched else None
-            last_attempt = datetime.fromisoformat(st["last_attempt"]) if st.get("last_attempt") else None
-            if now >= due and (last_sched is None or last_sched < due):
-                st = run_backup(s, reason="zeitplan")
-                st["last_scheduled_run"] = now.isoformat(timespec="seconds")
-                _save_status(s, st)
-            elif (st.get("last_result") == "error" and last_attempt
-                  and now - last_attempt > timedelta(hours=1)):
-                run_backup(s, reason="wiederholung nach fehler")
-        except Exception as ex:  # noqa: BLE001
-            log.exception("Error in backup scheduler: %s", ex)
-        stop.wait(60)
-
-
-def start_scheduler(s: Settings) -> threading.Event:
-    """Start the daily backup thread. Setting the returned event stops it."""
-    stop = threading.Event()
-    threading.Thread(target=_scheduler, args=(s, stop), name="backup-scheduler", daemon=True).start()
-    return stop
+def mark_scheduled_run(s: Settings, when: datetime) -> None:
+    """Record that the daily scheduled run for `when` has happened (see backup_schedule)."""
+    with _lock:
+        st = status(s)
+        st["last_scheduled_run"] = when.isoformat(timespec="seconds")
+        _save_status(s, st)

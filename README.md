@@ -49,7 +49,8 @@ Nicht jede Ausgabe ist eine feste Abbuchung. Für Lebensmittel, Tanken oder Frei
   - `backups.log`: Liste aller Sicherungen mit SHA-256-Prüfsumme
 - Dateien werden erst unter einem temporären Namen geschrieben und dann umbenannt. Ein Abbruch hinterlässt also nie eine halbe Sicherung.
 - **Schutz gegen ein nicht eingebundenes NAS:** Im Zielordner muss die Datei `.nas-marker` liegen. Fehlt sie, wird nichts gesichert und die App zeigt oben rechts rot „Sicherung fehlgeschlagen!“ an. Sonst würden die Sicherungen unbemerkt auf der lokalen Platte landen, wenn das NAS einmal nicht eingebunden ist.
-- Nach einem Fehler versucht die App es stündlich erneut.
+- Nach einem Fehler versucht die App es stündlich erneut. Startet die App nach `BACKUP_TIME` (z. B. nach einem Neustart oder Update), holt sie die Sicherung des Tages sofort nach.
+- **Backup prüfen:** Unter „Sicherung“ hat jede Datei einen Knopf **Prüfen**. Er prüft eine Kopie der Sicherung (Integrität, Datenstand, Prüfsumme aus `backups.log`) und zeigt, wie viele Konten, Buchungen usw. darin stecken. Die Sicherung selbst und die laufende Datenbank werden dabei nicht verändert.
 
 ---
 
@@ -177,6 +178,8 @@ Alles, was du nach dem Update eingetragen hast, fehlt danach. Es steht aber noch
 ---
 
 ## Wiederherstellen aus einer Sicherung
+
+Prüfe die gewünschte Sicherung vorher unter „Sicherung → Prüfen“. Das Zurückspielen selbst ist bewusst ein Handgriff auf dem Server, damit nichts in der App versehentlich die Daten ersetzen kann.
 
 ```bash
 cd /opt/finanzprognose
