@@ -2,7 +2,7 @@
 
 Ambiguities, under-specified behavior, and suspected bugs found while writing the contracts.
 Each entry: the related clause(s), what was observed, why it's unclear/suspicious, and the
-options. **Suspected bugs are marked.** All questions were decided on 2026-11-23 (see the **Decision** line of each entry), and the work they needed (B-017..B-022 in `BACKLOG.md`) is done, so the linked clauses are settled
+options. **Suspected bugs are marked.** All questions were decided on 2026-11-23 (see the **Decision** line of each entry), and the work they needed (B-017..B-022 in `docs/backlog-done.md`) is done, so the linked clauses are settled
 and tested like any other. This file is kept as the record of those decisions; a new question
 gets a new numbered entry here, and its clauses stay `xfail`/skipped only until it is decided.
 
