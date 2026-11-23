@@ -49,4 +49,4 @@ Read-only. Loads all four tables and runs `forecast.compute`. No clock dependenc
 - Performance characteristics for very large horizons.
 
 ## Open questions
-- OPEN_QUESTIONS #8 (month regex allows out-of-range months like `2026-13`).
+- None open. (#8 was settled, see `API-FC-007`.)

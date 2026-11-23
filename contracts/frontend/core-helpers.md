@@ -120,5 +120,6 @@ only their argument. `accName`/`entryName` (used by `warnMsg`) read the in-memor
 - Internal rendering helpers (`signed`, `eurCls`) beyond their visible effect in the views.
 
 ## Open questions
-- OPEN_QUESTIONS #14 (frontend has no `data-testid` hooks; browser tests must rely on
-  visible text/roles and the handful of ids listed in `FE-NAV`).
+- None open. Selectors: browser tests use the visible German text, roles, `data-name`/`name`
+  and the few ids in `FE-NAV`; the contracts pin that text, so this is intended
+  (OPEN_QUESTIONS #14). Add a `data-testid` only where a selector gets awkward.

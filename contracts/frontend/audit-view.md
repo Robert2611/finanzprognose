@@ -41,6 +41,11 @@ template) with a `"Schließen"` button.
   record will be reset and the reset itself logged; confirming POSTs the revert.
 - `FE-AUDIT-007` [INFERRED] After a successful revert, a `"Rückgängig gemacht"` toast is
   shown and the list re-renders with the new `revert` entry at the top.
+- `FE-AUDIT-011` [README] On a `revert` row the confirmation is worded as a redo (B-019):
+  title `"Änderung #<reverts_id> wiederherstellen"`, an intro saying the undone change
+  #<reverts_id> is restored and that this is logged as a new change, submit button
+  `"Wiederherstellen"`, and after success the toast `"Wiederhergestellt"`. The row's button
+  stays `"Rückgängig"`.
 - `FE-AUDIT-008` [INFERRED] `"Ältere laden"` appears only when the last fetch returned a full
   page (200 rows) and loads the next older page, appending to the list.
 - `FE-AUDIT-009` [INFERRED] `historyDialog(entity, id)` fetches that record's history

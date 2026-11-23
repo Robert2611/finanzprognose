@@ -50,14 +50,20 @@ write path) and therefore appends a new audit row in the same transaction. Raise
   to the reverted row's id. [TEST: `test_optimistic_locking_and_audit`]
 - `DB-AUDIT-011` [README] `data_version` equals `MAX(audit_log.id)`, i.e. it increases by
   one on every logged change and is `0` on an empty database.
-- `DB-AUDIT-012` [OBSERVED] Because a no-op update/archive writes no audit row (see
-  `DB-CRUD-010/014`), `data_version` does **not** change across a no-op write. See
-  OPEN_QUESTIONS #2.
+- `DB-AUDIT-012` [README] Because a no-op update/archive writes no audit row (see
+  `DB-CRUD-010/014`), `data_version` does **not** change across a no-op write, so the next
+  backup is skipped as unchanged. Intended (OPEN_QUESTIONS #2, B-019).
 - `DB-AUDIT-013` [INFERRED] `export_all` returns a dict with a key per data table
   (`accounts`, `entries`, `adjustments`, `checkpoints`) holding all rows, plus
   `audit_log` (oldest-first), `exported_at` (a `now()` timestamp) and `data_version`.
 - `DB-AUDIT-014` [INFERRED] The `audit_log` entries inside `export_all` are in ascending
   id order (chronological), i.e. the reverse of `audit_list`'s default order.
+- `DB-AUDIT-015` [README] Reverting a `revert` row is a **redo** (OPEN_QUESTIONS #4, B-019):
+  like any revert it restores that row's `before` snapshot, which is the state before the
+  undo, so the undone change is back. It is a new forward change with `action='revert'`
+  and `reverts_id` = the reverted revert row. Undoing the undo of a `create` (which
+  archived the record) therefore makes the record active again. Chains work the same way
+  at every step; nothing in history is rewritten.
 
 ## Examples
 - Create account (audit id 10), update name (id 11) → `revert(c, 11)` writes audit id 12
@@ -65,10 +71,7 @@ write path) and therefore appends a new audit row in the same transaction. Raise
 - Empty DB → `data_version()` == 0. After one create → 1.
 
 ## Out of scope / not specified
-- Reverting a `revert` row (allowed structurally; the exact resulting chain is not
-  specified here — see OPEN_QUESTIONS #4).
 - Exact `exported_at` value (timestamp; assert presence/format, not the instant).
 
 ## Open questions
-- OPEN_QUESTIONS #2 (no-op writes don't advance `data_version`).
-- OPEN_QUESTIONS #4 (revert-of-revert semantics unspecified).
+- None open. (#2 and #4 were settled, see `DB-AUDIT-012` and `DB-AUDIT-015`.)

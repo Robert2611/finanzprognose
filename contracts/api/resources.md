@@ -108,6 +108,4 @@ row.
 - Behavior of archive on `audit_log` (not a data table; not archivable).
 
 ## Open questions
-- OPEN_QUESTIONS #3 (archive/restore not optimistic-locked).
-- OPEN_QUESTIONS #9 (archive/restore unknown-table error shape differs from POST/PUT).
-- OPEN_QUESTIONS #10 (archiving a referenced account has no cascade/guard).
+- None open. (#3, #9 and #10 were settled, see `API-RES-018`, `API-RES-015` and `API-RES-020`.)

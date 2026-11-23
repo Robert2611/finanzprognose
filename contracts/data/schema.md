@@ -73,10 +73,11 @@ None of its own; the schema is applied by `db.init` (idempotent, `IF NOT EXISTS`
   and for an upgraded one. [TEST: `test_migrations_upgrade_preserves_data`]
 - `DATA-014` [INFERRED] Column defaults: `accounts.kind='checking'`, `note=''` (all data
   tables), `entries.category=''`, `entries.estimated=0`, `adjustments.repeat_yearly=0`, `audit_log.comment=''`.
-- `DATA-015` [OBSERVED] `adjustments.mode` is CHECKed to `'set'`/`'percent'`, but the
+- `DATA-015` [README] `adjustments.mode` is CHECKed to `'set'`/`'percent'`, but the
   schema does **not** enforce that `amount` is set only for `'set'` and `percent` only
-  for `'percent'`; that coupling is enforced by the API models only. See
-  `OPEN_QUESTIONS.md` #5. Tests must not assert a DB-level rejection of e.g.
+  for `'percent'`; that coupling is enforced by the API models only (`SCH-015/016`). This is
+  intended: nothing writes outside the API, and a CHECK would need a table rebuild in a
+  migration (OPEN_QUESTIONS #5, B-019). Tests must not assert a DB-level rejection of e.g.
   `mode='set'` with a `percent`.
 - `DATA-016` [README] `entries.estimated` accepts only `0` or `1` (CHECK constraint,
   `IntegrityError` otherwise) and defaults to `0` (fixed) when not given (B-015).
@@ -94,4 +95,4 @@ None of its own; the schema is applied by `db.init` (idempotent, `IF NOT EXISTS`
 - Migration mechanics (see `DB-SCHEMA-004..007`); the concrete migrations are `DB-SCHEMA-012`.
 
 ## Open questions
-- `OPEN_QUESTIONS.md` #5 (mode vs. amount/percent coupling, `DATA-015`).
+- None open. (`DATA-015` was settled in OPEN_QUESTIONS #5.)

@@ -81,6 +81,7 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | DB-AUDIT-012 | passed | 1: `test_noop_write_does_not_change_data_version` |
 | DB-AUDIT-013 | passed | 2: `test_export_all_on_empty_database`, `test_export_all_shape` |
 | DB-AUDIT-014 | passed | 1: `test_export_audit_log_is_oldest_first` |
+| DB-AUDIT-015 | passed | 3: `test_a_chain_alternates_and_never_rewrites_history`, `test_redo_of_an_undone_create_makes_the_record_active_again`, `test_reverting_an_undo_restores_the_undone_change` |
 | DB-ERR-001 | passed | 2: `test_api_error_carries_code_and_params`, `test_api_error_without_params_has_empty_params` |
 | DB-ERR-002 | passed | 2: `test_specific_errors_are_api_errors[Conflict]`, `test_specific_errors_are_api_errors[NotFound]` |
 | DB-ERR-003 | passed | 4: `test_missing_id_raises_not_found[archive]`, `test_missing_id_raises_not_found[restore]`, `test_missing_id_raises_not_found[update]`, `test_not_found_params_example` |
@@ -213,6 +214,7 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | API-AUDIT-008 | passed | 1: `test_revert_of_create_archives_the_record` |
 | API-AUDIT-009 | passed | 1: `test_revert_unknown_audit_id_is_404` |
 | API-AUDIT-010 | passed | 3: `test_audit_rows_cannot_be_edited_or_deleted_over_http[delete]`, `test_audit_rows_cannot_be_edited_or_deleted_over_http[patch]`, `test_audit_rows_cannot_be_edited_or_deleted_over_http[put]` |
+| API-AUDIT-011 | passed | 1: `test_revert_of_a_revert_row_is_a_redo` |
 | API-FC-001 | passed | 1: `test_four_month_forecast_shape` |
 | API-FC-002 | passed | 2: `test_defaults_are_current_month_and_24_months`, `test_months_default_applies_with_explicit_start` |
 | API-FC-003 | passed | 8: `test_malformed_start_is_422[2026-01-01]`, `test_malformed_start_is_422[2026-13x]`, `test_malformed_start_is_422[2026-1]`, `test_malformed_start_is_422[202601]` (+4 more) |
@@ -398,11 +400,12 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | FE-AUDIT-003 | passed | 2: `test_create_row_lists_the_created_values`, `test_update_row_shows_only_changed_fields_old_to_new` |
 | FE-AUDIT-004 | passed | 1: `test_values_are_rendered_with_german_formatters` |
 | FE-AUDIT-005 | passed | 1: `test_comment_is_shown_in_quotes` |
-| FE-AUDIT-006 | passed | 2: `test_cancelling_the_revert_dialog_changes_nothing`, `test_revert_confirmation_toast_and_new_revert_row` |
+| FE-AUDIT-006 | passed | 3: `test_cancelling_the_revert_dialog_changes_nothing`, `test_revert_confirmation_toast_and_new_revert_row`, `test_undoing_a_normal_change_keeps_the_undo_wording` |
 | FE-AUDIT-007 | passed | 1: `test_revert_confirmation_toast_and_new_revert_row` |
 | FE-AUDIT-008 | passed | 2: `test_no_older_page_button_for_a_short_history`, `test_older_page_button_appears_only_after_a_full_page` |
 | FE-AUDIT-009 | passed | 1: `test_history_dialog_for_a_record_closes_and_refreshes` |
 | FE-AUDIT-010 | passed | 1: `test_audit_shows_the_mark_in_german` |
+| FE-AUDIT-011 | passed | 2: `test_undoing_a_normal_change_keeps_the_undo_wording`, `test_undoing_an_undo_is_worded_as_restore` |
 | FE-BACKUP-001 | passed | 1: `test_status_block_shows_target_schedule_version` |
 | FE-BACKUP-002 | passed | 1: `test_run_backup_ok_then_unchanged_with_toasts_list_and_pill` |
 | FE-BACKUP-003 | passed | 1: `test_failed_backup_shows_error_toast_banner_and_pill` |

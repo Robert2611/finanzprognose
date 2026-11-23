@@ -167,9 +167,10 @@ Status values: `open`, `in progress`, `done`.
 
 ## B-019 Write the settled "keep as is" decisions into the contracts
 
-- **Status:** open
+- **Status:** done
 - **Decisions (with the user, open questions #2, #4, #5, #6, #14):** a no-op save is not an event (#2). Reverting a `revert` row is a redo, a new logged change; the confirmation says „wiederherstellen“ (#4). The `adjustments` mode/amount/percent coupling stays API-only (#5). An account without an Ist-Stand isn't forecast (#6). Browser tests keep text/role selectors (#14).
 - **Done when:** the clauses say so (drop the "open question" wording), the redo case has a test, and the redo confirmation text is in the frontend.
+- **Resolution:** the clauses for #2 (`DB-CRUD-010`, `DB-AUDIT-012`), #5 (`DATA-015`) and #6 (`FC-011`) are now `[README]` and say the behavior is intended; their "Open questions" sections, and the ones for #3/#7..#10 settled in B-017/B-018, point to the deciding clause instead. #4: new clauses `DB-AUDIT-015`, `API-AUDIT-011` and `FE-AUDIT-011` with tests (`test_db_redo.py`, `test_audit_redo_api.py`, two browser tests in `test_audit_view.py`). The backend already behaved as a redo; only `audit.js` changed, so that the confirmation on a revert row says „Änderung #n wiederherstellen“, with a „Wiederherstellen“ button and toast. #14 is documented in the frontend contracts. No other code changes.
 
 ## B-020 Backup status as codes instead of German text
 
