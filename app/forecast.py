@@ -106,9 +106,10 @@ def compute(state: dict, start: str, months: int) -> dict:
         if e["archived"] or e["account_id"] not in acc_ids:
             continue
         to = e.get("to_account_id")
-        if to and to not in acc_ids:
+        target_active = not to or to in acc_ids
+        if not target_active:
+            # The money still leaves the source account; only the archived target side is dropped.
             warnings.append({"code": "transfer_target_archived", "entry_id": e["id"], "account_id": to})
-            continue
         for d in occurrences(e, horizon):
             amt, expl = amount_at(e, adjs[e["id"]], d)
             base = {"entry_id": e["id"], "date": d.isoformat(), "category": e["category"],
@@ -116,8 +117,9 @@ def compute(state: dict, start: str, months: int) -> dict:
             if to:
                 events[e["account_id"]].append((d, 0, e["id"], {
                     **base, "type": "transfer", "amount": -amt, "label": f"{e['name']} → {acc_name[to]}"}))
-                events[to].append((d, 0, e["id"], {
-                    **base, "type": "transfer", "amount": amt, "label": f"{e['name']} ← {acc_name[e['account_id']]}"}))
+                if target_active:
+                    events[to].append((d, 0, e["id"], {
+                        **base, "type": "transfer", "amount": amt, "label": f"{e['name']} ← {acc_name[e['account_id']]}"}))
             else:
                 events[e["account_id"]].append((d, 0, e["id"], {**base, "type": "booking", "amount": amt, "label": e["name"]}))
 

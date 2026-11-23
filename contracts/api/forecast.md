@@ -25,17 +25,18 @@ Read-only. Loads all four tables and runs `forecast.compute`. No clock dependenc
   [TEST: `test_full_flow`]
 - `API-FC-002` [INFERRED] Omitting `start` defaults to the current calendar month;
   omitting `months` defaults to 24.
-- `API-FC-003` [INFERRED] `start` not matching `^\d{4}-\d{2}$` (e.g. `2026-1`, `2026-13x`,
-  `abc`) returns `422` (query pattern violation).
+- `API-FC-003` [INFERRED] `start` not matching `^\d{4}-(0[1-9]|1[0-2])$` (e.g. `2026-1`,
+  `2026-13x`, `abc`) returns `422` (query pattern violation, envelope per `ERRENV-010`).
 - `API-FC-004` [INFERRED] `months < 1` or `months > 240` returns `422` (query range
   violation).
 - `API-FC-005` [TEST] The result's forecast numbers match the engine contract `FC-*`
   (checkpoints, adjustments, transfers, clamping). [TEST: `test_full_flow`]
 - `API-FC-006` [INFERRED] `warnings` is present (possibly empty) and uses language-neutral
   codes (`no_checkpoint`, `transfer_target_archived`) with id params — no German text.
-- `API-FC-007` [OBSERVED] `start` passes the `\d{4}-\d{2}` regex but the month part is not
-  range-checked (e.g. `2026-00`, `2026-13`), which the engine then feeds to `date(...)`.
-  Behavior for an out-of-range month is unspecified/suspect. See OPEN_QUESTIONS #8.
+- `API-FC-007` [README] An out-of-range month in `start` (e.g. `2026-00`, `2026-13`) is
+  rejected with `422 {code:'validation_error'}` whose error has `field:'start'` and
+  `code:'string_pattern_mismatch'`; it is never wrapped into another month (B-017,
+  OPEN_QUESTIONS #8).
 - `API-FC-008` [INFERRED] With no accounts, the result has an empty `accounts` list, empty
   `warnings`, and `months` whose portfolio `opening`/`closing` are 0.
 

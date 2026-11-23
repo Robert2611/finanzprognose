@@ -420,10 +420,40 @@ def test_transfer_labels_name_the_other_account():
     assert [i["label"] for i in items(r, "2026-02", 2) if i["type"] == "transfer"] == ["Sparen ← Giro"]
 
 
-@pytest.mark.skip(reason="Open question #7 (transfer to archived target dropped on both sides): behavior not asserted pending resolution")
 @pytest.mark.contract("FC-028")
-def test_transfer_to_archived_target_is_skipped_with_warning():
-    """FC-028: skipped, see OPEN_QUESTIONS #7."""
+def test_transfer_to_archived_target_keeps_the_source_outflow():
+    """FC-028: the source still loses the money every month; the archived target side is dropped; one warning."""
+    accs = [account(1, "Giro"), account(2, "Tagesgeld", archived=1)]
+    cps = [checkpoint(1, 1, "2026-01-01", 100000), checkpoint(2, 2, "2026-01-01", 0)]
+    es = [entry(1, 1, 50000, "2026-02-05", name="Sparen", to_account_id=2)]
+    r = run(accs, es, checkpoints=cps, start="2026-02", months=2)
+    for ym, balance in (("2026-02", 50000), ("2026-03", 0)):
+        its = [i for i in items(r, ym, 1) if i["type"] == "transfer"]
+        assert [(i["amount"], i["label"], i["balance"]) for i in its] == [(-50000, "Sparen → Tagesgeld", balance)]
+        assert its[0]["explanation"][0] == {"code": "base_amount", "amount": 50000}
+    assert r["warnings"] == [{"code": "transfer_target_archived", "entry_id": 1, "account_id": 2}]
+    assert [a["id"] for a in r["accounts"]] == [1]
+
+
+@pytest.mark.contract("FC-028", "FC-005")
+def test_outflow_to_archived_target_stays_out_of_income_and_expense():
+    """FC-028/FC-005: the kept outflow is still a transfer, so it is not counted as expense."""
+    accs = [account(1), account(2, archived=1)]
+    cps = [checkpoint(1, 1, "2026-01-01", 0)]
+    es = [entry(1, 1, 50000, "2026-02-05", kind="once", to_account_id=2)]
+    m = month(run(accs, es, checkpoints=cps, start="2026-02", months=1), "2026-02")
+    assert m["income"] == 0 and m["expense"] == 0 and m["closing"] == -50000
+
+
+@pytest.mark.contract("FC-028", "FC-029")
+def test_transfer_from_archived_source_is_ignored():
+    """FC-028/029: with the source account archived the whole entry is ignored and no warning is emitted."""
+    accs = [account(1, archived=1), account(2)]
+    cps = [checkpoint(1, 1, "2026-01-01", 0), checkpoint(2, 2, "2026-01-01", 0)]
+    es = [entry(1, 1, 50000, "2026-02-05", kind="once", to_account_id=2)]
+    r = run(accs, es, checkpoints=cps, start="2026-02", months=1)
+    assert [i for i in items(r, "2026-02", 2) if i["type"] == "transfer"] == []
+    assert r["warnings"] == []
 
 
 # ------------------------------------------------------------------ archiving & scope

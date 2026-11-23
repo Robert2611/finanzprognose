@@ -2,7 +2,7 @@
 
 Ambiguities, under-specified behavior, and suspected bugs found while writing the contracts.
 Each entry: the related clause(s), what was observed, why it's unclear/suspicious, and the
-options. **Suspected bugs are marked.** The test-writing agent should treat the linked
+options. **Suspected bugs are marked.** All questions were decided on 2026-11-23 (see the **Decision** line of each entry); the work they need is tracked in `BACKLOG.md` (B-017..B-022). The test-writing agent should treat the linked
 clauses as not-yet-settled (write them `xfail`/skipped until resolved).
 
 ---
@@ -22,6 +22,7 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
   is a no-event" the intended contract?
 - **Options:** (a) keep as-is (document it), (b) always log an update even when nothing
   changed, (c) log only when something changed but still bump a change counter.
+- **Decision (2026-11-23):** Option (a): keep as-is and document. A save that changes nothing is not an event (no audit row, no `updated_at` bump, `data_version` unchanged, so the backup skips). → B-019
 
 ### 3. Archive/restore are not optimistic-locked — *possible bug*
 - **Clauses:** `DB-CRUD-013`, `API-RES-018`, `API-RES-003`.
@@ -32,6 +33,7 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
   restore in a way the user doesn't expect.
 - **Options:** (a) intended — archive/restore are idempotent flips, locking adds little;
   (b) bug — they should honor `expected_updated_at` like updates.
+- **Decision (2026-11-23):** Archive/restore honor `expected_updated_at` when it is given (409 on mismatch), like PUT; it stays optional in the API and the frontend always sends it. → B-017 (done)
 
 ### 4. Revert of a `revert` row is unspecified
 - **Clauses:** `DB-AUDIT` (out-of-scope note), `API-AUDIT-007`.
@@ -40,6 +42,7 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
 - **Why unclear:** The resulting chain (redo? re-undo?) is not defined anywhere and could
   confuse users.
 - **Options:** define and document the semantics, or disallow reverting a `revert`.
+- **Decision (2026-11-23):** Reverting a `revert` row is a **redo**: it restores the change that was undone, as a new logged change like every revert. Specify and test it; the confirmation text says „wiederherstellen“. → B-019
 
 ### 5. Schema does not couple `adjustments.mode` to which of `amount`/`percent` is set
 - **Clauses:** `DATA-015`, `SCH-015`, `SCH-016`.
@@ -49,6 +52,7 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
 - **Why unclear:** Is the invariant meant to be DB-enforced or API-only? Only matters if
   anything ever writes outside the API (forbidden by the data-safety rules, so maybe fine).
 - **Options:** add a CHECK constraint, or accept API-only enforcement and document it.
+- **Decision (2026-11-23):** Option (b): API-only enforcement, documented. A DB CHECK would need a table rebuild in a migration, which is riskier than the gap (nothing writes outside the API). → B-019
 
 ### 6. Account with no (non-archived) checkpoint — behavior & messaging
 - **Clauses:** `FC-011`, `E2E-CP-005`, `E2E-CP-006`.
@@ -58,6 +62,7 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
   evident from behavior. Confirm it's intended that **all** of the account's bookings are
   dropped (not, say, counted from 0).
 - **Options:** confirm as intended, or define a zero-based fallback.
+- **Decision (2026-11-23):** Confirmed as intended: no anchor, no forecast. The account shows the `no_checkpoint` warning and null balances, and all its bookings are ignored. No zero-based fallback. → B-019
 
 ### 7. Transfer to an archived target account is silently dropped (both sides) — *review*
 - **Clauses:** `FC-028`, `E2E-BOOK` (transfer), `FC-011`.
@@ -69,6 +74,7 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
   time). See also #10.
 - **Options:** (a) intended — drop both sides and warn; (b) keep the source outflow; (c)
   prevent archiving an account that is a transfer target.
+- **Decision (2026-11-23):** Option (b): keep the source outflow. The source account still gets the −amount item; only the archived target side is dropped, and the `transfer_target_archived` warning stays. → B-018 (done)
 
 ### 8. Forecast `start` month regex allows out-of-range months — *possible bug*
 - **Clauses:** `API-FC-007`, `FC` (out-of-scope note).
@@ -78,6 +84,7 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
 - **Why suspicious:** A client sending a bad month gets a plausible-looking but shifted
   forecast with no error.
 - **Options:** (a) validate `01`–`12` and return 422; (b) document the wrap as intended.
+- **Decision (2026-11-23):** Option (a): validate the month as `01`–`12` and return the usual 422 validation envelope. → B-017 (done)
 
 ### 9. archive/restore unknown-table error shape differs from create/update
 - **Clauses:** `API-RES-002`, `API-RES-015`.
@@ -86,6 +93,7 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
   no `{code}` envelope for an unknown table.
 - **Why unclear:** Inconsistent error contract for the "unknown table" case across endpoints.
 - **Options:** make archive/restore emit the same `unknown_table` envelope.
+- **Decision (2026-11-23):** Unify: archive/restore on an unknown table return the same `unknown_table` envelope as create/update. → B-017 (done)
 
 ### 10. Archiving an account referenced by active entries/checkpoints has no guard/cascade
 - **Clauses:** `API-RES-020`, `FC-028`.
@@ -96,6 +104,7 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
   bookings on an archived account?
 - **Options:** (a) allow and warn (current); (b) block archive while referenced; (c) cascade-
   archive dependents.
+- **Decision (2026-11-23):** Option (a) plus a warning: archiving stays allowed with no cascade, but the archive dialog lists the active bookings, transfers and Ist-Stände that still use the account. → B-018 (done)
 
 ### 11. Backup status still carries German text (`last_error`, `last_reason`)
 - **Clauses:** `API-BKP` (out-of-scope note), `BKP-018`, `FE-BACKUP-003`.
@@ -107,6 +116,7 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
   (B-005). Was backup intentionally left out of that refactor?
 - **Guidance for tests:** match stable substrings (e.g. `.nas-marker`) or the `last_result`
   enum (`ok`/`unchanged`/`error`), **not** full German sentences.
+- **Decision (2026-11-23):** Convert to codes: `last_error`/`last_reason` become `{code, params}` and the frontend maps them to German. Old German strings in an existing status file still display as-is. → B-020
 
 ### 12. Backup scheduler: startup catch-up and hourly-retry conditions
 - **Clauses:** `BKP-001`, `BKP-019`.
@@ -118,6 +128,7 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
   after 03:00)? These timing paths are also untestable in a black-box setting (ENVIRONMENT
   gaps #1–#3).
 - **Options:** confirm the catch-up behavior; add a seam so the schedule decision is testable.
+- **Decision (2026-11-23):** Keep the startup catch-up and the hourly retry. Refactor the schedule decision into a function that takes `now`, so both paths get real tests (un-skipping the TG-1/TG-2/TG-3 placeholders). → B-021
 
 ### 13. No automated restore and no built-in post-restore verification
 - **Clauses:** `RESTORE-001`..`RESTORE-007`.
@@ -127,6 +138,7 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
 - **Why noted:** The task asks for a restore acceptance contract so a test can verify
   restorability. That test must be built around the manual steps (there is no API to exercise).
 - **Options:** keep manual (document + external test), or add a verified restore path later.
+- **Decision (2026-11-23):** Keep restore manual (nothing in the app can overwrite the live DB). Add a read-only „Backup prüfen“ action on the Sicherung page: it opens a chosen backup, runs `integrity_check` and shows its `data_version` and row counts. → B-022
 
 ### 14. Frontend has no stable test hooks (`data-testid`)
 - **Clauses:** `FE-CORE-...`, `FE-FORM`, all `FE-*` and `[BROWSER-REQUIRED]` E2E clauses.
@@ -137,3 +149,5 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
 - **Why noted:** Browser tests (Playwright) will be brittle without dedicated hooks.
 - **Options:** add `data-testid` attributes to key controls/rows, or accept text/role-based
   selectors (the contracts specify exact visible text to make this workable).
+- **Decision (2026-11-23):** Keep text/role selectors: the contracts pin the visible German text, so a wording change is a contract change and tests catching it is intended. Add a `data-testid` only where a selector gets awkward. No work item.
+

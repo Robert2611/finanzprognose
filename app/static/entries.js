@@ -1,6 +1,6 @@
 // ------------------------------------------------------------ Buchungen
 import { html, render as renderLit } from './vendor/lit-html.js';
-import { $, eur, signed, approx, fDate, toInput, today, toast, api, RHYTHM, rhythm, accName, activeAccounts, S, formDialog, refresh, load, archiveDialog, restoreRow } from './core.js';
+import { $, eur, signed, approx, fDate, toInput, today, toast, api, RHYTHM, rhythm, accName, activeAccounts, S, formDialog, refresh, load, archiveDialog, restoreRow, setArchived } from './core.js';
 import { historyDialog } from './audit.js';
 import { entryType, categoryNames, DIMENSIONS, groupItems, monthlyAmount, getDimension, isOpen, toggleGroup, dimensionSelect } from './grouping.js';
 
@@ -114,8 +114,8 @@ async function adjustmentsDialog(entry) {
       </tbody></table><div class="actions"><button @click=${() => dlg.close()}>Schließen</button><button class="primary" @click=${() => edit(null)}>+ Anpassung</button></div></div>`, dlg);
   };
   const reload = async () => { await load(); draw(); toast('Gespeichert'); };
-  const archiveAdj = async a => { await api('POST', `/api/adjustments/${a.id}/archive`, {}); await reload(); };
-  const restoreAdj = async a => { await api('POST', `/api/adjustments/${a.id}/restore`, {}); await reload(); };
+  const archiveAdj = async a => { if (await setArchived('adjustments', a, true)) await reload(); else { await load(); draw(); } };
+  const restoreAdj = async a => { if (await setArchived('adjustments', a, false)) await reload(); else { await load(); draw(); } };
   const sign = entry.to_account_id ? 1 : Math.sign(entry.amount);
   const edit = async a => {
     const ok = await formDialog({

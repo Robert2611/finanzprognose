@@ -63,8 +63,8 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | DB-CRUD-010 | passed | 1: `test_noop_update_returns_row_without_bump_or_audit` |
 | DB-CRUD-011 | passed | 1: `test_update_writes_audit_row_with_before_and_after` |
 | DB-CRUD-012 | passed | 1: `test_archive_and_restore_flip_flag_and_log_actions` |
-| DB-CRUD-013 | skipped | 1: `test_set_archived_has_no_expected_updated_at` |
-| DB-CRUD-014 | passed | 1: `test_archiving_twice_and_restoring_active_are_noops` |
+| DB-CRUD-013 | passed | 4: `test_set_archived_with_matching_or_missing_expected_updated_at`, `test_set_archived_with_stale_expected_updated_at_conflicts[False]`, `test_set_archived_with_stale_expected_updated_at_conflicts[True]`, `test_stale_lock_is_checked_before_the_noop_path` |
+| DB-CRUD-014 | passed | 2: `test_archiving_twice_and_restoring_active_are_noops`, `test_stale_lock_is_checked_before_the_noop_path` |
 | DB-CRUD-015 | passed | 1: `test_comment_is_stored_verbatim_default_empty` |
 | DB-CRUD-016 | passed | 1: `test_data_write_and_audit_row_roll_back_together` |
 | DB-AUDIT-001 | passed | 1: `test_audit_list_is_newest_first` |
@@ -90,7 +90,7 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | FC-002 | passed | 2: `test_portfolio_closing_is_sum_of_account_closings_null_as_zero`, `test_portfolio_totals_with_two_anchored_accounts` |
 | FC-003 | passed | 4: `test_booking_on_last_day_of_month_belongs_to_that_month`, `test_monthly_entry_started_on_31st_clamps_to_month_end[2026-28]`, `test_monthly_entry_started_on_31st_clamps_to_month_end[2027-28]`, `test_monthly_entry_started_on_31st_clamps_to_month_end[2028-29]` |
 | FC-004 | passed | 1: `test_income_expense_sum_bookings_and_exclude_transfers` |
-| FC-005 | passed | 1: `test_income_expense_sum_bookings_and_exclude_transfers` |
+| FC-005 | passed | 2: `test_income_expense_sum_bookings_and_exclude_transfers`, `test_outflow_to_archived_target_stays_out_of_income_and_expense` |
 | FC-006 | passed | 1: `test_entries_on_or_before_first_checkpoint_are_already_included` |
 | FC-007 | passed | 1: `test_same_day_booking_is_applied_before_checkpoint` |
 | FC-008 | passed | 1: `test_later_checkpoint_resets_balance_and_reports_deviation` |
@@ -113,8 +113,8 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | FC-025 | passed | 7: `test_add_months_wraps_across_years`, `test_full_years[a0-b0-0]`, `test_full_years[a1-b1-0]`, `test_full_years[a2-b2-1]` (+3 more) |
 | FC-026 | passed | 1: `test_transfer_creates_minus_item_on_source_and_plus_on_target` |
 | FC-027 | passed | 1: `test_transfer_labels_name_the_other_account` |
-| FC-028 | skipped | 1: `test_transfer_to_archived_target_is_skipped_with_warning` |
-| FC-029 | passed | 5: `test_archived_account_is_excluded_entirely`, `test_archived_adjustment_is_excluded`, `test_archived_checkpoint_does_not_anchor_an_account`, `test_archived_entry_is_excluded` (+1 more) |
+| FC-028 | passed | 4: `test_forecast_keeps_the_outflow_to_an_archived_account`, `test_outflow_to_archived_target_stays_out_of_income_and_expense`, `test_transfer_from_archived_source_is_ignored`, `test_transfer_to_archived_target_keeps_the_source_outflow` |
+| FC-029 | passed | 6: `test_archived_account_is_excluded_entirely`, `test_archived_adjustment_is_excluded`, `test_archived_checkpoint_does_not_anchor_an_account`, `test_archived_entry_is_excluded` (+2 more) |
 | FC-030 | passed | 1: `test_top_level_accounts_are_id_name_kind_only` |
 | FC-031 | passed | 2: `test_booking_item_carries_all_documented_fields`, `test_checkpoint_item_fields` |
 | FC-032 | passed | 2: `test_items_ordered_by_date_then_bookings_before_checkpoints_with_running_balance`, `test_same_day_bookings_are_ordered_by_entry_id` |
@@ -154,6 +154,7 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | ERRENV-007 | passed | 2: `test_ref_not_found_envelope_passes_through`, `test_unknown_table_envelope_passes_through` |
 | ERRENV-008 | passed | 3: `test_plain_http_errors_use_detail_shape[delete-/api/state]`, `test_plain_http_errors_use_detail_shape[get-/api/does-not-exist]`, `test_plain_http_errors_use_detail_shape[post-/healthz]` |
 | ERRENV-009 | passed | 1: `test_sampled_error_responses_contain_no_german_text` |
+| ERRENV-010 | passed | 4: `test_invalid_path_parameter_uses_the_validation_envelope`, `test_invalid_query_parameters_use_the_validation_envelope[/api/audit?limit=5000-limit-less_than_equal]`, `test_invalid_query_parameters_use_the_validation_envelope[/api/forecast?months=0-months-greater_than_equal]`, `test_invalid_query_parameters_use_the_validation_envelope[/api/forecast?start=abc-start-string_pattern_mismatch]` |
 | SETTINGS-001 | passed | 1: `test_string_variables_are_copied_verbatim` |
 | SETTINGS-002 | passed | 3: `test_flag_variables[0-False]`, `test_flag_variables[1-True]`, `test_flag_variables[None-True]` |
 | SETTINGS-003 | passed | 1: `test_unset_variables_fall_back_to_defaults` |
@@ -198,7 +199,7 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | API-RES-015 | passed | 2: `test_archive_restore_on_unknown_table_is_404[archive]`, `test_archive_restore_on_unknown_table_is_404[restore]` |
 | API-RES-016 | passed | 2: `test_archive_restore_on_missing_id_is_not_found[archive]`, `test_archive_restore_on_missing_id_is_not_found[restore]` |
 | API-RES-017 | passed | 3: `test_archive_comment_is_stored_on_the_audit_row`, `test_archive_comment_of_500_chars_is_stored_in_full`, `test_archive_comment_over_500_is_truncated_or_rejected` |
-| API-RES-018 | skipped | 1: `test_archive_restore_take_no_expected_updated_at` |
+| API-RES-018 | passed | 3: `test_archive_restore_with_stale_expected_updated_at_is_409[archive]`, `test_archive_restore_with_stale_expected_updated_at_is_409[restore]`, `test_archive_with_matching_expected_updated_at` |
 | API-RES-019 | passed | 5: `test_archive_keeps_the_record_in_state`, `test_there_is_no_delete_over_http[accounts]`, `test_there_is_no_delete_over_http[adjustments]`, `test_there_is_no_delete_over_http[checkpoints]` (+1 more) |
 | API-RES-020 | passed | 1: `test_archiving_a_referenced_account_is_allowed_and_drops_it_from_the_forecast` |
 | API-RES-021 | passed | 4: `test_create_as_estimated`, `test_create_without_estimated_is_fixed`, `test_estimated_must_be_boolean`, `test_put_flips_estimated_with_one_audit_row` |
@@ -218,7 +219,7 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | API-FC-004 | passed | 8: `test_months_boundaries_are_accepted[1]`, `test_months_boundaries_are_accepted[240]`, `test_months_out_of_range_is_422[-1]`, `test_months_out_of_range_is_422[0]` (+4 more) |
 | API-FC-005 | passed | 1: `test_forecast_numbers_follow_the_engine_contract` |
 | API-FC-006 | passed | 1: `test_warnings_are_present_and_language_neutral` |
-| API-FC-007 | skipped | 1: `test_out_of_range_month_in_start` |
+| API-FC-007 | passed | 5: `test_boundary_months_are_accepted[2026-01]`, `test_boundary_months_are_accepted[2026-12]`, `test_out_of_range_month_in_start_is_rejected[2026-00]`, `test_out_of_range_month_in_start_is_rejected[2026-13]` (+1 more) |
 | API-FC-008 | passed | 1: `test_forecast_without_accounts` |
 | API-BKP-001 | passed | 2: `test_run_response_has_the_same_fields_as_status`, `test_status_contains_the_documented_fields` |
 | API-BKP-002 | passed | 1: `test_pending_changes_follow_data_version` |
@@ -299,7 +300,7 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | FE-CORE-021 | passed | 2: `test_expl_line_percent_change_matches_readme_example`, `test_expl_line_percent_change_variants` |
 | FE-CORE-022 | passed | 1: `test_expl_line_unknown_code_returns_the_code` |
 | FE-CORE-023 | passed | 1: `test_warn_msg_no_checkpoint_resolves_account_name` |
-| FE-CORE-024 | passed | 1: `test_warn_msg_transfer_target_archived` |
+| FE-CORE-024 | passed | 2: `test_forecast_keeps_the_outflow_to_an_archived_account`, `test_warn_msg_transfer_target_archived` |
 | FE-CORE-025 | passed | 1: `test_kinds_map` |
 | FE-CORE-026 | passed | 7: `test_rhythm[chromium-1-monatlich]`, `test_rhythm[chromium-12-j\xe4hrlich]`, `test_rhythm[chromium-2-alle 2 Monate]`, `test_rhythm[chromium-24-alle 24 Monate]` (+3 more) |
 | FE-CORE-027 | passed | 2: `test_action_map_labels`, `test_entity_and_field_maps_exist` |
@@ -318,6 +319,7 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | FE-FORM-013 | passed | 2: `test_dialog_is_appended_opened_modally_and_removed_on_cancel`, `test_escape_closes_with_null` |
 | FE-FORM-014 | passed | 1: `test_archive_dialog_asks_for_an_optional_reason_and_archives` |
 | FE-FORM-015 | passed | 1: `test_restore_row_posts_without_a_dialog` |
+| FE-FORM-016 | passed | 3: `test_archive_sends_the_rows_updated_at`, `test_archiving_a_booking_changed_elsewhere_shows_the_conflict`, `test_restoring_a_stale_row_toasts_the_conflict_and_reloads` |
 | FE-NAV-001 | passed | 3: `test_data_created_in_the_ui_survives_a_reload`, `test_initial_load_fetches_state_and_renders_forecast`, `test_initial_view_comes_from_the_hash` |
 | FE-NAV-002 | passed | 1: `test_header_shows_brand_five_nav_buttons_and_pill` |
 | FE-NAV-003 | passed | 4: `test_clicking_a_nav_button_sets_hash_and_renders_the_view[chromium-buchungen]`, `test_clicking_a_nav_button_sets_hash_and_renders_the_view[chromium-konten]`, `test_clicking_a_nav_button_sets_hash_and_renders_the_view[chromium-sicherung]`, `test_clicking_a_nav_button_sets_hash_and_renders_the_view[chromium-verlauf]` |
@@ -390,6 +392,7 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | FE-ACCOUNTS-010 | passed | 1: `test_saving_a_checkpoint_refreshes_the_card` |
 | FE-ACCOUNTS-011 | passed | 2: `test_archive_and_restore_a_checkpoint`, `test_archive_and_restore_an_account` |
 | FE-ACCOUNTS-012 | passed | 1: `test_archived_accounts_only_with_the_checkbox_and_only_restore_offered` |
+| FE-ACCOUNTS-013 | passed | 2: `test_archive_dialog_lists_what_still_uses_the_account`, `test_no_warning_for_an_unused_account` |
 | FE-AUDIT-001 | passed | 1: `test_view_structure_and_newest_first_rows` |
 | FE-AUDIT-002 | passed | 1: `test_actions_are_shown_in_german` |
 | FE-AUDIT-003 | passed | 2: `test_create_row_lists_the_created_values`, `test_update_row_shows_only_changed_fields_old_to_new` |

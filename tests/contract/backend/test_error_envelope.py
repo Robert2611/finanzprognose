@@ -131,3 +131,25 @@ def test_sampled_error_responses_contain_no_german_text(client, acc):
     for text in bodies:
         assert not re.search(r"[äöüÄÖÜß]", text), text
         assert not re.search(r"\b(nicht|Betrag|Konto|Fehler|ungültig|gefunden|Datensatz|bitte)\b", text, re.I), text
+
+
+@pytest.mark.contract("ERRENV-010")
+@pytest.mark.parametrize("url,field,code", [
+    ("/api/forecast?months=0", "months", "greater_than_equal"),
+    ("/api/forecast?start=abc", "start", "string_pattern_mismatch"),
+    ("/api/audit?limit=5000", "limit", "less_than_equal"),
+])
+def test_invalid_query_parameters_use_the_validation_envelope(client, url, field, code):
+    """ERRENV-010: invalid query parameters -> 422 validation_error envelope, field = parameter name."""
+    r = client.get(url)
+    assert r.status_code == 422
+    assert [(e["field"], e["code"]) for e in r.json()["params"]["errors"]] == [(field, code)]
+
+
+@pytest.mark.contract("ERRENV-010")
+def test_invalid_path_parameter_uses_the_validation_envelope(client):
+    """ERRENV-010: a non-numeric {id} -> 422 validation_error envelope with field 'id_'."""
+    r = client.post("/api/accounts/abc/archive", json={})
+    assert r.status_code == 422
+    body = r.json()
+    assert body["code"] == "validation_error" and body["params"]["errors"][0]["field"] == "id_"

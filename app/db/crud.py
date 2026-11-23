@@ -66,6 +66,7 @@ def update(conn, table, id_, data: dict, expected_updated_at=None, comment="") -
     return _write(conn, table, id_, changes, "update", comment, expected_updated_at)
 
 
-def set_archived(conn, table, id_, archived: bool, comment="") -> dict:
+def set_archived(conn, table, id_, archived: bool, comment="", expected_updated_at=None) -> dict:
+    """Archive or restore a row; optimistic-locked like update() when expected_updated_at is given."""
     return _write(conn, table, id_, {"archived": 1 if archived else 0},
-                  "archive" if archived else "restore", comment)
+                  "archive" if archived else "restore", comment, expected_updated_at)

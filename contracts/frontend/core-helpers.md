@@ -96,7 +96,8 @@ only their argument. `accName`/`entryName` (used by `warnMsg`) read the in-memor
   `"Konto „<account name>“ hat keinen Ist-Stand und kann nicht berechnet werden."` (name
   resolved from state via `accName`; unknown id shows `#<id>`).
 - `FE-CORE-024` [INFERRED] `warnMsg({code:'transfer_target_archived', entry_id, account_id})`
-  → `"Umbuchung „<entry name>“ ignoriert: Zielkonto „<account name>“ ist archiviert."`.
+  → `"Umbuchung „<entry name>“: Zielkonto „<account name>“ ist archiviert – berücksichtigt wird
+  nur die Abbuchung vom Quellkonto."` (B-018).
 
 ### Label maps
 - `FE-CORE-025` [INFERRED] `KINDS` maps account kinds to German:

@@ -19,8 +19,9 @@ Import: `from app import db`. All functions take an open connection `conn` (norm
 - `db.update(conn, table, id_, data: dict, expected_updated_at=None, comment='') -> dict`
   — update whitelisted columns, optimistic-lock on `expected_updated_at`, write an
   `update` audit row, return the updated row.
-- `db.set_archived(conn, table, id_, archived: bool, comment='') -> dict` — set
-  `archived` to 1/0, write an `archive`/`restore` audit row, return the row.
+- `db.set_archived(conn, table, id_, archived: bool, comment='', expected_updated_at=None) -> dict`
+  — set `archived` to 1/0, optimistic-lock on `expected_updated_at` like `update`, write an
+  `archive`/`restore` audit row, return the row.
 
 ## Dependencies & side effects
 Reads/writes the data tables and `audit_log` (via `DB-AUDIT`'s write path) in one
@@ -60,9 +61,10 @@ transaction. Uses `db.now()` for timestamps. Raises `db.NotFound`/`db.Conflict`
 - `DB-CRUD-012` [INFERRED] `set_archived(conn, table, id_, True, …)` sets `archived=1` and
   writes an audit row with `action='archive'`; `set_archived(…, False, …)` sets
   `archived=0` with `action='restore'`.
-- `DB-CRUD-013` [OBSERVED] `set_archived` does not take an `expected_updated_at`, so
-  archive/restore are not optimistic-locked and will overwrite concurrently. See
-  OPEN_QUESTIONS #3.
+- `DB-CRUD-013` [README] `set_archived` is optimistic-locked like `update` (B-017, OPEN_QUESTIONS
+  #3): when `expected_updated_at` is given and differs from the row's `updated_at`, it raises
+  `db.Conflict('conflict')` and changes nothing (checked before the no-op path of
+  `DB-CRUD-014`); `None` or empty skips the check.
 - `DB-CRUD-014` [INFERRED] Archiving an already-archived row (or restoring an already-active
   row) is a no-op that writes no audit row (same no-change path as `DB-CRUD-010`).
 - `DB-CRUD-015` [INFERRED] The optional `comment` is stored verbatim on the audit row;

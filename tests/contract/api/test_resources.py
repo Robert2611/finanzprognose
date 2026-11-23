@@ -224,8 +224,10 @@ def test_restore_flips_flag_back_and_logs(client, seed, ent):
 @pytest.mark.contract("API-RES-015")
 @pytest.mark.parametrize("action", ["archive", "restore"])
 def test_archive_restore_on_unknown_table_is_404(client, action):
-    """API-RES-015: archive/restore for a non-whitelisted table -> 404 (body shape not specified, OQ #9)."""
-    assert client.post(f"/api/widgets/1/{action}", json={}).status_code == 404
+    """API-RES-015: archive/restore for a non-whitelisted table -> 404 with the unknown_table envelope."""
+    r = client.post(f"/api/widgets/1/{action}", json={})
+    assert r.status_code == 404
+    assert r.json() == {"code": "unknown_table", "params": {"table": "widgets"}}
 
 
 @pytest.mark.contract("API-RES-016")
@@ -262,10 +264,24 @@ def test_archive_comment_over_500_is_truncated_or_rejected(client, ent):
         assert len(audit(client, entity="entries", entity_id=ent["id"])[0]["comment"]) <= 500
 
 
-@pytest.mark.skip(reason="Open question #3 (possible bug): archive/restore are not optimistic-locked; behavior not asserted pending resolution")
 @pytest.mark.contract("API-RES-018")
-def test_archive_restore_take_no_expected_updated_at():
-    """API-RES-018: skipped, see OPEN_QUESTIONS #3."""
+@pytest.mark.parametrize("action", ["archive", "restore"])
+def test_archive_restore_with_stale_expected_updated_at_is_409(client, ent, action):
+    """API-RES-018: a stale expected_updated_at -> 409 conflict, the row is unchanged and no audit row is written."""
+    if action == "restore":
+        ent = client.post(f"/api/entries/{ent['id']}/archive", json={}).json()
+    before = audit(client, entity="entries", entity_id=ent["id"])
+    r = client.post(f"/api/entries/{ent['id']}/{action}", json={"expected_updated_at": "1999-01-01T00:00:00.000+00:00"})
+    assert r.status_code == 409 and r.json()["code"] == "conflict"
+    assert audit(client, entity="entries", entity_id=ent["id"]) == before
+
+
+@pytest.mark.contract("API-RES-018")
+def test_archive_with_matching_expected_updated_at(client, ent):
+    """API-RES-018: the current updated_at archives the row; restore without it is not locked."""
+    r = client.post(f"/api/entries/{ent['id']}/archive", json={"expected_updated_at": ent["updated_at"]})
+    assert r.status_code == 200 and r.json()["archived"] == 1
+    assert client.post(f"/api/entries/{ent['id']}/restore", json={}).json()["archived"] == 0
 
 
 @pytest.mark.contract("API-RES-019")
