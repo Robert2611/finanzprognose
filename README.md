@@ -222,7 +222,7 @@ Die API-Dokumentation findest du unter `/api/docs`.
 
 ### Release erstellen
 
-1. Änderungen auf `master` bringen und pushen.
+1. Änderungen per Pull Request in `main` mergen (`main` ist geschützt, direkte Pushes sind nicht möglich).
 2. Auf GitHub unter *Releases → Draft a new release* einen neuen Tag im Format `vX.Y.Z` anlegen (z. B. `v1.4.0`), Release-Notizen schreiben und veröffentlichen.
 3. Der Workflow `.github/workflows/release.yml` führt die Tests aus, baut das Image, lädt es als `ghcr.io/robert2611/finanzprognose:vX.Y.Z` und `:latest` hoch und hängt `install.sh` an das Release.
 4. Auf dem Server: `sudo /opt/finanzprognose/update.sh`.

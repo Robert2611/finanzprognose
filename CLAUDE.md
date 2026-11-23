@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Rules
 
-- Never push to the remote on your own.
+- `main` is protected: never commit to it or push to it directly. Do all work on a feature branch, push that branch, and open a pull request into `main`.
 - Never revert any commits.
 - Open work items are tracked in `BACKLOG.md`. When you finish one, update its status there.
 - Prefer several smaller files with a well-defined scope over one big file that combines everything. When a file grows unrelated responsibilities, split it rather than adding to the pile.
@@ -17,11 +17,15 @@ Self-hosted personal finance forecast app (replaces an Excel sheet). FastAPI + S
 ## Commands
 
 ```bash
-# Dependencies (requirements-dev.txt = requirements.txt + pytest + httpx)
+# Dependencies (requirements-dev.txt = requirements.txt + pytest + httpx + pytest-playwright)
 pip install -r requirements-dev.txt
+python -m playwright install chromium   # one-time, only needed for the browser tests
 
-# Run all tests
+# Run all tests (browser tests are deselected by default via pytest.ini)
 python -m pytest -q
+
+# Including the Playwright browser tests (what the release pipeline runs)
+python -m pytest -q -m ""
 
 # Run a single test
 python -m pytest -q tests/test_app.py::test_full_flow

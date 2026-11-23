@@ -12,7 +12,7 @@ files. No implementation code under `app/` has been read.
 ## How to run
 
 ```bash
-pip install -r requirements-contract.txt        # requirements-dev.txt + pytest-playwright
+pip install -r requirements-dev.txt             # includes pytest-playwright
 python -m playwright install chromium            # one-time; Chromium is already cached here
 python -m pytest -q                              # default: legacy tests + contract suite, browser tests skipped
 python -m pytest -q -m ""                        # EVERYTHING, incl. Playwright tests (what the release pipeline runs)
@@ -138,9 +138,9 @@ suggested, or logged in `CONTRACT_FEEDBACK.md` when the clause is ambiguous/unob
 ## 6. New dependencies
 
 - `pytest-playwright` (brings `pytest-base-url`; `playwright` 1.64.1 and Chromium 1248 are
-  already installed in this container). Added as a new `requirements-contract.txt`
-  (`-r requirements-dev.txt` plus the plugin), pinned to a version compatible with
-  `pytest==9.2.0`. I will not touch `requirements-dev.txt` or the Docker image.
+  already installed in this container). Originally added as a separate `requirements-contract.txt`;
+  now part of `requirements-dev.txt`, pinned to a version compatible with `pytest==9.2.0`.
+  The Docker image is not affected.
 - No Node toolchain. No `faketime`, no root-only mounts.
 - Config files added: `tests/contract/pytest.ini` (marker registration). A root `pytest.ini` only
   if you choose to keep the browser tests out of the default run (Decision 2).
