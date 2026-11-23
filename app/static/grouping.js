@@ -49,6 +49,11 @@ export const DIMENSIONS = {
       ? { key: 'once', label: 'einmalig', order: [1, 0] }
       : { key: String(e.interval_months), label: rhythm(e.interval_months), order: [0, e.interval_months] },
   },
+  estimated: {
+    label: 'Art', key: e => e.estimated
+      ? { key: 'estimated', label: 'geschätzt', order: [1] }
+      : { key: 'fixed', label: 'fest', order: [0] },
+  },
 };
 
 const cmpOrder = (a, b) => {

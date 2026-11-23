@@ -363,7 +363,7 @@ def test_forecast_grouping_defaults_to_account_cards(grouped, app_page):
     """FE-FORECAST-018: 'Keine' is the default and keeps the per-account cards."""
     page = open_forecast(app_page)
     sel = page.locator("select[name=group-by]")
-    assert sel.evaluate("s => [...s.options].map(o => o.text)") == ["Keine", "Kategorie", "Typ", "Konto", "Rhythmus"]
+    assert sel.evaluate("s => [...s.options].map(o => o.text)") == ["Keine", "Kategorie", "Typ", "Konto", "Rhythmus", "Art"]
     expect(sel).to_have_value("none")
     expect(page.locator("#fdetail .acc-card")).to_have_count(2)
     expect(page.locator("#fdetail .acc-card.group")).to_have_count(0)

@@ -87,6 +87,9 @@ row.
 - `API-RES-020` [OBSERVED] Archiving an account that is still referenced by active
   entries/checkpoints is permitted (no cascade, no referential check); the forecast simply
   drops it and may emit warnings. See OPEN_QUESTIONS #10.
+- `API-RES-021` [README] `POST`/`PUT /api/entries` accept `estimated` (boolean, B-015). When
+  it is omitted the entry is fixed (`estimated = 0`); a `PUT` that flips it is a normal
+  update with one audit row whose `before`/`after` differ in `estimated`.
 
 ## Examples
 - `POST /api/entries {account_id:<giro>, name:'Rent', kind:'recurring', amount:-120000,

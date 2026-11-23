@@ -33,6 +33,8 @@ template) with a `"Schließen"` button.
 - `FE-AUDIT-004` [INFERRED] Field names and values are rendered via the German `FIELD` map
   and value formatters (amounts as EUR, account/entry ids as names, dates formatted, booleans
   as `ja/nein`, rhythm/mode/kind as German words).
+- `FE-AUDIT-010` [README] The entry field `estimated` is labeled `Fest/geschätzt` and its
+  values are shown as `fest` / `geschätzt` (B-015), e.g. `"Fest/geschätzt: fest → geschätzt"`.
 - `FE-AUDIT-005` [INFERRED] A row with a `comment` shows it as `„<comment>“`; a `revert` row
   shows `"Rückgängig gemacht: Protokolleintrag #<reverts_id>"` derived from `reverts_id`.
 - `FE-AUDIT-006` [INFERRED] Clicking `"Rückgängig"` opens a confirmation dialog explaining the

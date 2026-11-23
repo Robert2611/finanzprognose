@@ -9,21 +9,22 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 
 | Clause | Status | Tests |
 |---|---|---|
-| DATA-001 | passed | 8: `test_raw_delete_of_all_rows_is_aborted[accounts]`, `test_raw_delete_of_all_rows_is_aborted[adjustments]`, `test_raw_delete_of_all_rows_is_aborted[checkpoints]`, `test_raw_delete_of_all_rows_is_aborted[entries]` (+4 more) |
-| DATA-002 | passed | 1: `test_raw_update_on_audit_log_is_aborted` |
-| DATA-003 | passed | 1: `test_raw_delete_on_audit_log_is_aborted` |
-| DATA-004 | passed | 6: `test_init_creates_exactly_the_five_tables`, `test_table_columns_types_and_not_null[accounts]`, `test_table_columns_types_and_not_null[adjustments]`, `test_table_columns_types_and_not_null[audit_log]` (+2 more) |
-| DATA-005 | passed | 3: `test_data_layer_stores_whole_cents`, `test_money_columns_are_declared_integer`, `test_percent_adjustment_amount_is_null_and_percent_fractional` |
-| DATA-006 | passed | 6: `test_archive_does_not_remove_the_row`, `test_archived_column_defaults_to_zero[accounts]`, `test_archived_column_defaults_to_zero[adjustments]`, `test_archived_column_defaults_to_zero[checkpoints]` (+2 more) |
-| DATA-007 | passed | 8: `test_timestamps_are_required_on_insert[accounts-created_at]`, `test_timestamps_are_required_on_insert[accounts-updated_at]`, `test_timestamps_are_required_on_insert[adjustments-created_at]`, `test_timestamps_are_required_on_insert[adjustments-updated_at]` (+4 more) |
-| DATA-008 | passed | 6: `test_entry_kind_accepts_allowed_values[once]`, `test_entry_kind_accepts_allowed_values[recurring]`, `test_entry_kind_rejects_other_values[Once]`, `test_entry_kind_rejects_other_values[RECURRING]` (+2 more) |
-| DATA-009 | passed | 7: `test_interval_months_below_one_is_rejected[-12]`, `test_interval_months_below_one_is_rejected[-1]`, `test_interval_months_below_one_is_rejected[0]`, `test_interval_months_defaults_to_one` (+3 more) |
-| DATA-010 | passed | 4: `test_audit_before_after_are_nullable_text`, `test_audit_snapshots_are_json_text_in_same_database`, `test_each_accepted_change_has_exactly_one_audit_row`, `test_rejected_write_leaves_no_audit_row` |
-| DATA-011 | passed | 1: `test_audit_entity_index_exists` |
-| DATA-012 | passed | 5: `test_adjustment_with_missing_entry_is_rejected`, `test_checkpoint_with_missing_account_is_rejected`, `test_entry_with_missing_account_is_rejected`, `test_entry_with_missing_to_account_is_rejected` (+1 more) |
-| DATA-013 | passed | 2: `test_fresh_database_user_version_is_one`, `test_user_version_equals_latest_migration_target` |
-| DATA-014 | passed | 1: `test_column_defaults` |
-| DATA-015 | passed | 5: `test_adjustment_mode_accepts_set_and_percent[percent]`, `test_adjustment_mode_accepts_set_and_percent[set]`, `test_adjustment_mode_rejects_other_values[SET]`, `test_adjustment_mode_rejects_other_values[]` (+1 more) |
+| DATA-001 | **UNCOVERED** | - |
+| DATA-002 | **UNCOVERED** | - |
+| DATA-003 | **UNCOVERED** | - |
+| DATA-004 | **UNCOVERED** | - |
+| DATA-005 | **UNCOVERED** | - |
+| DATA-006 | **UNCOVERED** | - |
+| DATA-007 | **UNCOVERED** | - |
+| DATA-008 | **UNCOVERED** | - |
+| DATA-009 | **UNCOVERED** | - |
+| DATA-010 | **UNCOVERED** | - |
+| DATA-011 | **UNCOVERED** | - |
+| DATA-012 | **UNCOVERED** | - |
+| DATA-013 | **UNCOVERED** | - |
+| DATA-014 | **UNCOVERED** | - |
+| DATA-015 | **UNCOVERED** | - |
+| DATA-016 | passed | 4: `test_estimated_defaults_to_zero`, `test_estimated_rejects_values_other_than_zero_and_one[-1]`, `test_estimated_rejects_values_other_than_zero_and_one[2]`, `test_estimated_rejects_values_other_than_zero_and_one[ja]` |
 
 ## Backend
 
@@ -40,7 +41,7 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | DB-CONN-009 | passed | 3: `test_exception_propagates_and_connection_is_closed`, `test_read_closes_connection_and_opens_no_transaction`, `test_tx_connection_closed_after_normal_exit` |
 | DB-SCHEMA-001 | passed | 1: `test_init_creates_parent_directory_and_structure` |
 | DB-SCHEMA-002 | passed | 1: `test_init_is_idempotent_and_preserves_data` |
-| DB-SCHEMA-003 | passed | 1: `test_user_version_is_one_without_migrations` |
+| DB-SCHEMA-003 | passed | 2: `test_user_version_is_latest_migration_without_pending_migrations`, `test_user_version_is_one_with_an_empty_migration_list` |
 | DB-SCHEMA-004 | passed | 1: `test_migration_runs_and_preserves_rows` |
 | DB-SCHEMA-005 | passed | 1: `test_rerunning_init_does_not_reapply_a_migration` |
 | DB-SCHEMA-006 | passed | 1: `test_failing_migration_rolls_back_and_propagates` |
@@ -49,10 +50,11 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | DB-SCHEMA-009 | passed | 1: `test_has_column` |
 | DB-SCHEMA-010 | passed | 1: `test_init_enables_wal` |
 | DB-SCHEMA-011 | passed | 2: `test_baseline_exists_before_migrations_run`, `test_guarded_migration_converges_when_column_already_exists` |
+| DB-SCHEMA-012 | passed | 4: `test_upgraded_database_matches_a_fresh_one`, `test_upgraded_entries_can_be_marked_estimated`, `test_v2_adds_estimated_and_keeps_every_row`, `test_v2_is_a_no_op_when_the_column_exists` |
 | DB-CRUD-001 | passed | 2: `test_get_returns_full_row_with_system_columns`, `test_get_unknown_id_is_none` |
 | DB-CRUD-002 | passed | 2: `test_all_rows_includes_archived_and_is_ordered_by_id`, `test_all_rows_on_empty_table` |
 | DB-CRUD-003 | passed | 1: `test_create_sets_timestamps_archived_and_id` |
-| DB-CRUD-004 | PARTIAL (some failing) | 2: `test_create_ignores_non_whitelisted_keys`, `test_create_with_missing_whitelisted_keys_uses_defaults` |
+| DB-CRUD-004 | passed | 2: `test_create_ignores_non_whitelisted_keys`, `test_create_with_missing_whitelisted_keys_uses_defaults` |
 | DB-CRUD-005 | passed | 2: `test_create_writes_audit_row`, `test_data_write_and_audit_row_roll_back_together` |
 | DB-CRUD-006 | passed | 2: `test_update_changes_only_given_columns_and_bumps_updated_at`, `test_update_ignores_non_whitelisted_columns` |
 | DB-CRUD-007 | passed | 1: `test_stale_expected_updated_at_raises_conflict_and_changes_nothing` |
@@ -116,6 +118,7 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | FC-030 | passed | 1: `test_top_level_accounts_are_id_name_kind_only` |
 | FC-031 | passed | 2: `test_booking_item_carries_all_documented_fields`, `test_checkpoint_item_fields` |
 | FC-032 | passed | 2: `test_items_ordered_by_date_then_bookings_before_checkpoints_with_running_balance`, `test_same_day_bookings_are_ordered_by_entry_id` |
+| FC-033 | passed | 6: `test_estimated_mark_does_not_change_the_numbers`, `test_forecast_items_show_the_mark`, `test_items_carry_the_entry_estimated_flag[0-False]`, `test_items_carry_the_entry_estimated_flag[1-True]` (+2 more) |
 | SCH-001 | passed | 11: `test_account_create_requires_start_fields`, `test_name_length[-string_too_short-AccountIn-base0]`, `test_name_length[-string_too_short-EntryIn-base1]`, `test_name_length[Gr\xf6\xdfe \u65e5\u672c\u8a9e \U0001f600-None-AccountIn-base0]` (+7 more) |
 | SCH-002 | passed | 12: `test_account_kind_accepts_the_six_values[cash]`, `test_account_kind_accepts_the_six_values[checking]`, `test_account_kind_accepts_the_six_values[credit_card]`, `test_account_kind_accepts_the_six_values[custody]` (+8 more) |
 | SCH-003 | passed | 6: `test_entry_kind_accepts_allowed[once]`, `test_entry_kind_accepts_allowed[recurring]`, `test_entry_kind_is_required`, `test_entry_kind_rejects_others[ONCE]` (+2 more) |
@@ -134,6 +137,7 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | SCH-016 | passed | 2: `test_percent_adjustment_clears_amount`, `test_percent_adjustment_requires_percent` |
 | SCH-017 | passed | 1: `test_expected_updated_at_is_optional_free_form` |
 | SCH-018 | passed | 1: `test_comment_is_optional_and_defaults_to_empty` |
+| SCH-019 | passed | 4: `test_estimated_accepts_booleans[False]`, `test_estimated_accepts_booleans[True]`, `test_estimated_defaults_to_false`, `test_estimated_rejects_a_non_boolean` |
 | AUTH-001 | passed | 7: `test_rejected_request_does_not_run_the_route`, `test_requests_without_credentials_get_401_with_challenge[get-/api/audit]`, `test_requests_without_credentials_get_401_with_challenge[get-/api/backup/status]`, `test_requests_without_credentials_get_401_with_challenge[get-/api/export]` (+3 more) |
 | AUTH-002 | passed | 2: `test_without_password_credentials_are_not_required_nor_harmful`, `test_without_password_everything_is_open` |
 | AUTH-003 | passed | 1: `test_healthz_is_always_open` |
@@ -150,6 +154,9 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | ERRENV-007 | passed | 2: `test_ref_not_found_envelope_passes_through`, `test_unknown_table_envelope_passes_through` |
 | ERRENV-008 | passed | 3: `test_plain_http_errors_use_detail_shape[delete-/api/state]`, `test_plain_http_errors_use_detail_shape[get-/api/does-not-exist]`, `test_plain_http_errors_use_detail_shape[post-/healthz]` |
 | ERRENV-009 | passed | 1: `test_sampled_error_responses_contain_no_german_text` |
+| SETTINGS-001 | passed | 1: `test_string_variables_are_copied_verbatim` |
+| SETTINGS-002 | passed | 3: `test_flag_variables[0-False]`, `test_flag_variables[1-True]`, `test_flag_variables[None-True]` |
+| SETTINGS-003 | passed | 1: `test_unset_variables_fall_back_to_defaults` |
 
 ## HTTP API
 
@@ -164,6 +171,7 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | API-STATE-007 | passed | 1: `test_rows_are_ordered_by_ascending_id_including_archived` |
 | API-STATE-008 | passed | 2: `test_data_version_matches_newest_audit_id`, `test_data_version_tracks_changes` |
 | API-STATE-009 | passed | 1: `test_empty_database_state` |
+| API-STATE-010 | passed | 2: `test_create_as_estimated`, `test_create_without_estimated_is_fixed` |
 | API-ACC-001 | passed | 2: `test_create_account_returns_row`, `test_unicode_account_name_roundtrips` |
 | API-ACC-002 | passed | 2: `test_starting_checkpoint_is_created`, `test_unicode_account_name_roundtrips` |
 | API-ACC-003 | passed | 1: `test_starting_checkpoint_note_is_empty` |
@@ -193,6 +201,7 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | API-RES-018 | skipped | 1: `test_archive_restore_take_no_expected_updated_at` |
 | API-RES-019 | passed | 5: `test_archive_keeps_the_record_in_state`, `test_there_is_no_delete_over_http[accounts]`, `test_there_is_no_delete_over_http[adjustments]`, `test_there_is_no_delete_over_http[checkpoints]` (+1 more) |
 | API-RES-020 | passed | 1: `test_archiving_a_referenced_account_is_allowed_and_drops_it_from_the_forecast` |
+| API-RES-021 | passed | 4: `test_create_as_estimated`, `test_create_without_estimated_is_fixed`, `test_estimated_must_be_boolean`, `test_put_flips_estimated_with_one_audit_row` |
 | API-AUDIT-001 | passed | 1: `test_filter_by_entity_and_entity_id_newest_first` |
 | API-AUDIT-002 | passed | 1: `test_audit_objects_have_exactly_the_documented_keys` |
 | API-AUDIT-003 | passed | 1: `test_create_row_has_no_before_update_row_has_both` |
@@ -211,7 +220,7 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | API-FC-006 | passed | 1: `test_warnings_are_present_and_language_neutral` |
 | API-FC-007 | skipped | 1: `test_out_of_range_month_in_start` |
 | API-FC-008 | passed | 1: `test_forecast_without_accounts` |
-| API-BKP-001 | PARTIAL (some failing) | 2: `test_run_response_has_the_same_fields_as_status`, `test_status_contains_the_documented_fields` |
+| API-BKP-001 | passed | 2: `test_run_response_has_the_same_fields_as_status`, `test_status_contains_the_documented_fields` |
 | API-BKP-002 | passed | 1: `test_pending_changes_follow_data_version` |
 | API-BKP-003 | passed | 2: `test_status_echoes_a_custom_backup_time`, `test_status_echoes_configuration` |
 | API-BKP-004 | passed | 2: `test_failed_backup_does_not_block_later_data_changes_or_other_endpoints`, `test_missing_marker_fails_and_writes_nothing` |
@@ -235,7 +244,7 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | BKP-003 | passed | 2: `test_second_run_without_changes_is_unchanged_and_writes_nothing`, `test_unchanged_run_keeps_last_success_data` |
 | BKP-004 | passed | 1: `test_missing_last_backup_file_is_rewritten_even_if_nothing_changed` |
 | BKP-005 | passed | 1: `test_force_writes_a_new_artifact_even_when_nothing_changed` |
-| BKP-006 | passed | 6: `test_adding_the_marker_makes_the_next_run_succeed`, `test_marker_error_leaves_last_success_untouched`, `test_missing_marker_fails_and_writes_nothing`, `test_nas_coming_back_is_picked_up_by_the_next_run` (+2 more) |
+| BKP-006 | passed (some skipped) | 6: `test_adding_the_marker_makes_the_next_run_succeed`, `test_marker_error_leaves_last_success_untouched`, `test_missing_marker_fails_and_writes_nothing`, `test_nas_coming_back_is_picked_up_by_the_next_run` (+2 more) |
 | BKP-007 | passed | 1: `test_marker_not_required_when_guard_is_off` |
 | BKP-008 | passed | 4: `test_missing_backup_dir_fails_naming_the_target[False]`, `test_missing_backup_dir_fails_naming_the_target[True]`, `test_nas_becoming_unreachable_after_a_success`, `test_nas_coming_back_is_picked_up_by_the_next_run` |
 | BKP-009 | passed | 2: `test_json_artifact_is_the_readable_export`, `test_success_writes_exactly_a_sqlite_and_a_json_with_the_documented_name` |
@@ -246,13 +255,15 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | BKP-014 | passed | 2: `test_backups_log_gets_one_line_per_successful_backup`, `test_failed_run_adds_no_log_line` |
 | BKP-015 | passed | 1: `test_change_after_backup_creates_second_backup_and_keeps_first` |
 | BKP-016 | passed (some skipped) | 2: `test_interrupted_run_never_leaves_a_half_written_final_artifact`, `test_no_temporary_files_remain_after_success` |
-| BKP-017 | passed (some skipped) | 4: `test_disk_full_is_reported_as_error`, `test_failure_in_the_middle_of_a_write_leaves_no_final_artifact`, `test_permission_denied_keeps_previous_success_and_recovers`, `test_permission_denied_records_an_error_and_writes_no_artifact` |
-| BKP-018 | PARTIAL (some failing) | 7: `test_error_status_is_visible_via_get_status`, `test_nas_becoming_unreachable_after_a_success`, `test_permission_denied_keeps_previous_success_and_recovers`, `test_status_after_error_sets_last_error` (+3 more) |
+| BKP-017 | passed (some skipped) | 5: `test_disk_full_is_reported_as_error`, `test_failed_copy_to_nas_cleans_staging_and_nas`, `test_failure_in_the_middle_of_a_write_leaves_no_final_artifact`, `test_permission_denied_keeps_previous_success_and_recovers` (+1 more) |
+| BKP-018 | passed (some skipped) | 7: `test_error_status_is_visible_via_get_status`, `test_nas_becoming_unreachable_after_a_success`, `test_permission_denied_keeps_previous_success_and_recovers`, `test_status_after_error_sets_last_error` (+3 more) |
 | BKP-019 | skipped | 1: `test_failed_backup_is_retried_about_hourly` |
 | BKP-020 | passed | 1: `test_pending_changes_follow_data_version` |
 | BKP-021 | passed (some skipped) | 5: `test_app_keeps_serving_during_and_after_a_backup`, `test_backup_taken_while_writes_happen_is_a_consistent_snapshot`, `test_overlapping_runs_are_serialized`, `test_reads_and_writes_succeed_while_a_backup_runs` (+1 more) |
 | BKP-022 | passed | 1: `test_reads_and_writes_succeed_while_a_backup_runs` |
 | BKP-023 | passed | 1: `test_no_retention_and_files_list_is_capped_at_30_newest_first` |
+| BKP-024 | passed | 1: `test_sqlite_never_touches_the_backup_dir` |
+| BKP-025 | passed | 2: `test_failed_copy_to_nas_cleans_staging_and_nas`, `test_staging_files_removed_after_success_and_failure` |
 | RESTORE-001 | passed | 2: `test_backup_file_is_the_database_after_the_manual_steps`, `test_backup_opens_directly_in_a_fresh_location` |
 | RESTORE-002 | passed | 1: `test_old_database_and_its_sidecar_files_are_set_aside_not_lost` |
 | RESTORE-003 | passed | 2: `test_backup_file_is_the_database_after_the_manual_steps`, `test_forecast_after_restore_equals_forecast_at_backup_time` |
@@ -317,6 +328,7 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | FE-NAV-008 | passed | 2: `test_failed_initial_state_load_shows_an_error_banner`, `test_unreachable_backend_shows_an_error_banner` |
 | FE-NAV-009 | passed | 2: `test_refresh_reloads_state_and_rerenders_the_current_view`, `test_saving_in_a_dialog_refreshes_the_view` |
 | FE-NAV-010 | passed | 1: `test_backup_pill_opens_the_backup_view` |
+| FE-NAV-011 | passed | 1: `test_slow_forecast_does_not_clobber_the_view_navigated_to` |
 | FE-FORECAST-001 | passed | 1: `test_empty_state_welcome_panel_opens_the_account_dialog` |
 | FE-FORECAST-002 | passed | 1: `test_toolbar_chart_table_and_detail_are_rendered` |
 | FE-FORECAST-003 | passed | 1: `test_zeitraum_offers_the_five_horizons_and_refetches` |
@@ -334,6 +346,11 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | FE-FORECAST-015 | passed | 2: `test_negative_total_shows_an_error_banner_naming_the_first_month`, `test_no_error_banner_when_the_total_never_goes_negative` |
 | FE-FORECAST-016 | passed | 1: `test_clicking_a_booking_label_opens_the_prefilled_edit_dialog` |
 | FE-FORECAST-017 | passed | 2: `test_buchung_button_opens_new_entry_dialog_and_refreshes_the_forecast`, `test_ist_stand_button_opens_checkpoint_dialog_and_refreshes_the_forecast` |
+| FE-FORECAST-018 | passed | 3: `test_forecast_group_by_art`, `test_forecast_grouping_defaults_to_account_cards`, `test_forecast_groups_by_category_with_month_sums` |
+| FE-FORECAST-019 | passed | 2: `test_forecast_group_by_account_lists_both_transfer_sides`, `test_forecast_groups_by_category_with_month_sums` |
+| FE-FORECAST-020 | passed | 2: `test_forecast_group_choice_is_remembered_separately`, `test_forecast_group_unfolds_to_its_bookings` |
+| FE-FORECAST-021 | passed | 2: `test_estimated_items_are_marked_and_explained`, `test_forecast_group_by_art` |
+| FE-FORECAST-022 | passed | 2: `test_month_summary_shows_the_estimated_part`, `test_no_estimated_line_without_estimates` |
 | FE-ENTRIES-001 | passed | 2: `test_archived_entries_are_hidden_until_the_checkbox_is_ticked`, `test_table_headers_and_row_actions` |
 | FE-ENTRIES-002 | passed | 1: `test_row_content_for_expense_income_transfer_and_once` |
 | FE-ENTRIES-003 | passed | 1: `test_row_content_for_expense_income_transfer_and_once` |
@@ -353,6 +370,14 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | FE-ENTRIES-017 | passed | 3: `test_new_adjustment_form_fields_depend_on_the_kind`, `test_saving_a_set_adjustment_updates_the_list_and_the_booking_row`, `test_saving_a_yearly_percent_adjustment` |
 | FE-ENTRIES-018 | passed | 1: `test_set_adjustment_keeps_the_entrys_sign` |
 | FE-ENTRIES-019 | passed | 1: `test_saving_a_set_adjustment_updates_the_list_and_the_booking_row` |
+| FE-ENTRIES-020 | passed | 2: `test_category_field_accepts_a_new_category`, `test_category_field_suggests_known_categories` |
+| FE-ENTRIES-021 | passed | 1: `test_group_select_defaults_to_none_and_lists_the_dimensions` |
+| FE-ENTRIES-022 | passed | 6: `test_archived_bookings_are_grouped_when_shown`, `test_group_by_art`, `test_group_by_category_heads_order_and_monthly_sums`, `test_group_order_per_dimension[chromium-Konto-labels1]` (+2 more) |
+| FE-ENTRIES-023 | passed | 1: `test_group_by_category_heads_order_and_monthly_sums` |
+| FE-ENTRIES-024 | passed | 1: `test_clicking_a_group_head_folds_and_unfolds_it` |
+| FE-ENTRIES-025 | passed | 2: `test_group_choice_is_remembered_per_view`, `test_grouping_works_without_browser_storage` |
+| FE-ENTRIES-026 | passed | 2: `test_editing_prefills_and_can_unmark`, `test_new_booking_can_be_marked_estimated` |
+| FE-ENTRIES-027 | passed | 3: `test_estimated_amounts_carry_the_approx_mark`, `test_group_by_art`, `test_mixed_group_sum_is_marked` |
 | FE-ACCOUNTS-001 | passed | 3: `test_archived_accounts_only_with_the_checkbox_and_only_restore_offered`, `test_archived_checkpoints_show_with_the_checkbox`, `test_empty_state` |
 | FE-ACCOUNTS-002 | passed | 6: `test_card_shows_name_and_german_kind_tag[chromium-cash-Bargeld]`, `test_card_shows_name_and_german_kind_tag[chromium-checking-Girokonto]`, `test_card_shows_name_and_german_kind_tag[chromium-credit_card-Kreditkarte]`, `test_card_shows_name_and_german_kind_tag[chromium-custody-Depot]` (+2 more) |
 | FE-ACCOUNTS-003 | passed | 2: `test_letzter_ist_stand_shows_latest_balance_and_date`, `test_letzter_ist_stand_when_there_is_none` |
@@ -374,6 +399,7 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | FE-AUDIT-007 | passed | 1: `test_revert_confirmation_toast_and_new_revert_row` |
 | FE-AUDIT-008 | passed | 2: `test_no_older_page_button_for_a_short_history`, `test_older_page_button_appears_only_after_a_full_page` |
 | FE-AUDIT-009 | passed | 1: `test_history_dialog_for_a_record_closes_and_refreshes` |
+| FE-AUDIT-010 | passed | 1: `test_audit_shows_the_mark_in_german` |
 | FE-BACKUP-001 | passed | 1: `test_status_block_shows_target_schedule_version` |
 | FE-BACKUP-002 | passed | 1: `test_run_backup_ok_then_unchanged_with_toasts_list_and_pill` |
 | FE-BACKUP-003 | passed | 1: `test_failed_backup_shows_error_toast_banner_and_pill` |
@@ -383,6 +409,7 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | FE-BACKUP-007 | passed | 3: `test_failed_backup_shows_error_toast_banner_and_pill`, `test_pill_shows_pending_changes_after_a_backup`, `test_pill_without_any_backup_is_a_warning` |
 | FE-BACKUP-008 | passed | 1: `test_pill_says_server_unreachable_when_status_fails` |
 | FE-BACKUP-009 | passed | 1: `test_pill_refreshes_periodically` |
+| FE-BACKUP-010 | passed | 2: `test_failed_run_request_shows_error_toast[chromium-http]`, `test_failed_run_request_shows_error_toast[chromium-network]` |
 
 ## End-to-end
 
@@ -392,7 +419,7 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 | E2E-ONBOARD-002 | passed | 1: `test_new_account_dialog_fields` |
 | E2E-ONBOARD-003 | passed | 1: `test_creating_an_account_posts_start_balance_and_shows_card_with_startstand` |
 | E2E-ONBOARD-004 | passed | 1: `test_first_account_creates_account_and_start_checkpoint` |
-| E2E-ONBOARD-005 | FAILED | 2: `test_forecast_of_the_new_account_opens_at_the_start_balance`, `test_opening_balance_is_the_start_checkpoint` |
+| E2E-ONBOARD-005 | passed | 2: `test_forecast_of_the_new_account_opens_at_the_start_balance`, `test_opening_balance_is_the_start_checkpoint` |
 | E2E-ONBOARD-006 | passed | 1: `test_clicking_a_row_selects_the_month_and_updates_the_detail` |
 | E2E-ONBOARD-007 | passed | 1: `test_header_shows_brand_five_nav_buttons_and_pill` |
 | E2E-BOOK-001 | passed | 2: `test_amount_is_entered_positive_and_sign_follows_the_type[chromium-Ausgabe-1.200,00--120000]`, `test_amount_is_entered_positive_and_sign_follows_the_type[chromium-Einnahme-3.000,00-300000]` |
@@ -448,4 +475,18 @@ Status per clause: `passed`, `FAILED`, `PARTIAL` (some tests of the clause fail)
 
 ## Uncovered clauses
 
-None: every clause in `contracts/TRACEABILITY.md` has at least one test (possibly a skip stub).
+- DATA-001
+- DATA-002
+- DATA-003
+- DATA-004
+- DATA-005
+- DATA-006
+- DATA-007
+- DATA-008
+- DATA-009
+- DATA-010
+- DATA-011
+- DATA-012
+- DATA-013
+- DATA-014
+- DATA-015

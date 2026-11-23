@@ -21,7 +21,8 @@ Import: `from app import schemas`. Pydantic v2 models; `MODELS` maps table → m
 - `AccountCreate(AccountIn)`: adds `start_balance: int` (cents), `start_date: date`.
 - `EntryIn(Base)`: `account_id:int`, `to_account_id:int|None`, `name` (1–100),
   `category` (≤100), `kind` ∈ {recurring, once}, `amount:int`, `start_date:date`,
-  `end_date:date|None`, `interval_months:int` (1–120, default 1), `note` (≤2000).
+  `end_date:date|None`, `interval_months:int` (1–120, default 1), `estimated:bool`
+  (default false), `note` (≤2000).
 - `AdjustmentIn(Base)`: `entry_id:int`, `effective_date:date`, `mode` ∈ {set, percent},
   `amount:int|None`, `percent:float|None` (> −100 and < 1000), `repeat_yearly:bool`
   default false, `note` (≤500).
@@ -72,6 +73,9 @@ to the HTTP envelope by `ERRENV`.
   not written to the record (it drives optimistic locking only).
 - `SCH-018` [INFERRED] `comment` is optional (default empty) and is not written to the
   data row (it goes onto the audit entry).
+- `SCH-019` [README] `EntryIn.estimated` is a boolean, default `False` (a fixed amount);
+  `True` marks the amount as an estimate (B-015). A value that is not a boolean (e.g.
+  `"vielleicht"`) fails with `bool_parsing`.
 
 ## Examples
 - `EntryIn(account_id=1, name='x', kind='once', amount=-500, start_date='2026-01-01',

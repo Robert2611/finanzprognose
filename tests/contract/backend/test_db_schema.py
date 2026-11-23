@@ -7,6 +7,20 @@ from tests.contract.backend.conftest import make_account
 SYSTEM_COLS = {"id", "archived", "created_at", "updated_at"}
 
 
+REAL_MIGRATIONS = list(db.MIGRATIONS)  # captured before any test patches db.MIGRATIONS
+
+
+def latest():
+    """Target version of the last real migration (1 = baseline only)."""
+    return max((t for t, _ in REAL_MIGRATIONS), default=1)
+
+
+def with_extra(*fns):
+    """The real migrations plus test migrations numbered after them (latest()+1, +2, ...)."""
+    base = latest()
+    return [*REAL_MIGRATIONS, *((base + i, fn) for i, fn in enumerate(fns, 1))]
+
+
 def _add_column(table, col):
     def migrate(conn):
         if not db._has_column(conn, table, col):
@@ -41,19 +55,28 @@ def test_init_is_idempotent_and_preserves_data(path):
 
 
 @pytest.mark.contract("DB-SCHEMA-003")
-def test_user_version_is_one_without_migrations(path):
-    """DB-SCHEMA-003: with no pending migrations user_version is 1."""
+def test_user_version_is_latest_migration_without_pending_migrations(path):
+    """DB-SCHEMA-003: with no pending migrations user_version is the latest migration's target (1 if none)."""
+    assert scalar(path, "PRAGMA user_version") == latest()
+
+
+@pytest.mark.contract("DB-SCHEMA-003")
+def test_user_version_is_one_with_an_empty_migration_list(tmp_path, monkeypatch):
+    """DB-SCHEMA-003: with an empty MIGRATIONS list a fresh database is at version 1."""
+    monkeypatch.setattr(db, "MIGRATIONS", [])
+    path = str(tmp_path / "x.sqlite")
+    db.init(path)
     assert scalar(path, "PRAGMA user_version") == 1
 
 
 @pytest.mark.contract("DB-SCHEMA-004")
 def test_migration_runs_and_preserves_rows(path, monkeypatch):
-    """DB-SCHEMA-004: a registered (2, fn) migration is applied, user_version becomes 2, rows survive."""
+    """DB-SCHEMA-004: a newly registered migration is applied, user_version advances to its target, rows survive."""
     with db.tx(path) as c:
         make_account(c, "old row")
-    monkeypatch.setattr(db, "MIGRATIONS", [(2, _add_column("accounts", "color"))])
+    monkeypatch.setattr(db, "MIGRATIONS", with_extra(_add_column("accounts", "color")))
     db.init(path)
-    assert scalar(path, "PRAGMA user_version") == 2
+    assert scalar(path, "PRAGMA user_version") == latest() + 1
     with open_db(path) as c:
         assert db._has_column(c, "accounts", "color")
         assert [r["name"] for r in c.execute("SELECT name FROM accounts")] == ["old row"]
@@ -68,11 +91,11 @@ def test_rerunning_init_does_not_reapply_a_migration(path, monkeypatch):
         calls.append(1)
         _add_column("accounts", "color")(conn)
 
-    monkeypatch.setattr(db, "MIGRATIONS", [(2, migrate)])
+    monkeypatch.setattr(db, "MIGRATIONS", with_extra(migrate))
     db.init(path)
     db.init(path)
     assert calls == [1]
-    assert scalar(path, "PRAGMA user_version") == 2
+    assert scalar(path, "PRAGMA user_version") == latest() + 1
 
 
 @pytest.mark.contract("DB-SCHEMA-006")
@@ -82,10 +105,11 @@ def test_failing_migration_rolls_back_and_propagates(path, monkeypatch):
         conn.execute("ALTER TABLE accounts ADD COLUMN broken TEXT")
         raise RuntimeError("migration failed")
 
-    monkeypatch.setattr(db, "MIGRATIONS", [(2, _add_column("accounts", "color")), (3, bad)])
+    good_version = latest() + 1
+    monkeypatch.setattr(db, "MIGRATIONS", with_extra(_add_column("accounts", "color"), bad))
     with pytest.raises(RuntimeError, match="migration failed"):
         db.init(path)
-    assert scalar(path, "PRAGMA user_version") == 2
+    assert scalar(path, "PRAGMA user_version") == good_version
     with open_db(path) as c:
         assert db._has_column(c, "accounts", "color")
         assert not db._has_column(c, "accounts", "broken")
@@ -95,14 +119,15 @@ def test_failing_migration_rolls_back_and_propagates(path, monkeypatch):
 def test_only_pending_migrations_run_in_ascending_order(path, monkeypatch):
     """DB-SCHEMA-007: migrations with target > user_version run in ascending order; applied ones are skipped."""
     order = []
-    monkeypatch.setattr(db, "MIGRATIONS", [(2, lambda c: order.append(2))])
+    n = latest()
+    monkeypatch.setattr(db, "MIGRATIONS", with_extra(lambda c: order.append(1)))
     db.init(path)
     order.clear()
-    monkeypatch.setattr(db, "MIGRATIONS", [(2, lambda c: order.append(2)), (3, lambda c: order.append(3)),
-                                           (4, lambda c: order.append(4))])
+    monkeypatch.setattr(db, "MIGRATIONS", with_extra(lambda c: order.append(1), lambda c: order.append(2),
+                                                     lambda c: order.append(3)))
     db.init(path)
-    assert order == [3, 4]
-    assert scalar(path, "PRAGMA user_version") == 4
+    assert order == [2, 3]
+    assert scalar(path, "PRAGMA user_version") == n + 3
 
 
 @pytest.mark.contract("DB-SCHEMA-008")
@@ -145,7 +170,7 @@ def test_baseline_exists_before_migrations_run(tmp_path, monkeypatch):
         seen["tables"] = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         _add_column("accounts", "color")(conn)
 
-    monkeypatch.setattr(db, "MIGRATIONS", [(2, migrate)])
+    monkeypatch.setattr(db, "MIGRATIONS", with_extra(migrate))
     path = str(tmp_path / "f" / "x.sqlite")
     db.init(path)
     assert {"accounts", "entries", "adjustments", "checkpoints", "audit_log"} <= seen["tables"]
@@ -156,6 +181,6 @@ def test_guarded_migration_converges_when_column_already_exists(path, monkeypatc
     """DB-SCHEMA-011: a column-adding migration guarded by _has_column tolerates the column already existing."""
     with open_db(path) as c:
         c.execute("ALTER TABLE accounts ADD COLUMN color TEXT")
-    monkeypatch.setattr(db, "MIGRATIONS", [(2, _add_column("accounts", "color"))])
+    monkeypatch.setattr(db, "MIGRATIONS", with_extra(_add_column("accounts", "color")))
     db.init(path)
-    assert scalar(path, "PRAGMA user_version") == 2
+    assert scalar(path, "PRAGMA user_version") == latest() + 1

@@ -31,6 +31,7 @@ class EntryOut(BaseModel):
     start_date: str
     end_date: Optional[str] = None
     interval_months: int
+    estimated: bool
     note: str
     archived: bool
     updated_at: str

@@ -111,7 +111,8 @@ def compute(state: dict, start: str, months: int) -> dict:
             continue
         for d in occurrences(e, horizon):
             amt, expl = amount_at(e, adjs[e["id"]], d)
-            base = {"entry_id": e["id"], "date": d.isoformat(), "category": e["category"], "explanation": expl}
+            base = {"entry_id": e["id"], "date": d.isoformat(), "category": e["category"],
+                    "estimated": bool(e.get("estimated")), "explanation": expl}
             if to:
                 events[e["account_id"]].append((d, 0, e["id"], {
                     **base, "type": "transfer", "amount": -amt, "label": f"{e['name']} → {acc_name[to]}"}))
