@@ -45,6 +45,9 @@ any single change. Undo is a new forward change, never a rewrite of history.
   `{"code":"not_found","params":{"entity":"audit_log","id":audit_id}}`.
 - `API-AUDIT-010` [INFERRED] The audit log is append-only over the API too: there is no
   endpoint to edit or delete audit rows.
+- `API-AUDIT-011` [README] `POST /api/audit/{id}/revert` on a row whose `action` is
+  `revert` is a redo (`DB-AUDIT-015`): `200`, the undone change is back, and a new `revert`
+  row references the reverted revert row (B-019).
 
 ## Examples
 - Create+update an account, then `POST /api/audit/{update_id}/revert` → `200`, account name
@@ -53,7 +56,6 @@ any single change. Undo is a new forward change, never a rewrite of history.
 
 ## Out of scope / not specified
 - Exact `ts` values (timestamps).
-- Reverting a `revert` (structurally allowed; semantics unspecified — OPEN_QUESTIONS #4).
 
 ## Open questions
-- OPEN_QUESTIONS #4 (revert-of-revert).
+- None open. (Revert of a revert is a redo, see `API-AUDIT-011`.)

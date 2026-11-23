@@ -89,10 +89,11 @@ None. Pure computation over the passed `state`. Does not read the DB or the cloc
   `deviation` keys (nothing precedes it); later checkpoints have both.
 - `FC-010` [INFERRED] After a checkpoint, subsequent bookings continue from the
   checkpoint's `balance`.
-- `FC-011` [OBSERVED] An account with **no** (non-archived) checkpoint produces a
+- `FC-011` [README] An account with **no** (non-archived) checkpoint produces a
   `no_checkpoint` warning and its per-account `opening`/`closing` stay `null` with no
   booking items applied (bookings before the first checkpoint are skipped, and there is no
-  checkpoint to start from). See OPEN_QUESTIONS #6.
+  checkpoint to start from). Intended: without an anchor there is no honest starting
+  balance, so there is no zero-based fallback (OPEN_QUESTIONS #6, B-019).
 - `FC-012` [INFERRED] Checkpoints dated after the forecast horizon are ignored; checkpoints
   at or before the horizon are considered.
 
@@ -170,11 +171,10 @@ None. Pure computation over the passed `state`. Does not read the DB or the cloc
 
 ## Out of scope / not specified
 - The German rendering of any `code` (that lives in the frontend, see `FE-CORE`).
-- Behavior for a malformed `start` such as month `00`/`13` (the API guards the pattern but
-  not the range; see `API-FC` and OPEN_QUESTIONS #8) — the engine assumes a valid month.
+- Behavior for a malformed `start` such as month `00`/`13`: the API rejects it
+  (`API-FC-007`), so the engine assumes a valid month.
 - Ordering of `warnings` relative to each other.
 
 ## Open questions
-- OPEN_QUESTIONS #6 (account with only archived / no checkpoints).
-- OPEN_QUESTIONS #7 (transfer to archived target silently dropped — intended? warning only).
-- OPEN_QUESTIONS #8 (invalid month range passed to the engine).
+- None open. (#6 was settled, see `FC-011`; #7 see `FC-028`.)
+

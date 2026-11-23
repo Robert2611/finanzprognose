@@ -31,7 +31,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | DATA-012 | I | bkp (indirect) |
 | DATA-013 | T | mig |
 | DATA-014 | I | — |
-| DATA-015 | O | — |
+| DATA-015 | R | — |
 | DATA-016 | R | — |
 
 ## Backend
@@ -67,7 +67,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | DB-CRUD-007 | R | lock |
 | DB-CRUD-008 | I | lock |
 | DB-CRUD-009 | I | — |
-| DB-CRUD-010 | O | — |
+| DB-CRUD-010 | R | — |
 | DB-CRUD-011 | R | lock |
 | DB-CRUD-012 | I | — |
 | DB-CRUD-013 | R | — |
@@ -85,9 +85,10 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | DB-AUDIT-009 | I | — |
 | DB-AUDIT-010 | T | lock |
 | DB-AUDIT-011 | R | — |
-| DB-AUDIT-012 | O | — |
+| DB-AUDIT-012 | R | — |
 | DB-AUDIT-013 | I | bkp (indirect) |
 | DB-AUDIT-014 | I | — |
+| DB-AUDIT-015 | R | — |
 | DB-ERR-001 | I | — |
 | DB-ERR-002 | I | — |
 | DB-ERR-003 | I | — |
@@ -103,7 +104,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | FC-008 | R | flow |
 | FC-009 | I | flow |
 | FC-010 | I | — |
-| FC-011 | O | — |
+| FC-011 | R | — |
 | FC-012 | I | — |
 | FC-013 | I | flow |
 | FC-014 | I | — |
@@ -219,6 +220,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | API-AUDIT-008 | I | — |
 | API-AUDIT-009 | I | — |
 | API-AUDIT-010 | I | — |
+| API-AUDIT-011 | R | — |
 | API-FC-001 | T | flow |
 | API-FC-002 | I | — |
 | API-FC-003 | I | — |
@@ -308,6 +310,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | FE-ACCOUNTS-013 | R | — |
 | FE-AUDIT-001..009 | I | — |
 | FE-AUDIT-010 | R | — |
+| FE-AUDIT-011 | R | — |
 | FE-BACKUP-001..002 | I | — |
 | FE-BACKUP-003 | R | — |
 | FE-BACKUP-004..006 | I | — |
@@ -384,6 +387,5 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 - **Clauses:** 423 total.
 - **Already covered by an existing test (directly or indirectly):** ~45 clauses; the rest
   need new tests.
-- **`[OBSERVED]`-only clauses (treat with care, linked to open questions):** 11 —
-  DATA-015, DB-CRUD-010, DB-CRUD-013, DB-AUDIT-012, FC-011, FC-028, API-RES-016, API-RES-018,
-  API-RES-020, API-FC-007, BKP-004.
+- **`[OBSERVED]`-only clauses (treat with care):** 2 — API-RES-016, BKP-004. The others
+  were settled with the user (OPEN_QUESTIONS, 2026-11-23) and are now `R`.

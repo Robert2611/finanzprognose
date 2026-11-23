@@ -49,5 +49,6 @@ A database with at least one account, one booking, and some edit history.
   [FE-AUDIT-009]
 
 ## Out of scope
-- Revert-of-revert chains (OPEN_QUESTIONS #4).
-- Cascading effects of archiving an account referenced by entries (OPEN_QUESTIONS #10).
+- Revert-of-revert chains beyond one redo (specified in `DB-AUDIT-015`, tested there).
+- Cascading effects of archiving an account referenced by entries: there are none by design
+  (`API-RES-020`, `FE-ACCOUNTS-013`).

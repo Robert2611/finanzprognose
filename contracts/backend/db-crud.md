@@ -52,9 +52,10 @@ transaction. Uses `db.now()` for timestamps. Raises `db.NotFound`/`db.Conflict`
   skipped and the update always proceeds.
 - `DB-CRUD-009` [INFERRED] `update`/`set_archived` on a non-existent `id_` raises
   `db.NotFound('not_found', entity=table, id=id_)`.
-- `DB-CRUD-010` [OBSERVED] A no-op update (all submitted values already equal the stored
+- `DB-CRUD-010` [README] A no-op update (all submitted values already equal the stored
   values) returns the existing row unchanged, does **not** bump `updated_at`, and writes
-  **no** audit row. See OPEN_QUESTIONS #2.
+  **no** audit row. This is intended: a save that changes nothing is not an event (decided in
+  OPEN_QUESTIONS #2, B-019).
 - `DB-CRUD-011` [README] `update` writes an `audit_log` row with `action='update'`,
   `before=<prior row JSON>`, `after=<new row JSON>` when any column actually changed.
   [TEST: `test_optimistic_locking_and_audit`]
@@ -85,5 +86,4 @@ transaction. Uses `db.now()` for timestamps. Raises `db.NotFound`/`db.Conflict`
 - JSON serialization details of audit snapshots beyond "the row's columns" (see `DB-AUDIT`).
 
 ## Open questions
-- OPEN_QUESTIONS #2 (no-op update: no audit row, `data_version` unchanged).
-- OPEN_QUESTIONS #3 (archive/restore not optimistic-locked).
+- None open. (#2 and #3 were settled, see `DB-CRUD-010` and `DB-CRUD-013`.)

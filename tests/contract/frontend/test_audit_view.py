@@ -178,3 +178,30 @@ def test_history_dialog_for_a_record_closes_and_refreshes(s, app_page):
     assert "Andere2" not in body and body.count("Angelegt") == 1 and "Konto" in body
     dlg.get_by_role("button", name="Schließen").click()
     expect(page.locator("dialog")).to_have_count(0)
+
+
+@pytest.mark.contract("FE-AUDIT-011")
+def test_undoing_an_undo_is_worded_as_restore(s, app_page):
+    """FE-AUDIT-011: on a revert row the dialog says 'wiederherstellen'; confirming brings the change back."""
+    a = s.account("X")
+    rename(s, a, "Y")
+    upd = s.c.get(f"/api/audit?entity=accounts&entity_id={a['id']}").json()[0]
+    s.c.post(f"/api/audit/{upd['id']}/revert")
+    page = open_audit(app_page)
+    rows(page).first.get_by_role("button", name="Rückgängig").click()
+    dlg = page.locator("dialog")
+    expect(dlg.locator("h3")).to_have_text(f"Änderung #{upd['id']} wiederherstellen")
+    expect(dlg).to_contain_text(f"Die rückgängig gemachte Änderung #{upd['id']} wird wiederhergestellt.")
+    dlg.get_by_role("button", name="Wiederherstellen").click()
+    expect(page.locator("#toast")).to_contain_text("Wiederhergestellt")
+    assert s.state()["accounts"][0]["name"] == "Y"
+
+
+@pytest.mark.contract("FE-AUDIT-011", "FE-AUDIT-006")
+def test_undoing_a_normal_change_keeps_the_undo_wording(s, app_page):
+    """FE-AUDIT-011: a non-revert row still says 'rückgängig machen'."""
+    a = s.account("X")
+    rename(s, a, "Y")
+    page = open_audit(app_page)
+    rows(page).first.get_by_role("button", name="Rückgängig").click()
+    expect(page.locator("dialog").get_by_role("button", name="Rückgängig machen")).to_have_count(1)

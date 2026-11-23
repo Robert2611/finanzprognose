@@ -88,4 +88,6 @@ Mutates the DOM (appends/removes a `<dialog>`). `onSubmit` typically calls `api(
 - Keyboard focus order within the dialog.
 
 ## Open questions
-- OPEN_QUESTIONS #14 (no `data-testid`; selectors rely on `data-name`, `name`, button text).
+- None open. Selectors: browser tests use the visible German text, roles, `data-name`/`name`
+  and the few ids in `FE-NAV`; the contracts pin that text, so this is intended
+  (OPEN_QUESTIONS #14). Add a `data-testid` only where a selector gets awkward.

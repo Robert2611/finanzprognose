@@ -22,7 +22,7 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
   is a no-event" the intended contract?
 - **Options:** (a) keep as-is (document it), (b) always log an update even when nothing
   changed, (c) log only when something changed but still bump a change counter.
-- **Decision (2026-11-23):** Option (a): keep as-is and document. A save that changes nothing is not an event (no audit row, no `updated_at` bump, `data_version` unchanged, so the backup skips). → B-019
+- **Decision (2026-11-23):** Option (a): keep as-is and document. A save that changes nothing is not an event (no audit row, no `updated_at` bump, `data_version` unchanged, so the backup skips). → B-019 (done)
 
 ### 3. Archive/restore are not optimistic-locked — *possible bug*
 - **Clauses:** `DB-CRUD-013`, `API-RES-018`, `API-RES-003`.
@@ -42,7 +42,7 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
 - **Why unclear:** The resulting chain (redo? re-undo?) is not defined anywhere and could
   confuse users.
 - **Options:** define and document the semantics, or disallow reverting a `revert`.
-- **Decision (2026-11-23):** Reverting a `revert` row is a **redo**: it restores the change that was undone, as a new logged change like every revert. Specify and test it; the confirmation text says „wiederherstellen“. → B-019
+- **Decision (2026-11-23):** Reverting a `revert` row is a **redo**: it restores the change that was undone, as a new logged change like every revert. Specify and test it; the confirmation text says „wiederherstellen“. → B-019 (done)
 
 ### 5. Schema does not couple `adjustments.mode` to which of `amount`/`percent` is set
 - **Clauses:** `DATA-015`, `SCH-015`, `SCH-016`.
@@ -52,7 +52,7 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
 - **Why unclear:** Is the invariant meant to be DB-enforced or API-only? Only matters if
   anything ever writes outside the API (forbidden by the data-safety rules, so maybe fine).
 - **Options:** add a CHECK constraint, or accept API-only enforcement and document it.
-- **Decision (2026-11-23):** Option (b): API-only enforcement, documented. A DB CHECK would need a table rebuild in a migration, which is riskier than the gap (nothing writes outside the API). → B-019
+- **Decision (2026-11-23):** Option (b): API-only enforcement, documented. A DB CHECK would need a table rebuild in a migration, which is riskier than the gap (nothing writes outside the API). → B-019 (done)
 
 ### 6. Account with no (non-archived) checkpoint — behavior & messaging
 - **Clauses:** `FC-011`, `E2E-CP-005`, `E2E-CP-006`.
@@ -62,7 +62,7 @@ Intentionally left blank to keep numbering stable with the contract cross-refere
   evident from behavior. Confirm it's intended that **all** of the account's bookings are
   dropped (not, say, counted from 0).
 - **Options:** confirm as intended, or define a zero-based fallback.
-- **Decision (2026-11-23):** Confirmed as intended: no anchor, no forecast. The account shows the `no_checkpoint` warning and null balances, and all its bookings are ignored. No zero-based fallback. → B-019
+- **Decision (2026-11-23):** Confirmed as intended: no anchor, no forecast. The account shows the `no_checkpoint` warning and null balances, and all its bookings are ignored. No zero-based fallback. → B-019 (done)
 
 ### 7. Transfer to an archived target account is silently dropped (both sides) — *review*
 - **Clauses:** `FC-028`, `E2E-BOOK` (transfer), `FC-011`.

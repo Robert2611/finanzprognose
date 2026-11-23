@@ -31,13 +31,18 @@ function diffTpl(a) {
   return html`<div class="diff">${keys.map((k, i) => html`${i ? html`<br>` : ''}<b>${FIELD[k] || k}:</b> <del>${fmtVal(k, a.before[k])}</del> → <ins>${fmtVal(k, a.after[k])}</ins>`)}</div>`;
 }
 async function doRevert(a, onDone) {
+  // Undoing an undo restores the change it undid (a redo, B-019), so it is worded that way.
+  const redo = a.action === 'revert';
   const ok = await formDialog({
-    title: `Änderung #${a.id} rückgängig machen`, submitLabel: 'Rückgängig machen',
-    intro: html`<p class="muted">Der Datensatz wird auf den Zustand vor dieser Änderung zurückgesetzt. Das Zurücksetzen wird selbst als neue Änderung protokolliert – es geht also nichts verloren.</p>`,
+    title: redo ? `Änderung #${a.reverts_id} wiederherstellen` : `Änderung #${a.id} rückgängig machen`,
+    submitLabel: redo ? 'Wiederherstellen' : 'Rückgängig machen',
+    intro: redo
+      ? html`<p class="muted">Die rückgängig gemachte Änderung #${a.reverts_id} wird wiederhergestellt. Auch das wird als neue Änderung protokolliert – es geht also nichts verloren.</p>`
+      : html`<p class="muted">Der Datensatz wird auf den Zustand vor dieser Änderung zurückgesetzt. Das Zurücksetzen wird selbst als neue Änderung protokolliert – es geht also nichts verloren.</p>`,
     fields: [],
     onSubmit: () => api('POST', `/api/audit/${a.id}/revert`),
   });
-  if (ok) { toast('Rückgängig gemacht'); await load(); onDone(); }
+  if (ok) { toast(redo ? 'Wiederhergestellt' : 'Rückgängig gemacht'); await load(); onDone(); }
 }
 function auditRowTpl(a, onDone) {
   return html`<tr><td class="small" style="white-space:nowrap">${fTs(a.ts)}<div class="muted">#${a.id}</div></td><td>${ACTION[a.action] || a.action}</td>
