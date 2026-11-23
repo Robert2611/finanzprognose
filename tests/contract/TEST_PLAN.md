@@ -14,7 +14,7 @@ files. No implementation code under `app/` has been read.
 ```bash
 pip install -r requirements-dev.txt             # includes pytest-playwright
 python -m playwright install chromium            # one-time; Chromium is already cached here
-python -m pytest -q                              # default: legacy tests + contract suite, browser tests skipped
+python -m pytest -q                              # default: contract suite, browser tests skipped
 python -m pytest -q -m ""                        # EVERYTHING, incl. Playwright tests (what the release pipeline runs)
 python -m pytest -q -m "" tests/contract         # only the contract suite, incl. browser tests
 python -m pytest -q -m "" tests/contract --contract BKP-004   # a single clause

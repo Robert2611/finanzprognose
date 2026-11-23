@@ -29,10 +29,11 @@ Status values: `open`, `in progress`, `done`.
 
 ## B-004 Make tests independent of each other
 
-- **Status:** open
+- **Status:** done
 - **Problem:** All tests in `tests/test_app.py` share one module-scoped temp database. Later tests see data created by earlier ones (e.g. `test_backup` expects exactly 2 backup files), so tests can break when run alone, reordered, or extended.
 - **Proposal:** Give each test its own temp database and backup directory through a fixture. Since B-010 this is just `TestClient(create_app(Settings(db_path=tmp_path / ..., backup_dir=..., backup_scheduler=False)))` per test (about 100 ms each, mostly SQLite init); no patching needed.
 - **Done when:** Every test passes when run on its own and when the suite runs in random order (e.g. with `pytest-randomly`).
+- **Resolution:** Solved by removing `tests/test_app.py`, the only file with the shared database. The contract suite in `tests/contract/` already builds a fresh app with its own temp DB and backup dir per test and covers everything the old file tested. Its one uncovered test, `test_settings_from_env`, became the `SETTINGS-001..003` clauses (`contracts/backend/settings.md`) and `tests/contract/backend/test_settings.py`.
 
 ## B-005 Define an explicit, language-neutral API contract (and make backend output testable)
 

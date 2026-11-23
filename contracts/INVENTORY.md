@@ -170,7 +170,8 @@ container forwards 8000.
 
 - **Framework:** `pytest` (9.2.0) + FastAPI `TestClient` (needs `httpx` 0.28.1).
   Install via `pip install -r requirements-dev.txt`. Run with `python -m pytest -q`.
-- **Single test file:** `tests/test_app.py` (11 tests).
+- **Test suite:** `tests/contract/` (the black-box contract suite). The former
+  `tests/test_app.py` (11 tests) has been removed; the notes below describe it as it was.
 - **Setup:** the module builds a `Settings` pointing at a fresh `tempfile.mkdtemp()`
   (`backup_require_marker=True`, `backup_scheduler=False`, no password); no env vars.
 - **Fixtures:** one module-scoped `client` fixture wrapping `TestClient(create_app(S))` (which runs

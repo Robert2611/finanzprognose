@@ -28,7 +28,10 @@ python -m pytest -q
 python -m pytest -q -m ""
 
 # Run a single test
-python -m pytest -q tests/test_app.py::test_full_flow
+python -m pytest -q tests/contract/api/test_accounts.py::test_create_account_returns_row
+
+# All tests for one contract clause
+python -m pytest -q --contract BKP-004
 
 # Run locally (defaults point to /data and /backup, so override them; an empty APP_PASSWORD disables auth;
 # BACKUP_DIR must exist). Easiest: use the dev container (.devcontainer/) and press F5 (.vscode/launch.json).
@@ -82,4 +85,4 @@ API docs are served at `/api/docs`. There is no linter or formatter configured.
 
 ### Tests
 
-There is a single file, `tests/test_app.py`. It builds the app with `create_app(Settings(db_path=<tmp>, backup_dir=<tmp>, backup_scheduler=False, ...))` and wraps it in `TestClient`; no env vars are involved. For a different config (auth on, marker off, other DB), build another app in the same process instead of starting a server. Most tests share one module-scoped DB, so later tests see data created by earlier ones.
+All tests live in `tests/contract/`, a black-box suite written against the specs in `contracts/` (`tests/contract/TEST_PLAN.md` describes it). Every test carries `@pytest.mark.contract("<ID>")` with a clause ID from `contracts/TRACEABILITY.md`; collection fails for a missing or unknown ID (only `tests/contract/harness/` is exempt). When you change behavior, update the clause in `contracts/` and its row in `TRACEABILITY.md` along with the test. Each test builds its own app via `create_app(Settings(...))` with a temp DB and backup dir and wraps it in `TestClient` (fixtures in `tests/contract/conftest.py`; per-test overrides with `@pytest.mark.app_settings(...)`); no env vars are involved. Tests that use a browser fixture are marked `browser` automatically and skipped by default. The run writes `tests/contract/results.json` (gitignored); `python -m tests.contract.helpers.report` turns it into `COVERAGE.md` and `TEST_REPORT.md`.
