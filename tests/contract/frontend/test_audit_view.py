@@ -7,7 +7,11 @@ from tests.contract.frontend.conftest import norm
 
 
 def open_audit(app_page):
-    return app_page.open("verlauf")
+    """Open the history view and wait until it has loaded: the heading is drawn together with the
+    rows, only after GET /api/audit returns, so counting rows before that would see none."""
+    page = app_page.open("verlauf")
+    expect(page.locator("#main h2", has_text="Änderungsverlauf")).to_be_visible()
+    return page
 
 
 def rows(page):

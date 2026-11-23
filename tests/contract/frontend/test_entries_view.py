@@ -428,3 +428,152 @@ def test_adjustment_can_be_archived_and_restored_from_its_list(world, app_page, 
     expect(page.locator("dialog").last.get_by_role("button", name="Wiederherstellen")).to_have_count(1)
     assert world["s"].state()["adjustments"][0]["archived"] is True
     expect(page.locator("dialog").last.get_by_role("button", name="Wiederherstellen")).to_have_count(1)
+
+
+# ---------------------------------------------------------------------------- category suggestions
+
+@pytest.mark.contract("FE-ENTRIES-020")
+def test_category_field_suggests_known_categories(world, app_page):
+    """FE-ENTRIES-020: one suggestion per case-insensitive name, majority spelling, most used first, archived count."""
+    s, giro = world["s"], world["giro"]["id"]
+    for name, cat in [("A", "Lebensmittel"), ("B", "Lebensmittel"), ("C", "lebensmittel"),
+                      ("D", "Wohnen"), ("E", "Auto"), ("F", "Auto"), ("G", "")]:
+        s.entry(giro, name, -100, category=cat)
+    old = s.entry(giro, "H", -100, category="Urlaub")
+    s.c.post(f"/api/entries/{old['id']}/archive", json={})
+    page = open_entries(app_page)
+    dlg = new_entry(page)
+    inp = field(dlg, "Kategorie").locator("input")
+    list_id = inp.get_attribute("list")
+    assert list_id
+    options = dlg.locator(f"datalist[id='{list_id}'] option").evaluate_all("os => os.map(o => o.value)")
+    assert options == ["Lebensmittel", "Auto", "Urlaub", "Wohnen"]
+
+
+@pytest.mark.contract("FE-ENTRIES-020")
+def test_category_field_accepts_a_new_category(world, app_page):
+    """FE-ENTRIES-020: the field stays free text, so a category nobody used yet can be saved."""
+    world["s"].entry(world["giro"]["id"], "Miete", -100, category="Wohnen")
+    page = open_entries(app_page)
+    dlg = new_entry(page)
+    put_value(dlg, "Bezeichnung", "Kino")
+    put_value(dlg, "Betrag", "12,50")
+    put_value(dlg, "Kategorie", "Freizeit")
+    dlg.get_by_role("button", name="Speichern").click()
+    expect(page.locator("dialog")).to_have_count(0)
+    saved = [e for e in world["s"].state()["entries"] if e["name"] == "Kino"]
+    assert [e["category"] for e in saved] == ["Freizeit"]
+
+
+# ---------------------------------------------------------------------------- grouping (B-012)
+
+@pytest.fixture
+def grouped(world):
+    """Bookings across categories, types, rhythms and both accounts, plus one archived booking."""
+    s, giro, tg = world["s"], world["giro"]["id"], world["tg"]["id"]
+    s.entry(giro, "Gehalt", 320000, category="Einkommen")
+    s.entry(giro, "Miete", -110000, category="Wohnen")
+    s.entry(giro, "Strom", -9000, category="wohnen")
+    s.entry(giro, "Hausrat", -12000, category="Wohnen", interval_months=12)
+    s.entry(giro, "Kino", -2000, category="Freizeit", kind="once", start_date="2026-03-01")
+    s.entry(giro, "Sparen", 50000, category="Sparen", to_account_id=tg)
+    s.entry(tg, "Zinsen", 3000, interval_months=3)
+    old = s.entry(giro, "Altvertrag", -5000, category="Wohnen")
+    s.c.post(f"/api/entries/{old['id']}/archive", json={})
+    return world
+
+
+def group_by(page, option):
+    page.locator("select[name=group-by]").select_option(label=option)
+
+
+def group_heads(page):
+    return [norm(t) for t in page.locator("#main tr.group-head").all_inner_texts()]
+
+
+@pytest.mark.contract("FE-ENTRIES-021")
+def test_group_select_defaults_to_none_and_lists_the_dimensions(grouped, app_page):
+    """FE-ENTRIES-021: 'Gruppieren nach' offers Keine/Kategorie/Typ/Konto/Rhythmus; Keine is the flat list."""
+    page = open_entries(app_page)
+    sel = page.locator("select[name=group-by]")
+    assert sel.evaluate("s => [...s.options].map(o => o.text)") == ["Keine", "Kategorie", "Typ", "Konto", "Rhythmus"]
+    assert sel.evaluate("s => s.options[s.selectedIndex].text") == "Keine"
+    expect(page.locator("#main tr.group-head")).to_have_count(0)
+    expect(rows(page)).to_have_count(7)
+
+
+@pytest.mark.contract("FE-ENTRIES-022", "FE-ENTRIES-023")
+def test_group_by_category_heads_order_and_monthly_sums(grouped, app_page):
+    """FE-ENTRIES-022/023: one head per category (case-insensitive, 'Ohne Kategorie' last) with monthly sums;
+    yearly counts 1/12, one-time and archived are not summed, transfers are summed separately."""
+    page = open_entries(app_page)
+    group_by(page, "Kategorie")
+    assert group_heads(page) == [
+        "▾ Einkommen · 1 Buchung · +3.200,00 €/Monat",
+        "▾ Freizeit · 1 Buchung",
+        "▾ Sparen · 1 Buchung · Umbuchungen 500,00 €/Monat",
+        "▾ Wohnen · 3 Buchungen · -1.200,00 €/Monat",
+        "▾ Ohne Kategorie · 1 Buchung · +10,00 €/Monat",
+    ]
+
+
+@pytest.mark.contract("FE-ENTRIES-022")
+@pytest.mark.parametrize("option,labels", [
+    ("Typ", ["Einnahmen", "Ausgaben", "Umbuchungen"]),
+    ("Konto", ["Giro", "Tagesgeld"]),
+    ("Rhythmus", ["monatlich", "quartalsweise", "jährlich", "einmalig"]),
+])
+def test_group_order_per_dimension(grouped, app_page, option, labels):
+    """FE-ENTRIES-022: fixed group order for Typ, account order for Konto, interval order with einmalig last."""
+    page = open_entries(app_page)
+    group_by(page, option)
+    assert [h.split(" · ")[0].removeprefix("▾ ") for h in group_heads(page)] == labels
+
+
+@pytest.mark.contract("FE-ENTRIES-022")
+def test_archived_bookings_are_grouped_when_shown(grouped, app_page):
+    """FE-ENTRIES-022/023: with 'Archivierte zeigen' the archived row joins its group but not the sum."""
+    page = open_entries(app_page)
+    page.get_by_label("Archivierte zeigen").check()
+    group_by(page, "Kategorie")
+    assert "▾ Wohnen · 4 Buchungen · -1.200,00 €/Monat" in group_heads(page)
+
+
+@pytest.mark.contract("FE-ENTRIES-024")
+def test_clicking_a_group_head_folds_and_unfolds_it(grouped, app_page):
+    """FE-ENTRIES-024: groups start open; the head button toggles the group's rows."""
+    page = open_entries(app_page)
+    group_by(page, "Kategorie")
+    data_rows = page.locator("#main table tbody tr:not(.group-head)")
+    expect(data_rows).to_have_count(7)
+    page.get_by_role("button", name="▾ Wohnen").click()
+    expect(data_rows).to_have_count(4)
+    expect(page.locator("#main tr.group-head").filter(has_text="Wohnen")).to_contain_text("▸ Wohnen")
+    page.get_by_role("button", name="▸ Wohnen").click()
+    expect(data_rows).to_have_count(7)
+
+
+@pytest.mark.contract("FE-ENTRIES-025")
+def test_group_choice_is_remembered_per_view(grouped, app_page):
+    """FE-ENTRIES-025: the choice survives a reload and does not change the forecast view's choice."""
+    page = open_entries(app_page)
+    group_by(page, "Konto")
+    page.reload()
+    expect(page.locator("#main tr.group-head")).to_have_count(2)
+    page.goto("/#prognose")
+    sel = page.locator("select[name=group-by]")
+    expect(sel).to_have_value("none")
+
+
+@pytest.mark.contract("FE-ENTRIES-025")
+def test_grouping_works_without_browser_storage(grouped, app_page):
+    """FE-ENTRIES-025: when localStorage throws, the view renders and grouping still works until reload."""
+    page = app_page.page
+    page.add_init_script("""Object.defineProperty(window, 'localStorage', { get() { throw new Error('blocked'); } });""")
+    errors = []
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page = open_entries(app_page)
+    expect(rows(page)).to_have_count(7)
+    group_by(page, "Typ")
+    expect(page.locator("#main tr.group-head")).to_have_count(3)
+    assert errors == []

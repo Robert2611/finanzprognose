@@ -63,10 +63,11 @@ Status values: `open`, `in progress`, `done`.
 
 ## B-007 Split app/main.py into smaller modules
 
-- **Status:** open
+- **Status:** done
 - **Problem:** `main.py` combines several unrelated responsibilities in one 260+ line file: auth middleware, exception handlers, all Pydantic request models, and every route (generic CRUD, accounts, audit/revert, forecast, backup, export). This violates the file-size preference in `CLAUDE.md`.
 - **Proposal:** Split by responsibility, e.g. `app/schemas.py` (the Pydantic models and `MODELS` mapping), `app/auth.py` (the auth middleware), and keep `main.py` for route wiring only (or split routes further by area if that still ends up large). Keep the route paths and behavior unchanged.
 - **Done when:** `main.py` only wires routes/middleware together, the split-out modules each have a single clear responsibility, and the existing test suite passes unchanged.
+- **Resolution:** done in commit `6f546ec` (auth → `app/auth.py`, request models → `app/schemas.py`, exception handlers → `app/errors.py`); B-010 later moved the routes to `app/routes.py`. `main.py` is now only the app factory (47 lines). The status was not updated at the time.
 
 ## B-008 Split app/static/app.js into smaller modules
 
@@ -81,10 +82,11 @@ Status values: `open`, `in progress`, `done`.
 
 ## B-009 Split db.py into focused modules
 
-- **Status:** open
+- **Status:** done
 - **Problem:** `db.py` combines several responsibilities in one file: the schema and migration runner (B-002), the generic CRUD helpers, the audit log, and the transaction/connection plumbing. This violates the file-size preference in `CLAUDE.md`. It was carved out of B-002 so the migration runner could land as a small, contained change.
 - **Proposal:** Split `db.py` into smaller, well-scoped modules (e.g. schema + migrations, generic CRUD, audit log, connection/transaction helpers), keeping the public functions importable as they are today so callers (`main.py`, `backup.py`, tests) don't change. Preserve every data-safety invariant: DELETE-blocking triggers, append-only `audit_log`, optimistic locking, and the single-writer lock.
 - **Done when:** `db.py`'s responsibilities live in focused modules, the import surface used elsewhere is unchanged, and the existing test suite passes unchanged.
+- **Resolution:** done in commit `65e9673`: `app/db/` package with `connection.py`, `schema.py`, `crud.py`, `audit.py` and `errors.py`, re-exported from `app/db/__init__.py` so callers still use `db.<name>`. The status was not updated at the time.
 
 ## B-010 Per-app settings instead of import-time config
 
@@ -102,18 +104,28 @@ Status values: `open`, `in progress`, `done`.
 - **Resolution so far:** `.github/workflows/release.yml` (tests → tag check → build/push `vX.Y.Z` + `latest` unless prerelease → upload `install.sh`). `deploy/` holds the production `docker-compose.yml` (image pinned by `APP_VERSION`), `install.sh` and `update.sh`. The Dockerfile copies `deploy/` into the image and sets the label `finanzprognose.version`. Both scripts copy the deploy files out of the image, so the VM only needs a classic token with `read:packages` and the scripts update themselves. `update.sh` keeps a DB copy in `data/pre-update/` (never deleted) and prints rollback commands if the new version does not become healthy. `deploy/docker-compose.yml` is the only compose file: the root build-from-source variant was removed and the contracts (`README`, `INVENTORY`) now point to `deploy/docker-compose.yml`; a local image test is `docker build` + that file with `--project-directory .`. `/healthz` is unchanged (its contract fixes the body to `{"ok": true}`), so the running version is visible via `.env` and the image label rather than the API. README (German) and `CLAUDE.md` are updated.
 - **Verified:** the release workflow, `install.sh` on a fresh VM and `update.sh` were tested successfully by the user.
 
-## B-012 Group bookings (maybe by category)
+## B-012 Group bookings in the Buchungen list and the forecast
 
-- **Status:** open
-- **Problem:** Not yet specified. Rough idea: group bookings, possibly by category.
-- **Next step:** Ask the user before doing anything. Open questions: what "group" means (display only vs. a new entity), whether grouping is by category or something else, and where it should show up (forecast, entries list, monthly totals).
+- **Status:** done
+- **Problem:** Bookings can only be seen as one flat list, so questions like "what does Wohnen cost me per month?" or "where does my money go in March?" need mental arithmetic.
+- **Decisions (with the user):**
+  - Grouping is a **view only**: nothing new is stored, no API or schema change.
+  - A **"Gruppieren nach"** selector in the toolbar of **both** the Buchungen list and the Prognose. Options: `Keine` (default, today's flat list), `Kategorie` (plus "Ohne Kategorie"), `Typ` (Einnahmen / Ausgaben / Umbuchungen), `Konto`, `Rhythmus` (monatlich / vierteljährlich / jährlich / einmalig). Later `Art` (fest / geschätzt, see B-015).
+  - The options are one small table of dimensions (key, label, function entry → group), so adding a dimension is a one-line change.
+  - **Buchungen list:** a header row per group, e.g. "Wohnen · 3 Buchungen · −1.240 €/Monat", groups can be folded. The sum is a **monthly equivalent**: amount ÷ `interval_months`, from the base amount. One-time bookings are left out of the monthly sum (they are still listed in the group).
+  - **Prognose:** grouping applies to the detail of the selected month: subtotals per group from the forecast items (so adjustments are included), each group unfoldable to its bookings. Checkpoint items stay ungrouped.
+  - The selection is remembered **per view** in the browser (`localStorage`, wrapped in try/catch).
+- **Resolved while building:** under `Kategorie` a transfer goes into its own category like any booking. Transfers are never mixed into a group's sum; they appear as a separate "Umbuchungen …" figure. In the forecast a transfer counts once (its source side), except under `Konto`, where each side is listed under its own account. Archived bookings join their group when "Archivierte zeigen" is on, but are not summed.
+- **Resolution:** new `app/static/grouping.js` (dimension table, `groupItems`, monthly equivalent, the "Gruppieren nach" select, remembered choice and folded groups); `entryType` and the category spelling logic from B-013 moved there so both views and the entry form share them. `entries.js` renders group header rows with monthly sums; `forecast.js` replaces the account cards in the month detail with group cards when a dimension is chosen. Frontend only. Contract clauses `FE-ENTRIES-021..025` and `FE-FORECAST-018..020` with browser tests; the existing toolbar tests were updated for the second select.
+- **Done when:** both views have the selector with the dimensions above, group sums are correct (contract clauses + browser tests), and `Keine` renders exactly as today.
 
 ## B-013 Make `category` a dropdown field
 
-- **Status:** open
+- **Status:** done
 - **Problem:** `category` is free text, so known categories have to be retyped when editing an entry.
 - **Proposal:** Make it a dropdown that offers the known categories, so they are easier to insert on edit.
-- **Next step:** Ask the user before doing anything. Open questions: whether new categories can still be typed in (combobox vs. fixed list), where the list comes from (existing values vs. a managed list), and how this relates to B-012.
+- **Decisions:** free text with suggestions (new categories can still be typed); the list comes from the categories already used by any entry, archived ones included (no managed list); names that differ only in case are offered once, in the spelling used most often; most used first. Existing data is not touched. B-012 stays open and independent.
+- **Resolution:** `formDialog` (`core.js`) gained a `suggestions` option for text fields, rendered as a native `<datalist>` bound to the input. `entries.js` builds the category list (`categorySuggestions()`) from `S.data.entries`. Frontend only, no API or schema change. New clause `FE-ENTRIES-020` (`contracts/frontend/entries-view.md`) with two browser tests in `tests/contract/frontend/test_entries_view.py`.
 
 ## B-014 Make the "Buchungen" page scroll as a whole
 
@@ -121,3 +133,12 @@ Status values: `open`, `in progress`, `done`.
 - **Problem:** On the "Buchungen" (entries) page only a part of the page scrolls (an inner scroll area).
 - **Proposal:** Let the page grow to its full length so the whole page scrolls instead of an inner part.
 - **Next step:** Not investigated yet. Check which element has the inner scroll (CSS in `app/static`, entries view in `entries.js`) and whether other views behave the same.
+
+## B-015 Mark bookings as estimated (variable spending)
+
+- **Status:** open
+- **Problem:** Some recurring expenses are not fixed debits but estimates, e.g. "about 450 €/month for food". They can already be entered as recurring bookings, and checkpoints (Ist-Stände) already absorb the difference to reality as Abweichung, but the app cannot tell a fixed amount from an estimate.
+- **Decisions (with the user):** only a **mark**, no budget tracking. A new field **Art: fest / geschätzt** on bookings (default fest). Individual purchases are deliberately **not** recorded against the estimate; checkpoints stay the source of truth.
+- **Proposal:** new column on `entries` (first real use of the migration runner from B-002: `SCHEMA` for fresh DBs plus an idempotent migration for existing ones; update `TABLES`, the Pydantic model and the response contract). The UI shows estimated amounts with "≈", the entry form gets the Art selector, and B-012 gets the `Art` grouping dimension. Optionally the forecast month detail shows how much of the month is estimated.
+- **Depends on:** B-012 (grouping by Art is where the mark pays off).
+- **Done when:** an existing database is upgraded without data loss, bookings can be marked as geschätzt, the mark is visible in the list and the forecast, and B-012 offers `Art` as a dimension.

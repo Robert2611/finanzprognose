@@ -3,6 +3,7 @@ import { html, svg, render as renderLit, nothing } from './vendor/lit-html.js';
 import { $, eur, eurCls, signed, fShort, fMonth, thisMonth, api, KINDS, COLORS, warnMsg, explLine, S } from './core.js';
 import { entryDialog } from './entries.js';
 import { accountDialog, checkpointDialog } from './accounts.js';
+import { DIMENSIONS, groupItems, getDimension, isOpen, toggleGroup, dimensionSelect } from './grouping.js';
 
 export async function renderForecast(main) {
   if (!S.data.accounts.length) {
@@ -12,7 +13,8 @@ export async function renderForecast(main) {
   renderLit(html`<div class="toolbar">
       <label>Ab <input type="month" .value=${S.from} @change=${e => { S.from = e.target.value || thisMonth(); S.sel = null; renderForecast(main); }}></label>
       <label>Zeitraum <select @change=${e => { S.months = +e.target.value; renderForecast(main); }}>${[12, 24, 36, 60, 120].map(n => html`<option value=${n} ?selected=${n == S.months}>${n} Monate</option>`)}</select></label>
-      <button @click=${() => { S.from = thisMonth(); S.sel = null; renderForecast(main); }}>Heute</button><span class="spacer"></span>
+      <button @click=${() => { S.from = thisMonth(); S.sel = null; renderForecast(main); }}>Heute</button>
+      ${dimensionSelect('prognose', () => S.fc && drawDetail(S.fc))}<span class="spacer"></span>
       <button class="primary" @click=${() => entryDialog()}>+ Buchung</button><button @click=${() => checkpointDialog()}>+ Ist-Stand</button></div>
     <div id="warn"></div><div class="panel" style="margin-bottom:16px"><div id="chart"></div></div>
     <div class="fc-layout"><div class="panel table-wrap" id="ftable"></div><div class="panel detail" id="fdetail"></div></div>`, main);
@@ -91,7 +93,7 @@ function detailTpl(fc) {
       <span class="muted">Einnahmen</span><span class="num pos" style="text-align:left">${eur(m.income)}</span>
       <span class="muted">Ausgaben</span><span class="num neg" style="text-align:left">${eur(m.expense)}</span>
       <span class="muted">Gesamtstand Monatsende</span><b class="${eurCls(m.closing)}">${eur(m.closing)}</b></div>
-    ${fc.accounts.map(a => {
+    ${getDimension('prognose') !== 'none' ? groupedTpl(fc, m) : fc.accounts.map(a => {
       const am = m.accounts[a.id]; if (!am) return nothing;
       return html`<div class="acc-card"><div class="head"><span>${a.name}</span><span class="muted small">${KINDS[a.kind] || ''}</span></div>
         <div class="row sum"><span></span><span>Anfangsstand</span><span class="num ${eurCls(am.opening)}">${eur(am.opening)}</span></div>
@@ -99,6 +101,31 @@ function detailTpl(fc) {
         ${am.items.map(itemTpl)}
         <div class="row sum"><span></span><span>Endstand</span><span class="num ${eurCls(am.closing)}">${eur(am.closing)}</span></div></div>`;
     })}`;
+}
+
+/** The month's bookings grouped by the chosen dimension, with a subtotal per group. A transfer is
+ *  counted once (its source side), except under "Konto", where each side belongs to its account.
+ *  Transfers are listed but kept out of the subtotal, like in the monthly income/expense totals. */
+function groupedTpl(fc, m) {
+  const dim = getDimension('prognose');
+  const multi = fc.accounts.length > 1;
+  const items = fc.accounts.flatMap(a => (m.accounts[a.id]?.items ?? [])
+    .filter(it => it.type !== 'checkpoint' && !(it.type === 'transfer' && it.amount > 0 && dim !== 'account'))
+    .map(it => ({ ...it, accountId: a.id })));
+  if (!items.length) return html`<p class="muted">Keine Buchungen in diesem Monat</p>`;
+  const entryOf = it => S.data.entries.find(e => e.id === it.entry_id);
+  const groups = groupItems(items, it => DIMENSIONS[dim].key(entryOf(it), it.accountId));
+  return groups.map(g => {
+    const open = isOpen('prognose', dim, g.key, false);
+    const toggle = () => { toggleGroup('prognose', dim, g.key); drawDetail(S.fc); };
+    const bookings = g.items.filter(it => it.type === 'booking'), transfers = g.items.filter(it => it.type === 'transfer');
+    const sum = bookings.reduce((t, it) => t + it.amount, 0);
+    return html`<div class="acc-card group"><div class="head"><button class="link" aria-expanded=${open} @click=${toggle}>${open ? '▾' : '▸'} ${g.label}</button>
+        <span class="num">${bookings.length ? html`<span class="group-sum">${signed(sum)}</span>` : ''}${transfers.length
+          ? html` <span class="muted small">Umbuchungen</span> <span class="group-transfers">${eur(transfers.reduce((t, it) => t + Math.abs(it.amount), 0))}</span>` : ''}</span></div>
+      ${open ? g.items.map(it => html`<div class="row"><span>${fShort(it.date)}</span><span><button class="link" title="Buchung bearbeiten" @click=${() => entryDialog(entryOf(it))}>${it.label}</button>${multi && dim !== 'account' ? html`<span class="tag">${fc.accounts.find(a => a.id === it.accountId)?.name}</span>` : ''}</span><span class="num">${signed(it.amount)}</span>
+          <div class="expl">${it.explanation.map(e => html`<div>${explLine(e)}</div>`)}</div></div>`) : ''}</div>`;
+  });
 }
 
 function drawDetail(fc) { renderLit(detailTpl(fc), $('#fdetail')); }

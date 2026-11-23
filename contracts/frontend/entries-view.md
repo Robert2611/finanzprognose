@@ -10,7 +10,8 @@ lists bookings, supports create/edit/archive/restore, and opens an adjustments s
 ## Interface
 Rendered into `#main` when view = `buchungen`. Reads bookings from in-memory state `S.data`.
 Stable DOM:
-- `.toolbar` with heading `"Buchungen"`, an `"Archivierte zeigen"` checkbox, and a
+- `.toolbar` with heading `"Buchungen"`, an `"Archivierte zeigen"` checkbox, a
+  `Gruppieren nach` select (FE-ENTRIES-021), and a
   `"+ Neue Buchung"` primary button.
 - A `table` with headers `Bezeichnung, Typ, Konto, Grundbetrag, Rhythmus, Zeitraum,
   Anpassungen`, plus an action column. Archived rows have class `archived`. Empty list shows
@@ -78,6 +79,31 @@ history dialog. Refreshes forecast/state after saves.
   keeps the entry's sign (an expense stays negative); for a transfer it is positive.
 - `FE-ENTRIES-019` [INFERRED] Saving an adjustment refreshes the entry's adjustment list and
   (on dialog close) the forecast.
+- `FE-ENTRIES-020` [README] The `Kategorie` field stays free text and offers the categories
+  already used by any entry (archived ones included) as suggestions (a `datalist`). Names
+  that differ only in case appear once, spelled the way they are used most often; the list
+  is ordered by how often a category is used (most first, ties alphabetically). Empty
+  categories are not offered.
+
+### Grouping (B-012)
+- `FE-ENTRIES-021` [README] The toolbar has a `Gruppieren nach` select with the options
+  `Keine`, `Kategorie`, `Typ`, `Konto`, `Rhythmus`. `Keine` is the default and renders the
+  flat list exactly as without grouping.
+- `FE-ENTRIES-022` [README] With any other option the table shows one header row
+  (class `group-head`) per group, `"<label> · N Buchung(en)"`, followed by the group's rows
+  in the usual order. Groups: `Kategorie` — case-insensitive, labeled with the most-used
+  spelling (as in FE-ENTRIES-020), alphabetical, `Ohne Kategorie` last; `Typ` — `Einnahmen`,
+  `Ausgaben`, `Umbuchungen`; `Konto` — the booking's (source) account, in account order;
+  `Rhythmus` — by interval (`monatlich` first), `einmalig` last.
+- `FE-ENTRIES-023` [README] A group header shows the monthly equivalent of the group's
+  non-archived recurring bookings as `"<±eur>/Monat"` (amount ÷ interval in months, from the
+  base amount, rounded to the cent). One-time bookings are listed but not summed. Transfers
+  are summed separately as `"Umbuchungen <eur>/Monat"`. A part with nothing to sum is omitted.
+- `FE-ENTRIES-024` [README] Groups are open by default; clicking a group header folds or
+  unfolds its rows.
+- `FE-ENTRIES-025` [README] The chosen option is remembered in the browser across reloads,
+  separately from the forecast view's choice. Without browser storage the view still works
+  (the choice then lasts until the next reload).
 
 ## Examples
 - Create `"Miete"`, type Ausgabe, 1200, monthly, from 2026-01-01 → appears as an expense of

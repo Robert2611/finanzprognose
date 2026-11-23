@@ -7,6 +7,7 @@ Each test gets its own temp DB, status file and NAS directory, so tests are inde
 """
 import json
 import itertools
+import os
 from pathlib import Path
 
 import pytest
@@ -201,6 +202,19 @@ def seed(client) -> Seed:
 
 
 # --------------------------------------------------------------------------- browser
+
+@pytest.fixture(scope="session")
+def browser_type_launch_args(browser_type_launch_args):
+    """Optionally launch an existing Chromium instead of Playwright's own download.
+
+    Set ``PLAYWRIGHT_CHROMIUM_EXECUTABLE`` to a Chromium binary when the machine has one that does
+    not match the installed Playwright version (e.g. a cloud container with a preinstalled
+    browser). Unset, Playwright uses the browser from ``python -m playwright install chromium``.
+    This only picks the browser; the app under test still gets no env vars.
+    """
+    exe = os.environ.get("PLAYWRIGHT_CHROMIUM_EXECUTABLE")
+    return {**browser_type_launch_args, "executable_path": exe} if exe else browser_type_launch_args
+
 
 @pytest.fixture
 def live_server(settings, nas):

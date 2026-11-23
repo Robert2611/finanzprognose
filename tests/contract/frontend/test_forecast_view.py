@@ -69,7 +69,8 @@ def test_toolbar_chart_table_and_detail_are_rendered(app_page, single):
     expect(page.locator("#chart svg.chart")).to_be_visible()
     tb = page.locator(".toolbar")
     expect(tb.locator('input[type="month"]')).to_have_count(1)
-    expect(tb.locator("select")).to_have_count(1)
+    expect(tb.locator("select:not([name=group-by])")).to_have_count(1)   # Zeitraum
+    expect(tb.locator("select[name=group-by]")).to_have_count(1)          # Gruppieren nach (FE-FORECAST-018)
     for name in ("Heute", "+ Buchung", "+ Ist-Stand"):
         expect(tb.get_by_role("button", name=name)).to_have_count(1)
     expect(tb.locator("button.primary")).to_have_text("+ Buchung")
@@ -79,7 +80,7 @@ def test_toolbar_chart_table_and_detail_are_rendered(app_page, single):
 def test_zeitraum_offers_the_five_horizons_and_refetches(app_page, single):
     """FE-FORECAST-003: Zeitraum has 12/24/36/60/120 Monate; changing it re-fetches with the new horizon."""
     page = open_forecast(app_page)
-    sel = page.locator(".toolbar select")
+    sel = page.locator(".toolbar select:not([name=group-by])")
     assert [o.strip() for o in sel.locator("option").all_inner_texts()] == ["12 Monate", "24 Monate", "36 Monate", "60 Monate", "120 Monate"]
     with page.expect_request(lambda r: "/api/forecast" in r.url and "months=36" in r.url):
         sel.select_option(label="36 Monate")
@@ -326,3 +327,86 @@ def test_ist_stand_button_opens_checkpoint_dialog_and_refreshes_the_forecast(app
     expect(page.locator("dialog")).to_have_count(0)
     select(page, "2026-02")
     expect(page.locator("#fdetail")).to_contain_text("Ist-Stand eingetragen")
+
+
+# ---------------------------------------------------------------------------- grouping (B-012)
+
+@pytest.fixture
+def grouped(app_page):
+    """Giro + Tagesgeld with categorised bookings; in March 2026 the salary is raised and the yearly
+    Hausrat and the quarterly interest fall due."""
+    s = app_page.seed
+    giro, tg = s.account("Giro", 100000, "2026-01-15"), s.account("Tagesgeld", 0, "2026-01-15", kind="savings")
+    sal = s.entry(giro["id"], "Gehalt", 300000, "2026-01-31", category="Einkommen")
+    s.adjustment(sal["id"], "2026-03-01", amount=320000)
+    s.entry(giro["id"], "Miete", -120000, "2026-01-01", category="Wohnen")
+    s.entry(giro["id"], "Strom", -9000, "2026-01-10", category="wohnen")
+    s.entry(giro["id"], "Hausrat", -12000, "2026-03-15", category="Wohnen", interval_months=12)
+    s.entry(giro["id"], "Sparen", 50000, "2026-02-05", category="Sparen", to_account_id=tg["id"])
+    s.entry(tg["id"], "Zinsen", 3000, "2026-03-31", interval_months=3)
+    return s
+
+
+def show_march_grouped(app_page, option):
+    page = open_forecast(app_page)
+    page.locator("#ftable tr").filter(has_text="März 2026").click()
+    page.locator("select[name=group-by]").select_option(label=option)
+    return page
+
+
+def group_cards(page):
+    return [norm(t) for t in page.locator("#fdetail .acc-card.group > .head").all_inner_texts()]
+
+
+@pytest.mark.contract("FE-FORECAST-018")
+def test_forecast_grouping_defaults_to_account_cards(grouped, app_page):
+    """FE-FORECAST-018: 'Keine' is the default and keeps the per-account cards."""
+    page = open_forecast(app_page)
+    sel = page.locator("select[name=group-by]")
+    assert sel.evaluate("s => [...s.options].map(o => o.text)") == ["Keine", "Kategorie", "Typ", "Konto", "Rhythmus"]
+    expect(sel).to_have_value("none")
+    expect(page.locator("#fdetail .acc-card")).to_have_count(2)
+    expect(page.locator("#fdetail .acc-card.group")).to_have_count(0)
+
+
+@pytest.mark.contract("FE-FORECAST-018", "FE-FORECAST-019")
+def test_forecast_groups_by_category_with_month_sums(grouped, app_page):
+    """FE-FORECAST-018/019: month sums per category incl. the March raise; the transfer counts once and only as 'Umbuchungen'."""
+    page = show_march_grouped(app_page, "Kategorie")
+    assert group_cards(page) == [
+        "▸ Einkommen +3.200,00 €",
+        "▸ Sparen Umbuchungen 500,00 €",
+        "▸ Wohnen -1.410,00 €",
+        "▸ Ohne Kategorie +30,00 €",
+    ]
+
+
+@pytest.mark.contract("FE-FORECAST-019")
+def test_forecast_group_by_account_lists_both_transfer_sides(grouped, app_page):
+    """FE-FORECAST-019: under 'Konto' each side of the transfer belongs to its own account."""
+    page = show_march_grouped(app_page, "Konto")
+    assert group_cards(page) == ["▸ Giro +1.790,00 € Umbuchungen 500,00 €", "▸ Tagesgeld +30,00 € Umbuchungen 500,00 €"]
+
+
+@pytest.mark.contract("FE-FORECAST-020")
+def test_forecast_group_unfolds_to_its_bookings(grouped, app_page):
+    """FE-FORECAST-020: folded by default; opening shows date, name, account tag, amount and explanation."""
+    page = show_march_grouped(app_page, "Kategorie")
+    card = page.locator("#fdetail .acc-card.group").filter(has_text="Wohnen")
+    expect(card.locator(".row")).to_have_count(0)
+    card.get_by_role("button", name="▸ Wohnen").click()
+    expect(card.locator(".row")).to_have_count(3)
+    assert card.locator(".row button.link").all_inner_texts() == ["Miete", "Strom", "Hausrat"]
+    assert card.locator(".row .tag").all_inner_texts() == ["Giro", "Giro", "Giro"]
+    first = norm(card.locator(".row").first.inner_text())
+    assert first.startswith("01.03.") and "-1.200,00 €" in first and "Grundbetrag" in first
+
+
+@pytest.mark.contract("FE-FORECAST-020")
+def test_forecast_group_choice_is_remembered_separately(grouped, app_page):
+    """FE-FORECAST-020: the forecast's choice survives a reload and leaves the Buchungen view at 'Keine'."""
+    page = show_march_grouped(app_page, "Typ")
+    page.reload()
+    expect(page.locator("select[name=group-by]")).to_have_value("type")
+    page.goto("/#buchungen")
+    expect(page.locator("select[name=group-by]")).to_have_value("none")
