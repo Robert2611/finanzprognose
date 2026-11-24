@@ -11,6 +11,10 @@ deviation from the forecast.
 Reserve accounts (B-028) are computed like any other account, but are left out of the
 "available" money per month; transfers between an available and a reserve account are summed
 as the month's `to_reserve` flow (positive = put aside, negative = taken out of the reserve).
+
+Optional entries (B-029) are not yet decided: they are left out of the result unless their id
+is in `include`. When some are left out, every month also carries `with_optional`, the
+month-end totals as they would be with every optional entry counted, for comparison.
 """
 from calendar import monthrange
 from collections import defaultdict
@@ -74,7 +78,20 @@ def amount_at(e: dict, adjs: list[dict], d: date) -> tuple[int, list[dict]]:
     return amt, expl
 
 
-def compute(state: dict, start: str, months: int) -> dict:
+def compute(state: dict, start: str, months: int, include=()) -> dict:
+    """The forecast; optional entries count only when their id is in `include` (B-029)."""
+    include = set(include)
+    left_out = {e["id"] for e in state["entries"] if e.get("optional") and not e["archived"] and e["id"] not in include}
+    result = _compute(state, start, months, left_out)
+    alt = _compute(state, start, months, set()) if left_out else None
+    for k, mo in enumerate(result["months"]):
+        mo["with_optional"] = None if alt is None else {
+            "closing": alt["months"][k]["closing"], "available_closing": alt["months"][k]["available_closing"]}
+    return result
+
+
+def _compute(state: dict, start: str, months: int, skip: set) -> dict:
+    """The forecast without the entries in `skip`."""
     sy, sm = map(int, start.split("-"))
     bounds = []
     for k in range(months):
@@ -109,7 +126,7 @@ def compute(state: dict, start: str, months: int) -> dict:
             }))
 
     for e in state["entries"]:
-        if e["archived"] or e["account_id"] not in acc_ids:
+        if e["archived"] or e["account_id"] not in acc_ids or e["id"] in skip:
             continue
         to = e.get("to_account_id")
         target_active = not to or to in acc_ids
@@ -119,7 +136,7 @@ def compute(state: dict, start: str, months: int) -> dict:
         for d in occurrences(e, horizon):
             amt, expl = amount_at(e, adjs[e["id"]], d)
             base = {"entry_id": e["id"], "date": d.isoformat(), "category": e["category"],
-                    "estimated": bool(e.get("estimated")), "explanation": expl}
+                    "estimated": bool(e.get("estimated")), "optional": bool(e.get("optional")), "explanation": expl}
             if to:
                 events[e["account_id"]].append((d, 0, e["id"], {
                     **base, "type": "transfer", "amount": -amt, "label": f"{e['name']} → {acc_name[to]}"}))

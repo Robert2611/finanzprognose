@@ -94,6 +94,10 @@ row.
 - `API-RES-021` [README] `POST`/`PUT /api/entries` accept `estimated` (boolean, B-015). When
   it is omitted the entry is fixed (`estimated = 0`); a `PUT` that flips it is a normal
   update with one audit row whose `before`/`after` differ in `estimated`.
+- `API-RES-022` [README] `POST`/`PUT /api/entries` accept `optional` (boolean, B-029). When
+  it is omitted the entry is planned (`optional = 0`); a non-boolean is a `422
+  validation_error` on the `optional` field; a `PUT` that flips it is a normal update with
+  one audit row whose `before`/`after` differ in `optional`.
 
 ## Examples
 - `POST /api/entries {account_id:<giro>, name:'Rent', kind:'recurring', amount:-120000,

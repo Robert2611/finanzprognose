@@ -18,7 +18,8 @@ Import: `from app import db`.
   `accounts`, `entries`, `adjustments`, `checkpoints` (see `data/schema.md` for the lists).
 - `db.SCHEMA: str` — the idempotent baseline DDL (`CREATE TABLE/TRIGGER/INDEX IF NOT EXISTS`).
 - `db.MIGRATIONS: list[tuple[int, callable]]` — ordered `(target_version, fn)`; currently
-  `[(2, add entries.estimated), (3, add accounts.reserve)]` (see `DB-SCHEMA-012`/`013`).
+  `[(2, add entries.estimated), (3, add accounts.reserve), (4, add entries.optional)]`
+  (see `DB-SCHEMA-012..014`).
   Patchable by tests.
 - `db._has_column(conn, table, col) -> bool` — helper used to guard idempotent `ALTER`s.
 
@@ -66,6 +67,11 @@ Creates the parent directory of `path`. Creates/alters the SQLite schema. Reads
   DEFAULT 0 CHECK IN (0,1)` to a version-2 database: every existing row is kept unchanged
   and existing accounts become `reserve = 0` (available money); `user_version` becomes `3`,
   and the upgraded `accounts` table has the same columns as a fresh one. It is guarded with
+  `_has_column`, so it is a no-op where the column already exists.
+- `DB-SCHEMA-014` [README] Migration `4` (B-029) adds `entries.optional INTEGER NOT NULL
+  DEFAULT 0 CHECK IN (0,1)` to a version-3 database: every existing row is kept unchanged
+  and existing entries become `optional = 0` (planned); `user_version` becomes `4`, and the
+  upgraded `entries` table has the same columns as a fresh one. It is guarded with
   `_has_column`, so it is a no-op where the column already exists.
 
 ## Examples

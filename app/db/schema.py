@@ -15,7 +15,7 @@ TABLES = {
     "accounts": ["name", "kind", "reserve", "note"],
     "entries": [
         "account_id", "to_account_id", "name", "category", "kind", "amount",
-        "start_date", "end_date", "interval_months", "estimated", "note",
+        "start_date", "end_date", "interval_months", "estimated", "optional", "note",
     ],
     "adjustments": ["entry_id", "effective_date", "mode", "amount", "percent", "repeat_yearly", "note"],
     "checkpoints": ["account_id", "date", "balance", "note"],
@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS entries(
   end_date TEXT,
   interval_months INTEGER NOT NULL DEFAULT 1 CHECK(interval_months >= 1),
   estimated INTEGER NOT NULL DEFAULT 0 CHECK(estimated IN (0,1)),  -- 1 = an estimate, not a fixed debit (B-015)
+  optional INTEGER NOT NULL DEFAULT 0 CHECK(optional IN (0,1)),    -- 1 = not yet decided, left out of the plan (B-029)
   note TEXT NOT NULL DEFAULT '',
   archived INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
@@ -114,6 +115,12 @@ def _v3_accounts_reserve(conn) -> None:
         conn.execute("ALTER TABLE accounts ADD COLUMN reserve INTEGER NOT NULL DEFAULT 0 CHECK(reserve IN (0,1))")
 
 
+def _v4_entries_optional(conn) -> None:
+    """B-029: mark entries as optional (not yet decided); existing rows stay planned."""
+    if not _has_column(conn, "entries", "optional"):
+        conn.execute("ALTER TABLE entries ADD COLUMN optional INTEGER NOT NULL DEFAULT 0 CHECK(optional IN (0,1))")
+
+
 # Ordered schema migrations, each `(target_version, migrate_fn)`. Version 1 is the
 # baseline created by SCHEMA above, so real migrations start at 2. A migration must be
 # idempotent (e.g. guard ALTERs with _has_column): a fresh database already gets the
@@ -122,6 +129,7 @@ def _v3_accounts_reserve(conn) -> None:
 MIGRATIONS: list[tuple[int, "callable"]] = [
     (2, _v2_entries_estimated),
     (3, _v3_accounts_reserve),
+    (4, _v4_entries_optional),
 ]
 
 

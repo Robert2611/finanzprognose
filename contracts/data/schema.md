@@ -23,7 +23,7 @@ DEFAULT ''`. Columns the API may write are listed in `db.TABLES`; everything els
 | Table | Columns (type, constraint) |
 |---|---|
 | `accounts` | `name TEXT NOT NULL`, `kind TEXT NOT NULL DEFAULT 'checking'`, `reserve INTEGER NOT NULL DEFAULT 0 CHECK IN (0,1)` (1 = a reserve, not money to plan with; B-028), `note` |
-| `entries` | `account_id INTEGER NOT NULL → accounts(id)`, `to_account_id INTEGER NULL → accounts(id)`, `name TEXT NOT NULL`, `category TEXT NOT NULL DEFAULT ''`, `kind TEXT NOT NULL CHECK IN ('recurring','once')`, `amount INTEGER NOT NULL` (cents, signed; transfers positive), `start_date TEXT NOT NULL`, `end_date TEXT NULL`, `interval_months INTEGER NOT NULL DEFAULT 1 CHECK >= 1`, `estimated INTEGER NOT NULL DEFAULT 0 CHECK IN (0,1)` (1 = an estimate, not a fixed debit; B-015), `note` |
+| `entries` | `account_id INTEGER NOT NULL → accounts(id)`, `to_account_id INTEGER NULL → accounts(id)`, `name TEXT NOT NULL`, `category TEXT NOT NULL DEFAULT ''`, `kind TEXT NOT NULL CHECK IN ('recurring','once')`, `amount INTEGER NOT NULL` (cents, signed; transfers positive), `start_date TEXT NOT NULL`, `end_date TEXT NULL`, `interval_months INTEGER NOT NULL DEFAULT 1 CHECK >= 1`, `estimated INTEGER NOT NULL DEFAULT 0 CHECK IN (0,1)` (1 = an estimate, not a fixed debit; B-015), `optional INTEGER NOT NULL DEFAULT 0 CHECK IN (0,1)` (1 = not yet decided, left out of the plan; B-029), `note` |
 | `adjustments` | `entry_id INTEGER NOT NULL → entries(id)`, `effective_date TEXT NOT NULL`, `mode TEXT NOT NULL CHECK IN ('set','percent')`, `amount INTEGER NULL` (cents; used when `mode='set'`), `percent REAL NULL` (used when `mode='percent'`), `repeat_yearly INTEGER NOT NULL DEFAULT 0`, `note` |
 | `checkpoints` | `account_id INTEGER NOT NULL → accounts(id)`, `date TEXT NOT NULL`, `balance INTEGER NOT NULL` (cents, actual balance at the end of that day), `note` |
 | `audit_log` | `id INTEGER PRIMARY KEY`, `ts TEXT NOT NULL`, `action TEXT NOT NULL`, `entity TEXT NOT NULL`, `entity_id INTEGER NOT NULL`, `before TEXT NULL` (JSON), `after TEXT NULL` (JSON), `comment TEXT NOT NULL DEFAULT ''`, `reverts_id INTEGER NULL → audit_log(id)` |
@@ -69,10 +69,10 @@ None of its own; the schema is applied by `db.init` (idempotent, `IF NOT EXISTS`
   `entry_id`, or an `entries.to_account_id` that doesn't exist, fails with
   `IntegrityError` (on a connection opened by the data layer).
 - `DATA-013` [TEST] `PRAGMA user_version` equals the target of the latest migration in
-  `MIGRATIONS` after `init()` (currently `3`; `1` if there were none), for a fresh database
+  `MIGRATIONS` after `init()` (currently `4`; `1` if there were none), for a fresh database
   and for an upgraded one. [TEST: `test_migrations_upgrade_preserves_data`]
 - `DATA-014` [INFERRED] Column defaults: `accounts.kind='checking'`, `accounts.reserve=0`, `note=''` (all data
-  tables), `entries.category=''`, `entries.estimated=0`, `adjustments.repeat_yearly=0`, `audit_log.comment=''`.
+  tables), `entries.category=''`, `entries.estimated=0`, `entries.optional=0`, `adjustments.repeat_yearly=0`, `audit_log.comment=''`.
 - `DATA-015` [README] `adjustments.mode` is CHECKed to `'set'`/`'percent'`, but the
   schema does **not** enforce that `amount` is set only for `'set'` and `percent` only
   for `'percent'`; that coupling is enforced by the API models only (`SCH-015/016`). This is
@@ -83,6 +83,8 @@ None of its own; the schema is applied by `db.init` (idempotent, `IF NOT EXISTS`
   `IntegrityError` otherwise) and defaults to `0` (fixed) when not given (B-015).
 - `DATA-017` [README] `accounts.reserve` accepts only `0` or `1` (CHECK constraint,
   `IntegrityError` otherwise) and defaults to `0` (available money) when not given (B-028).
+- `DATA-018` [README] `entries.optional` accepts only `0` or `1` (CHECK constraint,
+  `IntegrityError` otherwise) and defaults to `0` (planned) when not given (B-029).
 
 ## Examples
 - `INSERT INTO entries(..., kind) VALUES (..., 'weekly')` → `IntegrityError`.
@@ -94,7 +96,7 @@ None of its own; the schema is applied by `db.init` (idempotent, `IF NOT EXISTS`
 - Exact trigger error message text (German, see CLAUDE.md B-005); assert only that the
   statement is rejected.
 - Journal mode / `synchronous` (specified in `DB-SCHEMA-010`).
-- Migration mechanics (see `DB-SCHEMA-004..007`); the concrete migrations are `DB-SCHEMA-012` and `DB-SCHEMA-013`.
+- Migration mechanics (see `DB-SCHEMA-004..007`); the concrete migrations are `DB-SCHEMA-012..014`.
 
 ## Open questions
 - None open. (`DATA-015` was settled in OPEN_QUESTIONS #5.)

@@ -2,7 +2,7 @@ import pytest
 
 ACCOUNT_KEYS = {"id", "name", "kind", "reserve", "note", "archived", "updated_at"}
 ENTRY_KEYS = {"id", "account_id", "to_account_id", "name", "category", "kind", "amount", "start_date", "end_date",
-              "interval_months", "estimated", "note", "archived", "updated_at"}
+              "interval_months", "estimated", "optional", "note", "archived", "updated_at"}
 ADJ_KEYS = {"id", "entry_id", "effective_date", "mode", "amount", "percent", "repeat_yearly", "note", "archived", "updated_at"}
 CP_KEYS = {"id", "account_id", "date", "balance", "note", "archived", "updated_at"}
 

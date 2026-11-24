@@ -13,7 +13,7 @@ EXPECTED = {
     "entries": {**COMMON, "account_id": ("INTEGER", 1), "to_account_id": ("INTEGER", 0), "name": ("TEXT", 1),
                 "category": ("TEXT", 1), "kind": ("TEXT", 1), "amount": ("INTEGER", 1), "start_date": ("TEXT", 1),
                 "end_date": ("TEXT", 0), "interval_months": ("INTEGER", 1),
-                "estimated": ("INTEGER", 1)},
+                "estimated": ("INTEGER", 1), "optional": ("INTEGER", 1)},
     "adjustments": {**COMMON, "entry_id": ("INTEGER", 1), "effective_date": ("TEXT", 1), "mode": ("TEXT", 1),
                     "amount": ("INTEGER", 0), "percent": ("REAL", 0), "repeat_yearly": ("INTEGER", 1)},
     "checkpoints": {**COMMON, "account_id": ("INTEGER", 1), "date": ("TEXT", 1), "balance": ("INTEGER", 1)},

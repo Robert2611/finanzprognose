@@ -28,7 +28,7 @@ Dialogs (via `formDialog`):
   bearbeiten`); fields: `Bezeichnung`, `Typ` (Einnahme/Ausgabe/Umbuchung zwischen
   Konten), `Konto`, `Zielkonto` (only for transfer), `Betrag (positiv eingeben)`, `Art`
   (Fest/Geschätzt), `Rhythmus`, `Datum der ersten Fälligkeit`,
-  `Letzte Fälligkeit (optional)`, `Kategorie`, `Notiz`. Always saves `kind = 'recurring'`.
+  `Letzte Fälligkeit (optional)`, `Planung` (FE-ENTRIES-029), `Kategorie`, `Notiz`. Always saves `kind = 'recurring'`.
 - `entryDialog(entry)` — opens an existing booking in the dialog that matches its kind
   (`recurringDialog` or `onceDialog`); used by the forecast view.
 - `adjustmentsDialog(entry)` — a sub-dialog listing adjustments with `+ Anpassung`.
@@ -109,7 +109,7 @@ history dialog. Refreshes forecast/state after saves.
   `Rhythmus` — by interval (`monatlich` first); `Art` — `fest`, then
   `geschätzt` (B-015).
 - `FE-ENTRIES-023` [README] A group header shows the monthly equivalent of the group's
-  non-archived recurring bookings as `"<±eur>/Monat"` (amount ÷ interval in months, from the
+  non-archived, non-optional (B-029) recurring bookings as `"<±eur>/Monat"` (amount ÷ interval in months, from the
   base amount, rounded to the cent). Transfers
   are summed separately as `"Umbuchungen <eur>/Monat"`. A part with nothing to sum is omitted.
 - `FE-ENTRIES-024` [README] Groups are open by default; clicking a group header folds or
@@ -128,6 +128,15 @@ history dialog. Refreshes forecast/state after saves.
 - `FE-ENTRIES-028` [README] The bookings table has no inner vertical scroll area (no height
   cap): it grows to its full length and the page itself scrolls (B-014). Its column headers
   stay visible right below the sticky app header while scrolling.
+
+### Optional bookings (B-029)
+- `FE-ENTRIES-029` [README] Both booking dialogs (recurring and one-time) have a `Planung`
+  select with `Eingeplant` (default for a new booking) and `Optional – noch nicht
+  entschieden`, with a hint that optional bookings only count in the forecast once switched
+  in under „Optionale Posten“. It is pre-filled when editing and saved as
+  `optional: false/true`. In both booking lists an optional booking's name carries an
+  `"optional"` tag (class `tag optional`), and optional bookings are left out of the group
+  sums.
 
 ## Examples
 - Create `"Miete"`, type Ausgabe, 1200, monthly, from 2026-01-01 → appears as an expense of

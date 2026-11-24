@@ -90,6 +90,7 @@ API docs are served at `/api/docs`. There is no linter or formatter configured.
 - Recurring dates clamp to the last day of the month (an entry starting on the 31st falls on Feb 28).
 - A transfer (`to_account_id` set) is stored as a positive amount and produces a −amount item on the source account and a +amount item on the target account. Transfers are not counted in the monthly `income`/`expense` totals. If the target account is archived, the source side is kept (the money still leaves) and a `transfer_target_archived` warning is emitted; if the source is archived, the whole entry is ignored (B-018).
 - A reserve account (`accounts.reserve`, B-028) is computed like any other account, but left out of the month's `available_opening`/`available_closing`; transfers between an available and a reserve account form the month's `to_reserve` flow. The frontend only switches to „Verfügbar“ when at least one reserve account exists.
+- An optional entry (`entries.optional`, B-029) is left out of the forecast unless its id is in `compute(..., include)` (`GET /api/forecast?include=`); while some are left out, each month's `with_optional` holds the totals with all of them. Which ones are switched in is a browser-only view setting (`optional.js`).
 - An adjustment with `mode='set'` replaces the amount. One with `mode='percent'` and `repeat_yearly` is applied `full_years(effective_date, date) + 1` times. Adjustments are applied in `(effective_date, id)` order.
 
 ### Tests

@@ -40,7 +40,8 @@ Refreshes state after saves. No API or schema change: a one-time booking is an e
 - `FE-ONCE-004` [README] `"+ Neue Buchung"` opens the dialog `"Neue einmalige Buchung"` with
   the fields `Bezeichnung`, `Typ` (Einnahme/Ausgabe/Umbuchung zwischen Konten), `Konto`,
   `Zielkonto` (only for a transfer), `Betrag (positiv eingeben)`, `Art` (Fest/Geschätzt),
-  `Datum`, `Kategorie (optional)` (with suggestions as FE-ENTRIES-020), `Notiz (optional)` —
+  `Datum`, `Planung` (FE-ENTRIES-029), `Kategorie (optional)` (with suggestions as
+  FE-ENTRIES-020), `Notiz (optional)` —
   no frequency, rhythm or end date. Defaults: type Ausgabe, today, first active account, fest.
 - `FE-ONCE-005` [README] Saving sends `kind: 'once'`, `interval_months: 1`, `end_date: null`
   and the sign from the type (expense negative, income and transfer positive); a
@@ -55,7 +56,8 @@ Refreshes state after saves. No API or schema change: a one-time booking is an e
 - `FE-ONCE-008` [README] The `Gruppieren nach` select offers `Keine`, `Kategorie`, `Typ`,
   `Konto`, `Art` (no `Rhythmus`), grouped as in FE-ENTRIES-022 and folding as in
   FE-ENTRIES-024. A group header shows `"<label> · N Buchung(en)"` followed by
-  `"· Summe <±eur>"` — the plain total of its non-archived non-transfer bookings — and
+  `"· Summe <±eur>"` — the plain total of its non-archived, non-optional non-transfer
+  bookings — and
   `"· Umbuchungen <eur>"` for its transfers; a part with nothing to sum is omitted, and a sum
   that includes an estimated booking is marked `"≈ "`. The choice is remembered across
   reloads, separately from the recurring and forecast views.

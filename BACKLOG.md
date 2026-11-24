@@ -12,18 +12,7 @@ Status values: `open`, `in progress`.
 The forecast page should answer the questions the app is really used for: planning a year with
 its events (holidays, renovations, raises, parental leave ending) and seeing whether the money
 works out. B-028..B-032 came out of one discussion with the user and are meant to be done in
-this order, each as its own small PR (B-028, reserve accounts, is done).
-
-## B-029 Optional bookings
-
-- **Status:** open
-- **Problem:** planned but undecided expenses (a second holiday, a renovation) can only be in
-  or out of the forecast; comparing "with" and "without" means archiving and restoring.
-- **Decision (with the user):** a flag `optional` on bookings, default off (= planned).
-  Optional bookings are **excluded** from the main numbers by default; the forecast shows
-  them as a dashed comparison („mit optionalen Posten“) and each one can be switched into the
-  main numbers with a checkbox. That choice is a view setting remembered in the browser; it
-  never changes data. No named scenarios (too heavy for this app).
+this order, each as its own small PR (B-028 reserve accounts and B-029 optional bookings are done).
 
 ## B-030 Main chart: monthly surplus instead of the cumulative balance
 

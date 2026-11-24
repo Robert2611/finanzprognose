@@ -509,7 +509,7 @@ def test_booking_item_carries_all_documented_fields():
     """FC-031: booking items have entry_id, ISO date, category, label, signed amount, balance, explanation."""
     r = run(entries=[entry(7, A, -2500, "2026-02-03", name="Miete", category="Wohnen", kind="once")], start="2026-02", months=1)
     it = items(r, "2026-02", A)[0]
-    assert set(it) == {"type", "entry_id", "date", "category", "estimated", "label", "amount", "balance", "explanation"}
+    assert set(it) == {"type", "entry_id", "date", "category", "estimated", "optional", "label", "amount", "balance", "explanation"}
     assert (it["type"], it["entry_id"], it["date"], it["category"], it["label"], it["amount"], it["balance"]) == \
            ("booking", 7, "2026-02-03", "Wohnen", "Miete", -2500, 97500)
     assert it["explanation"]

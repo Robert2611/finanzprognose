@@ -114,6 +114,23 @@ state `S.from`, `S.months`, `S.sel`.
   absent when 0), then `"Verfügbar Monatsende"` (bold) and `"Gesamtstand Monatsende"`. The
   card of a reserve account has a `"Rücklage"` tag next to its name.
 
+### Optional bookings (B-029)
+- `FE-FORECAST-026` [README] When there are non-archived optional bookings, a panel
+  `"Optionale Posten"` (`.optional-panel`) between the warnings and the chart lists them by
+  date, each with a checkbox (`name="include-optional"`), its name, amount and due date
+  (one-time) or rhythm and period (recurring). All are unticked at first; the forecast is
+  requested with `include=<id>` for each ticked one, so only those count. Ticking or
+  unticking re-runs the forecast. Without optional bookings the panel is absent.
+- `FE-FORECAST-027` [README] Which optional bookings are ticked is remembered in the browser
+  across reloads (localStorage), never stored on the server; ids that are no longer active
+  optional bookings are ignored. Without browser storage the page works and the choice lasts
+  until the next reload.
+- `FE-FORECAST-028` [README] While some optional bookings are left out (`with_optional` set),
+  the chart adds a dashed series `"mit optionalen Posten"` (the main amount — available money
+  with reserve accounts, else the total — with every optional booking counted), shown dashed
+  in the legend too, and the month summary ends with `"mit allen optionalen Posten <eur>"`.
+  A ticked optional booking's items carry an `"optional"` tag in the month detail.
+
 ## Examples
 - Account with a start checkpoint and a monthly salary → the first month's card shows
   `"Anfangsstand"`, a `"Gehalt"` item with `+<eur>` and an explanation, and `"Endstand"`.
