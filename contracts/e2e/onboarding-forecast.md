@@ -35,8 +35,8 @@ the base URL.
   `#fdetail` panel shows that month's `"Anfangsstand"`/`"Endstand"` for the account.
   [FE-FORECAST]
 - `E2E-ONBOARD-007` [BROWSER-REQUIRED] **Given** no accounts and the backend reachable,
-  **when** the page loads, **then** the header shows the five nav buttons (`Prognose`,
-  `Buchungen`, `Konten & Ist-Stände`, `Verlauf`, `Sicherung`) and the backup pill.
+  **when** the page loads, **then** the header shows the six nav buttons (`Prognose`,
+  `Buchungen`, `Konten & Ist-Stände`, `Verlauf`, `Sicherung`, `Version`) and the backup pill.
   [FE-NAV]
 
 ## Out of scope

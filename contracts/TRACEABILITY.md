@@ -166,6 +166,15 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | SETTINGS-001 | T | env |
 | SETTINGS-002 | T | env |
 | SETTINGS-003 | T | env |
+| SETTINGS-004 | R | — |
+| UPDATER-001 | R | — |
+| UPDATER-002 | R | — |
+| UPDATER-003 | R | — |
+| UPDATER-004 | R | — |
+| UPDATER-005 | I | — |
+| UPDATER-006 | R | — |
+| UPDATER-007 | R | — |
+| UPDATER-008 | R | — |
 
 ## HTTP API
 | Clause | Tag | Covered by |
@@ -240,6 +249,11 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | API-BKP-009 | I | bkp |
 | API-BKP-010 | R | — |
 | API-BKP-011 | R | — |
+| API-UPD-001 | R | — |
+| API-UPD-002 | R | — |
+| API-UPD-003 | R | — |
+| API-UPD-004 | R | — |
+| API-UPD-005 | R | — |
 | API-EXPORT-001 | I | — |
 | API-EXPORT-002 | I | — |
 | API-EXPORT-003 | I | — |
@@ -328,8 +342,32 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | FE-BACKUP-008..009 | I | — |
 | FE-BACKUP-010 | I | — |
 | FE-BACKUP-011..013 | R | — |
+| FE-UPDATE-001 | R | — |
+| FE-UPDATE-002 | R | — |
+| FE-UPDATE-003 | R | — |
+| FE-UPDATE-004 | R | — |
+| FE-UPDATE-005 | R | — |
+| FE-UPDATE-006 | R | — |
+| FE-UPDATE-007 | I | — |
 
 (No existing test covers any frontend clause — there is no browser/DOM harness today.)
+
+## Deploy
+| Clause | Tag | Covered by |
+|---|---|---|
+| DEPLOY-UPD-001 | R | — |
+| DEPLOY-UPD-002 | R | — |
+| DEPLOY-UPD-003 | R | — |
+| DEPLOY-UPD-004 | R | — |
+| DEPLOY-UPD-005 | R | — |
+| DEPLOY-UPD-006 | R | — |
+| DEPLOY-UPD-007 | R | — |
+| DEPLOY-UPD-008 | R | — |
+| DEPLOY-UPD-009 | I | — |
+| DEPLOY-UPD-010 | I | — |
+| DEPLOY-UPD-011 | R | — |
+| DEPLOY-UPD-012 | R | — |
+| DEPLOY-UPD-013 | R | — |
 
 ## End-to-end
 `HTTP`=HTTP-checkable, `BR`=BROWSER-REQUIRED.
@@ -394,8 +432,8 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | E2E-AUTH-010 | BR | — |
 
 ## Summary
-- **Units:** 34 (backend 10, api 7, frontend 8, data 1, backup 2, e2e 6).
-- **Clauses:** 423 total.
+- **Units:** 38 (backend 11, api 8, frontend 9, data 1, backup 2, deploy 1, e2e 6).
+- **Clauses:** 491 total (B-026 added the updater, API-UPD, FE-UPDATE and DEPLOY-UPD clauses).
 - **Already covered by an existing test (directly or indirectly):** ~45 clauses; the rest
   need new tests.
 - **`[OBSERVED]`-only clauses (treat with care):** 2 — API-RES-016, BKP-004. The others

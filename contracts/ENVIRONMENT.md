@@ -48,7 +48,8 @@ There is no separate dev server; the backend serves the SPA.
   and wrap it in `TestClient`. `Settings` (`app/settings.py`, frozen dataclass) has these
   fields: `db_path`, `backup_dir`, `backup_time` (`HH:MM`, default `03:00`),
   `backup_require_marker` (default `True`), `backup_scheduler` (default `True`),
-  `app_user` (default `admin`) and `app_password` (default empty = auth off). Each app has its own DB, backup dir, status file and auth, so
+  `app_user` (default `admin`), `app_password` (default empty = auth off), `app_version`
+  (default `dev`) and `update_dir` (default empty = no host updater, B-026). Each app has its own DB, backup dir, status file and auth, so
   differently configured apps can coexist in one process (see `tests/contract/harness/test_harness.py::test_apps_are_isolated`).
   The data layer takes the path explicitly: `db.init(path)`, `db.tx(path)`, `db.read(path)`.
 - A brand-new DB starts empty (no accounts/entries/...). `user_version` is set to the

@@ -9,7 +9,8 @@ object, so nothing else in the app reads the environment.
 ## Interface
 `Settings.from_env(env: Mapping[str, str] = os.environ) -> Settings` (`app/settings.py`).
 `Settings` is a frozen dataclass with the fields `db_path`, `backup_dir`, `backup_time`,
-`backup_require_marker`, `backup_scheduler`, `app_user`, `app_password` (defaults in
+`backup_require_marker`, `backup_scheduler`, `app_user`, `app_password`, `app_version`,
+`update_dir` (defaults in
 `ENVIRONMENT.md` §2).
 
 ## Dependencies & side effects
@@ -23,6 +24,8 @@ Reads only the mapping it is given. No files, no DB.
 - `SETTINGS-002` [TEST] `BACKUP_REQUIRE_MARKER=0` and `BACKUP_SCHEDULER=0` turn
   `backup_require_marker` and `backup_scheduler` off; `1` (or leaving them unset) keeps
   them on.
+- `SETTINGS-004` [README] `APP_VERSION` and `UPDATE_DIR` are copied into `app_version` and
+  `update_dir` (B-026); unset they are `"dev"` and `""` (no update folder).
 - `SETTINGS-003` [TEST] A variable that is not set falls back to the dataclass default, so
   `Settings.from_env({}) == Settings()`.
 

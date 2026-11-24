@@ -6,9 +6,9 @@ migration) are silently dropped here unless also added to the matching model, so
 schema changes don't change the API. Internal-only columns (`created_at`) are dropped for
 the same reason; `archived` is exposed as a real boolean instead of the stored 0/1.
 """
-from typing import Optional, Union
+from typing import Literal, Optional, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AccountOut(BaseModel):
@@ -121,3 +121,37 @@ class BackupVerifyOut(BaseModel):
     counts: dict[str, int]
     sha256: Optional[str] = None
     sha256_logged: Optional[str] = None
+
+
+class UpdaterLastUpdateOut(BaseModel):
+    """The last update the host updater ran (B-026)."""
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+    from_: Optional[str] = Field(None, alias="from")
+    to: Optional[str] = None
+    result: Literal["success", "rolled_back", "rollback_failed", "failed"]
+    at: Optional[str] = None
+
+
+class UpdaterHostOut(BaseModel):
+    """What the host updater wrote to updater/status.json (B-026). Values are codes and versions."""
+    model_config = ConfigDict(extra="ignore")
+    mode: Literal["auto", "notify"]
+    state: Literal["idle", "updating"]
+    current: Optional[str] = None
+    latest: Optional[str] = None
+    checked_at: Optional[str] = None
+    check_error: Optional[str] = None
+    target: Optional[str] = None
+    failed_version: Optional[str] = None
+    last_update: Optional[UpdaterLastUpdateOut] = None
+
+
+class UpdateStatusOut(BaseModel):
+    """GET /api/update/status (B-026). FastAPI serializes by alias, so `last_update.from` keeps its name."""
+    enabled: bool
+    running_version: str
+    host: Optional[UpdaterHostOut] = None
+    host_error: Optional[CodeOut] = None
+    update_available: bool = False
+    request_pending: bool = False
+    log_tail: list[str] = []

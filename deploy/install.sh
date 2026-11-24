@@ -10,7 +10,8 @@
 #   2. logs in to ghcr.io (the image is private; a classic token with read:packages is enough)
 #   3. mounts the NAS share for the backups (SMB or NFS, via /etc/fstab) and creates .nas-marker
 #   4. writes /opt/finanzprognose/.env (an existing .env is kept unless you choose otherwise)
-#   5. pulls the image, copies docker-compose.yml/update.sh/install.sh out of it and starts the app
+#   5. pulls the image, copies docker-compose.yml/update.sh/install.sh/auto-update.sh out of it,
+#      installs the systemd timer of the automatic update (B-026) and starts the app
 #
 # Safe to run again. This file is published as a release asset and must work standalone.
 set -euo pipefail
@@ -55,15 +56,37 @@ image_version() {
 }
 
 extract_deploy_files() {
+    # Every step is checked explicitly: update.sh calls this inside `if`, where `set -e` is off.
     local image=$1 dest=$2 cid tmp
-    cid=$(docker create "$image")
-    tmp=$(mktemp -d)
-    docker cp "$cid:/deploy/." "$tmp/"
+    cid=$(docker create "$image") || return 1
+    tmp=$(mktemp -d) || return 1
+    docker cp "$cid:/deploy/." "$tmp/" || { docker rm "$cid" >/dev/null; return 1; }
     docker rm "$cid" >/dev/null
-    install -m 0644 "$tmp/docker-compose.yml" "$dest/docker-compose.yml"
-    install -m 0755 "$tmp/update.sh" "$dest/update.sh"
-    install -m 0755 "$tmp/install.sh" "$dest/install.sh"
+    install -m 0644 "$tmp/docker-compose.yml" "$dest/docker-compose.yml" || return 1
+    install -m 0755 "$tmp/update.sh" "$dest/update.sh" || return 1
+    install -m 0755 "$tmp/install.sh" "$dest/install.sh" || return 1
+    # Releases before B-026 have no automatic update; keep what is there in that case.
+    if [[ -f $tmp/auto-update.sh ]]; then
+        install -m 0755 "$tmp/auto-update.sh" "$dest/auto-update.sh" || return 1
+        install_update_units "$tmp" "$dest"
+    fi
     rm -rf "$tmp"
+}
+
+# Installs the systemd units of the automatic update (B-026) and starts the timer and path unit.
+# SYSTEMD_UNIT_DIR only exists for the tests.
+install_update_units() {
+    local src=$1 dest=$2 unit dir=${SYSTEMD_UNIT_DIR:-/etc/systemd/system}
+    command -v systemctl >/dev/null || return 0
+    for unit in finanzprognose-update.service finanzprognose-update.timer finanzprognose-update.path; do
+        [[ -f $src/$unit ]] || return 0
+        sed "s|@INSTALL_DIR@|$dest|g" "$src/$unit" >"$dir/$unit.tmp" || return 0
+        mv -f "$dir/$unit.tmp" "$dir/$unit"
+    done
+    mkdir -p "$dest/updater"
+    systemctl daemon-reload
+    systemctl enable --now finanzprognose-update.timer finanzprognose-update.path >/dev/null 2>&1 ||
+        printf 'WARNING: could not enable the automatic update units\n' >&2
 }
 
 wait_healthy() {
@@ -245,6 +268,12 @@ write_env() {
         echo "Passwords do not match."
     done
     ask backup_time "Time of the daily backup (HH:MM)" 03:00
+    local auto_update
+    while true; do
+        ask auto_update "New releases: install automatically (auto) or only show them in the app (notify)" auto
+        [[ $auto_update == auto || $auto_update == notify ]] && break
+        echo "Please answer auto or notify."
+    done
 
     umask 077
     cat >"$INSTALL_DIR/.env" <<EOF
@@ -255,6 +284,8 @@ APP_USER=$user
 APP_PASSWORD='$pass'
 BACKUP_TIME=$backup_time
 BACKUP_HOST_DIR=$BACKUP_HOST_DIR
+# auto: install new releases automatically (checked every 15 minutes); notify: only show them in the app
+AUTO_UPDATE=$auto_update
 EOF
     umask 022
     chmod 600 "$INSTALL_DIR/.env"
@@ -292,7 +323,7 @@ main() {
     ghcr_login
     pull_image "$requested"
 
-    mkdir -p "$INSTALL_DIR/data"
+    mkdir -p "$INSTALL_DIR/data" "$INSTALL_DIR/updater"
     local installed=""
     [[ -f $INSTALL_DIR/.env ]] && installed=$(env_get APP_VERSION)
     # Changing the version of an existing installation is update.sh's job: it copies the
@@ -337,7 +368,8 @@ EOF
 
   Next steps:
     - open the URL and run "Sicherung -> Jetzt sichern" once, then check the NAS for the file
-    - updates later:  sudo $INSTALL_DIR/update.sh
+    - updates: checked every 15 minutes, installed automatically unless AUTO_UPDATE=notify in .env;
+      the "Version" page of the app shows the state. By hand: sudo $INSTALL_DIR/update.sh
 EOF
 }
 

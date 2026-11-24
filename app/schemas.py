@@ -81,4 +81,9 @@ class CheckpointIn(Base):
     note: str = Field("", max_length=500)
 
 
+class UpdateRequestIn(BaseModel):
+    """POST /api/update/request (B-026): the version the user saw, or none for the latest release."""
+    version: Optional[str] = Field(None, pattern=r"^v\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$")
+
+
 MODELS = {"accounts": AccountIn, "entries": EntryIn, "adjustments": AdjustmentIn, "checkpoints": CheckpointIn}
