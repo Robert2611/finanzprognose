@@ -19,7 +19,7 @@ presentation-neutral shape that does **not** track internal schema churn.
     "data_version": <int>
   }
   ```
-  **AccountOut:** `{id, name, kind, note, archived: bool, updated_at}`
+  **AccountOut:** `{id, name, kind, reserve: bool, note, archived: bool, updated_at}`
   **EntryOut:** `{id, account_id, to_account_id|null, name, category, kind, amount,
   start_date, end_date|null, interval_months, estimated: bool, note, archived: bool, updated_at}`
   **AdjustmentOut:** `{id, entry_id, effective_date, mode, amount|null, percent|null,
@@ -36,7 +36,7 @@ Read-only. Reads all four data tables and the audit max-id (`data_version`).
 - `API-STATE-002` [TEST] `GET /api/state` returns the four table arrays plus a
   `data_version` integer. [TEST: `test_state_contract`]
 - `API-STATE-003` [TEST] Each account object has **exactly** the keys
-  `{id, name, kind, note, archived, updated_at}` — no `created_at`, no other internal
+  `{id, name, kind, reserve, note, archived, updated_at}` — no `created_at`, no other internal
   columns. [TEST: `test_state_contract`]
 - `API-STATE-004` [TEST] `archived` is a JSON boolean (`true`/`false`), not the stored
   `0`/`1`. [TEST: `test_state_contract`]
@@ -53,6 +53,8 @@ Read-only. Reads all four data tables and the audit max-id (`data_version`).
   `data_version` is `0`.
 - `API-STATE-010` [README] `EntryOut.estimated` is a real boolean (not the stored `0/1`):
   `false` for a fixed amount, `true` for an estimate (B-015).
+- `API-STATE-011` [README] `AccountOut.reserve` is a real boolean (not the stored `0/1`):
+  `false` for available money, `true` for a reserve account (B-028).
 
 ## Examples
 - Fresh DB → `{"accounts":[],"entries":[],"adjustments":[],"checkpoints":[],"data_version":0}`.

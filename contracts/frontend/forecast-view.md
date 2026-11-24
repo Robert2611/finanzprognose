@@ -66,7 +66,8 @@ state `S.from`, `S.months`, `S.sel`.
   `#warn` with the German text from `warnMsg`.
 - `FE-FORECAST-015` [INFERRED] If any month's total closing is negative, `#warn` shows a
   `.banner.err` naming the first such month and amount
-  (`"Achtung: Im <Monat> wird der Gesamtstand voraussichtlich negativ (<eur>)."`).
+  (`"Achtung: Im <Monat> wird der Gesamtstand voraussichtlich negativ (<eur>)."`). With
+  reserve accounts the check uses the available money instead (FE-FORECAST-024).
 - `FE-FORECAST-016` [INFERRED] Clicking a booking item's label opens that entry's edit
   dialog (pre-filled): the recurring dialog for a recurring booking, the one-time dialog for a
   one-time booking (B-027).
@@ -96,6 +97,22 @@ state `S.from`, `S.months`, `S.sel`.
   month summary shows `"davon geschätzt ≈ <eur>"` right after `Einnahmen` and/or `Ausgaben`
   (the estimated part of each, bookings only, transfers excluded like in the totals). Without
   estimated bookings in that direction the line is absent.
+
+### Reserve accounts (B-028)
+- `FE-FORECAST-023` [README] Without any reserve account (`accounts[].reserve` all false) the
+  page is exactly as described above (`"Gesamt"`). With at least one, the page is about the
+  available money (`available_closing`): the chart's main series and the table's bold column
+  are named `"Verfügbar"`, `"Veränderung"` is the change of the available money in that
+  month, and a muted `"Gesamt"` column (all accounts) follows it. A reserve account's column
+  header carries the note `"Rücklage"`; its own line stays in the chart.
+- `FE-FORECAST-024` [README] With reserve accounts the negative banner checks the available
+  money and reads `"Achtung: Im <Monat> wird das verfügbare Geld (ohne Rücklagen)
+  voraussichtlich negativ (<eur>)."`; a negative reserve or total alone raises no banner.
+- `FE-FORECAST-025` [README] With reserve accounts the month summary in `#fdetail` shows,
+  after `Einnahmen`/`Ausgaben`, the month's reserve flow as `"In Rücklage gelegt <eur>"`
+  (`to_reserve` > 0) or `"Aus Rücklage entnommen <eur>"` (< 0, shown as a positive amount;
+  absent when 0), then `"Verfügbar Monatsende"` (bold) and `"Gesamtstand Monatsende"`. The
+  card of a reserve account has a `"Rücklage"` tag next to its name.
 
 ## Examples
 - Account with a start checkpoint and a monthly salary → the first month's card shows

@@ -151,13 +151,14 @@ def test_creating_an_account_posts_start_balance_and_shows_card_with_startstand(
 
 
 @pytest.mark.contract("FE-ACCOUNTS-008")
-def test_editing_an_account_has_only_name_kind_note_and_sends_expected_updated_at(s, app_page):
-    """FE-ACCOUNTS-008: edit shows Name/Kontoart/Notiz only, and the PUT carries expected_updated_at."""
+def test_editing_an_account_has_only_name_kind_reserve_note_and_sends_expected_updated_at(s, app_page):
+    """FE-ACCOUNTS-008: edit shows Name/Kontoart/Rücklage/Notiz only, and the PUT carries expected_updated_at."""
     a = s.account("Giro", note="alt")
     page = open_accounts(app_page)
     card_of(page, "Giro").get_by_role("button", name="Bearbeiten", exact=True).first.click()
     dlg = page.locator("dialog")
-    assert dlg.locator("label.field").count() == 3
+    assert dlg.locator("label.field").count() == 4
+    expect(field(dlg, "Rücklage – nicht zum Verplanen")).to_have_count(1)
     expect(field(dlg, "Aktueller Kontostand")).to_have_count(0)
     expect(field(dlg, "Name").locator("input")).to_have_value("Giro")
     put_value(dlg, "Name", "Giro neu")
@@ -225,3 +226,45 @@ def test_archive_and_restore_a_checkpoint(s, app_page):
     card_of(page, "Giro").locator("table tbody tr.archived").get_by_role("button", name="Wiederherstellen").click()
     expect(page.locator("#toast")).to_contain_text("Wiederhergestellt")
     assert [c["archived"] for c in s.state()["checkpoints"]] == [False, False]
+
+
+# ---------------------------------------------------------------------------- reserve accounts (B-028)
+
+RESERVE = "Rücklage – nicht zum Verplanen"
+
+
+@pytest.mark.contract("FE-ACCOUNTS-014")
+def test_new_account_can_be_created_as_a_reserve(s, app_page):
+    """FE-ACCOUNTS-014: the checkbox starts unchecked, is sent as reserve=true, and the card gets a 'Rücklage' tag."""
+    page = open_accounts(app_page)
+    page.get_by_role("button", name="+ Neues Konto").click()
+    dlg = page.locator("dialog")
+    box = field(dlg, RESERVE).locator("input[type=checkbox]")
+    expect(box).not_to_be_checked()
+    put_value(dlg, "Name", "Notgroschen")
+    put_value(dlg, "Kontoart", "Tagesgeld")
+    put_value(dlg, "Aktueller Kontostand", "10.000,00")
+    put_value(dlg, RESERVE, True)
+    with page.expect_request(lambda r: r.method == "POST" and r.url.endswith("/api/accounts")) as req:
+        dlg.locator("button.primary").click()
+    assert json.loads(req.value.post_data)["reserve"] is True
+    expect(card_of(page, "Notgroschen").locator(".tag.reserve")).to_have_text("Rücklage")
+    assert s.state()["accounts"][0]["reserve"] is True
+
+
+@pytest.mark.contract("FE-ACCOUNTS-014")
+def test_editing_prefills_and_clears_the_reserve_mark(s, app_page):
+    """FE-ACCOUNTS-014: editing a reserve account shows the box checked; unticking sends reserve=false."""
+    s.account("Notgroschen", kind="savings", reserve=True)
+    s.account("Giro")
+    page = open_accounts(app_page)
+    expect(card_of(page, "Giro").locator(".tag.reserve")).to_have_count(0)
+    card_of(page, "Notgroschen").get_by_role("button", name="Bearbeiten", exact=True).first.click()
+    dlg = page.locator("dialog")
+    box = field(dlg, RESERVE).locator("input[type=checkbox]")
+    expect(box).to_be_checked()
+    put_value(dlg, RESERVE, False)
+    with page.expect_request(lambda r: r.method == "PUT" and "/api/accounts/" in r.url) as req:
+        dlg.locator("button.primary").click()
+    assert json.loads(req.value.post_data)["reserve"] is False
+    expect(card_of(page, "Notgroschen").locator(".tag.reserve")).to_have_count(0)

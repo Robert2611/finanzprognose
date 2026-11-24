@@ -54,6 +54,10 @@ Writes an `accounts` row and a `checkpoints` row (the starting balance), each wi
   before the call.
 - `API-ACC-009` [INFERRED] An optional `comment` is recorded on the account's `create`
   audit entry (not on the checkpoint, and not on the data row).
+- `API-ACC-010` [README] `POST /api/accounts` and `PUT /api/accounts/{id}` accept `reserve`
+  (boolean, B-028). When it is omitted the account is available money (`reserve = 0`); a
+  non-boolean is a `422 validation_error` on the `reserve` field; a `PUT` that flips it is a
+  normal update with one audit row whose `before`/`after` differ in `reserve`.
 
 ## Examples
 - `POST /api/accounts {"name":"Checking","kind":"checking","start_balance":100000,

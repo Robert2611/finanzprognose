@@ -4,8 +4,8 @@ from datetime import date
 T = "2026-01-01T00:00:00.000+00:00"
 
 
-def account(id, name=None, kind="checking", archived=0):
-    return {"id": id, "name": name or f"Acc{id}", "kind": kind, "note": "", "archived": archived,
+def account(id, name=None, kind="checking", archived=0, reserve=0):
+    return {"id": id, "name": name or f"Acc{id}", "kind": kind, "reserve": reserve, "note": "", "archived": archived,
             "created_at": T, "updated_at": T}
 
 

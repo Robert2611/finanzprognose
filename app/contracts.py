@@ -15,6 +15,7 @@ class AccountOut(BaseModel):
     id: int
     name: str
     kind: str
+    reserve: bool
     note: str
     archived: bool
     updated_at: str

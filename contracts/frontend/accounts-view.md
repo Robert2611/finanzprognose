@@ -39,12 +39,12 @@ Dialogs: `accountDialog(acc?)`, `checkpointDialog(accountId?, cp?)` (both via `f
   note is empty). [B-005 phase 4]
 - `FE-ACCOUNTS-005` [INFERRED] Checkpoints are listed newest-date-first within a card.
 - `FE-ACCOUNTS-006` [INFERRED] `"+ Neues Konto"` opens the account dialog with a `Name`,
-  `Kontoart` select, and (for new accounts only) `Aktueller Kontostand` + `Stand vom (abends)`
-  plus a `Notiz` field.
+  `Kontoart` select, the `Rücklage – nicht zum Verplanen` checkbox (FE-ACCOUNTS-014), and (for
+  new accounts only) `Aktueller Kontostand` + `Stand vom (abends)` plus a `Notiz` field.
 - `FE-ACCOUNTS-007` [INFERRED] Creating an account posts to `/api/accounts` with the start
   balance and date; the resulting account and its starting checkpoint appear after refresh.
-- `FE-ACCOUNTS-008` [INFERRED] Editing an account shows only `Name`, `Kontoart`, `Notiz`
-  (no start balance/date) and sends `expected_updated_at`.
+- `FE-ACCOUNTS-008` [INFERRED] Editing an account shows only `Name`, `Kontoart`, the
+  `Rücklage` checkbox and `Notiz` (no start balance/date) and sends `expected_updated_at`.
 - `FE-ACCOUNTS-009` [INFERRED] `"+ Ist-Stand"` (card-level or editing one) opens the
   checkpoint dialog with `Konto`, `Datum (Stand am Abend)`, `Kontostand`, `Notiz`, and an
   intro explaining the balance is the end-of-day actual value and same-day bookings count as
@@ -61,6 +61,11 @@ Dialogs: `accountDialog(acc?)`, `checkpointDialog(accountId?, cp?)` (both via `f
   longer in the forecast, not at the target either), transfers to it (still debited from the
   source account), and the count of its active Ist-Stände. Nothing is archived along with it.
   Without active bookings or transfers there is no warning (B-018).
+- `FE-ACCOUNTS-014` [README] The account dialog has a checkbox `Rücklage – nicht zum
+  Verplanen` (B-028), unchecked for a new account and pre-filled when editing, with a hint
+  that the forecast then shows the available money without this account. It is sent as
+  `reserve: true/false` on create and edit. A reserve account's card shows a `"Rücklage"` tag
+  next to its kind tag.
 
 ## Examples
 - New account `"Giro"`, kind Girokonto, 1.000,00 € on 2026-01-15 → a card for Giro with a

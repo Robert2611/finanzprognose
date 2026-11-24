@@ -494,11 +494,12 @@ def test_archived_later_checkpoint_is_excluded():
 
 
 @pytest.mark.contract("FC-030")
-def test_top_level_accounts_are_id_name_kind_only():
-    """FC-030: result['accounts'] lists non-archived accounts as {id, name, kind}."""
-    accs = [account(1, "Giro", "checking"), account(2, "Depot", "custody"), account(3, "Alt", archived=1)]
+def test_top_level_accounts_are_id_name_kind_reserve_only():
+    """FC-030: result['accounts'] lists non-archived accounts as {id, name, kind, reserve}."""
+    accs = [account(1, "Giro", "checking"), account(2, "Depot", "custody", reserve=1), account(3, "Alt", archived=1)]
     r = run(accs, checkpoints=[checkpoint(1, 1, "2026-01-01", 0), checkpoint(2, 2, "2026-01-01", 0)])
-    assert r["accounts"] == [{"id": 1, "name": "Giro", "kind": "checking"}, {"id": 2, "name": "Depot", "kind": "custody"}]
+    assert r["accounts"] == [{"id": 1, "name": "Giro", "kind": "checking", "reserve": False},
+                             {"id": 2, "name": "Depot", "kind": "custody", "reserve": True}]
 
 
 # ------------------------------------------------------------------ item invariants

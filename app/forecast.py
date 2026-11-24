@@ -7,6 +7,10 @@ The anchor points are the checkpoints: the actual account balance at the end of 
 An account's first checkpoint is its starting point; bookings on or before that day are considered
 already included in it. Later checkpoints reset the forecast to the real value and report the
 deviation from the forecast.
+
+Reserve accounts (B-028) are computed like any other account, but are left out of the
+"available" money per month; transfers between an available and a reserve account are summed
+as the month's `to_reserve` flow (positive = put aside, negative = taken out of the reserve).
 """
 from calendar import monthrange
 from collections import defaultdict
@@ -80,6 +84,8 @@ def compute(state: dict, start: str, months: int) -> dict:
 
     accounts = [a for a in state["accounts"] if not a["archived"]]
     acc_ids = {a["id"] for a in accounts}
+    reserve_ids = {a["id"] for a in accounts if a.get("reserve")}
+    transfer_ends = {e["id"]: (e["account_id"], e.get("to_account_id")) for e in state["entries"] if e.get("to_account_id")}
     acc_name = {a["id"]: a["name"] for a in state["accounts"]}
     warnings: list[dict] = []
 
@@ -123,7 +129,8 @@ def compute(state: dict, start: str, months: int) -> dict:
             else:
                 events[e["account_id"]].append((d, 0, e["id"], {**base, "type": "booking", "amount": amt, "label": e["name"]}))
 
-    out_months = [{"month": key, "accounts": {}, "opening": 0, "closing": 0, "income": 0, "expense": 0}
+    out_months = [{"month": key, "accounts": {}, "opening": 0, "closing": 0, "income": 0, "expense": 0,
+                   "available_opening": 0, "available_closing": 0, "to_reserve": 0}
                   for key, _, _ in bounds]
 
     for acc in accounts:
@@ -163,13 +170,20 @@ def compute(state: dict, start: str, months: int) -> dict:
             mo["accounts"][acc["id"]] = {"opening": opening, "closing": running, "items": items}
             mo["opening"] += opening or 0
             mo["closing"] += running or 0
+            if acc["id"] not in reserve_ids:
+                mo["available_opening"] += opening or 0
+                mo["available_closing"] += running or 0
             for it in items:
                 if it["type"] == "booking":
                     mo["income" if it["amount"] > 0 else "expense"] += it["amount"]
+                elif it["type"] == "transfer" and acc["id"] not in reserve_ids:
+                    src, dst = transfer_ends[it["entry_id"]]
+                    if (dst if src == acc["id"] else src) in reserve_ids:
+                        mo["to_reserve"] -= it["amount"]  # leaving the available side = put aside
 
     return {
         "start": start,
         "months": out_months,
-        "accounts": [{"id": a["id"], "name": a["name"], "kind": a["kind"]} for a in accounts],
+        "accounts": [{"id": a["id"], "name": a["name"], "kind": a["kind"], "reserve": bool(a.get("reserve"))} for a in accounts],
         "warnings": warnings,
     }
