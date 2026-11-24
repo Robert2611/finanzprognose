@@ -4,16 +4,18 @@ import { $, eur, eurCls, fDate, today, toInput, toast, api, KINDS, activeAccount
 
 export async function accountDialog(acc = null) {
   const kindOpts = Object.entries(KINDS).map(([value, label]) => ({ value, label }));
-  const fields = [{ name: 'name', label: 'Name', required: true }, { name: 'kind', label: 'Kontoart', type: 'select', options: kindOpts }];
+  const fields = [{ name: 'name', label: 'Name', required: true }, { name: 'kind', label: 'Kontoart', type: 'select', options: kindOpts },
+    { name: 'reserve', label: 'Rücklage – nicht zum Verplanen', type: 'checkbox',
+      hint: 'Für Geld, das für Unvorhergesehenes zurückgelegt ist. Die Prognose zeigt dann das verfügbare Geld ohne dieses Konto.' }];
   if (!acc) fields.push(
     { name: 'start_balance', label: 'Aktueller Kontostand', type: 'money', required: true, hint: 'Negativ mit Minus, z. B. -250,00' },
     { name: 'start_date', label: 'Stand vom (abends)', type: 'date', required: true });
   fields.push({ name: 'note', label: 'Notiz (optional)', type: 'textarea' });
   const ok = await formDialog({
     title: acc ? `Konto „${acc.name}“ bearbeiten` : 'Neues Konto', fields,
-    values: acc ? acc : { kind: 'checking', start_date: today() },
-    onSubmit: v => acc ? api('PUT', `/api/accounts/${acc.id}`, { name: v.name, kind: v.kind, note: v.note || '', expected_updated_at: acc.updated_at })
-      : api('POST', '/api/accounts', { name: v.name, kind: v.kind, note: v.note || '', start_balance: v.start_balance, start_date: v.start_date }),
+    values: acc ? acc : { kind: 'checking', reserve: false, start_date: today() },
+    onSubmit: v => acc ? api('PUT', `/api/accounts/${acc.id}`, { name: v.name, kind: v.kind, reserve: !!v.reserve, note: v.note || '', expected_updated_at: acc.updated_at })
+      : api('POST', '/api/accounts', { name: v.name, kind: v.kind, reserve: !!v.reserve, note: v.note || '', start_balance: v.start_balance, start_date: v.start_date }),
   });
   if (ok) { toast('Gespeichert'); refresh(); }
 }
@@ -68,7 +70,7 @@ export async function renderAccounts(main) {
     const active = cps.filter(c => !c.archived);
     const startId = active.length ? active.reduce((min, c) => c.date < min.date ? c : min).id : null;
     return html`<div class="panel ${a.archived ? 'archived' : ''}" style="${a.archived ? 'opacity:.55' : ''}">
-        <div class="toolbar" style="margin-bottom:6px"><h3 style="margin:0">${a.name}</h3><span class="tag">${KINDS[a.kind] || a.kind}</span><span class="spacer"></span>
+        <div class="toolbar" style="margin-bottom:6px"><h3 style="margin:0">${a.name}</h3><span class="tag">${KINDS[a.kind] || a.kind}</span>${a.reserve ? html`<span class="tag reserve" title="nicht zum Verplanen">Rücklage</span>` : ''}<span class="spacer"></span>
         ${a.archived
           ? html`<button class="small" @click=${() => restoreRow('accounts', a)}>Wiederherstellen</button>`
           : html`<button class="small" @click=${() => accountDialog(a)}>Bearbeiten</button><button class="small" @click=${() => archiveDialog('accounts', a, a.name, usageNotice(a))}>Archivieren</button>`}</div>

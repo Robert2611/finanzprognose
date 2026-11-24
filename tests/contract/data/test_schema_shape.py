@@ -9,7 +9,7 @@ COMMON = {"id": ("INTEGER", None), "archived": ("INTEGER", 1), "created_at": ("T
           "note": ("TEXT", 1)}
 # name -> (declared type, NOT NULL flag or None when not asserted)
 EXPECTED = {
-    "accounts": {**COMMON, "name": ("TEXT", 1), "kind": ("TEXT", 1)},
+    "accounts": {**COMMON, "name": ("TEXT", 1), "kind": ("TEXT", 1), "reserve": ("INTEGER", 1)},
     "entries": {**COMMON, "account_id": ("INTEGER", 1), "to_account_id": ("INTEGER", 0), "name": ("TEXT", 1),
                 "category": ("TEXT", 1), "kind": ("TEXT", 1), "amount": ("INTEGER", 1), "start_date": ("TEXT", 1),
                 "end_date": ("TEXT", 0), "interval_months": ("INTEGER", 1),
@@ -155,13 +155,14 @@ def test_fresh_database_user_version_is_latest_migration_target(fresh_db):
 
 @pytest.mark.contract("DATA-013")
 def test_user_version_equals_latest_migration_target(fresh_db, monkeypatch):
-    """DATA-013: after init() with a migration (2, fn), user_version equals 2."""
+    """DATA-013: after init() with one more migration than the real ones, user_version equals its target."""
     def add_col(conn):
         if not db._has_column(conn, "accounts", "color"):
             conn.execute("ALTER TABLE accounts ADD COLUMN color TEXT")
-    monkeypatch.setattr(db, "MIGRATIONS", [(2, add_col)])
+    target = max(t for t, _ in db.MIGRATIONS) + 1
+    monkeypatch.setattr(db, "MIGRATIONS", [*db.MIGRATIONS, (target, add_col)])
     db.init(fresh_db)
-    assert scalar(fresh_db, "PRAGMA user_version") == 2
+    assert scalar(fresh_db, "PRAGMA user_version") == target
 
 
 @pytest.mark.contract("DATA-014")

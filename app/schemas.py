@@ -14,6 +14,7 @@ class Base(BaseModel):
 class AccountIn(Base):
     name: str = Field(min_length=1, max_length=100)
     kind: Literal["checking", "savings", "custody", "credit_card", "cash", "other"] = "checking"
+    reserve: bool = False
     note: str = Field("", max_length=2000)
 
 

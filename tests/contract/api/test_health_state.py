@@ -1,6 +1,6 @@
 import pytest
 
-ACCOUNT_KEYS = {"id", "name", "kind", "note", "archived", "updated_at"}
+ACCOUNT_KEYS = {"id", "name", "kind", "reserve", "note", "archived", "updated_at"}
 ENTRY_KEYS = {"id", "account_id", "to_account_id", "name", "category", "kind", "amount", "start_date", "end_date",
               "interval_months", "estimated", "note", "archived", "updated_at"}
 ADJ_KEYS = {"id", "entry_id", "effective_date", "mode", "amount", "percent", "repeat_yearly", "note", "archived", "updated_at"}
@@ -33,7 +33,7 @@ def test_state_has_four_arrays_and_data_version(seed):
 
 @pytest.mark.contract("API-STATE-003")
 def test_account_objects_have_exactly_the_public_keys(seed):
-    """API-STATE-003: each account has exactly {id, name, kind, note, archived, updated_at}."""
+    """API-STATE-003: each account has exactly {id, name, kind, reserve, note, archived, updated_at}."""
     seed.account("Giro")
     assert all(set(a) == ACCOUNT_KEYS for a in seed.state()["accounts"])
 

@@ -35,6 +35,8 @@ template) with a `"Schließen"` button.
   as `ja/nein`, rhythm/mode/kind as German words).
 - `FE-AUDIT-010` [README] The entry field `estimated` is labeled `Fest/geschätzt` and its
   values are shown as `fest` / `geschätzt` (B-015), e.g. `"Fest/geschätzt: fest → geschätzt"`.
+- `FE-AUDIT-013` [README] The account field `reserve` is labeled `Rücklage` and its values are
+  shown as `ja` / `nein` (B-028), e.g. `"Rücklage: nein → ja"`.
 - `FE-AUDIT-005` [INFERRED] A row with a `comment` shows it as `„<comment>“`; a `revert` row
   shows `"Rückgängig gemacht: Protokolleintrag #<reverts_id>"` derived from `reverts_id`.
 - `FE-AUDIT-006` [INFERRED] Clicking `"Rückgängig"` opens a confirmation dialog explaining the

@@ -55,7 +55,7 @@ def create_account(body: dict = Body(...), s: Settings = Depends(get_settings)):
     except ValidationError as ex:
         raise HTTPException(422, detail=errors.validation_detail(ex)) from None
     with db.tx(s.db_path) as conn:
-        acc = db.create(conn, "accounts", {"name": m.name, "kind": m.kind, "note": m.note}, m.comment)
+        acc = db.create(conn, "accounts", {"name": m.name, "kind": m.kind, "reserve": m.reserve, "note": m.note}, m.comment)
         db.create(conn, "checkpoints", {"account_id": acc["id"], "date": m.start_date.isoformat(),
                                         "balance": m.start_balance, "note": ""})
     return acc

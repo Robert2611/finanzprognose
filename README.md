@@ -6,7 +6,7 @@ Eine selbst gehostete Web-App, die dir zeigt, wie viel Geld du in den kommenden 
 
 | Bereich | Funktion |
 |---|---|
-| **Konten** | Beliebig viele Konten (Giro, Tagesgeld, Depot …) |
+| **Konten** | Beliebig viele Konten (Giro, Tagesgeld, Depot …). Ein Konto lässt sich als **Rücklage** markieren: Geld für Unvorhergesehenes, das nicht verplant wird. |
 | **Wiederkehrende Buchungen** | Einnahmen, Ausgaben und Umbuchungen zwischen Konten, die regelmäßig wiederkommen (monatlich, quartalsweise, jährlich …), mit Start- und optionalem Enddatum. Eigene Seite „Wiederkehrend“. |
 | **Einmalige Buchungen** | Einzelne Zahlungen auf ein Konto oder von einem Konto weg (z. B. Steuererstattung, Urlaub, neue Waschmaschine) und einzelne Umbuchungen, mit einem Datum. Eigene Seite „Einmalig“ mit eigenem, kürzerem Formular. |
 | **Anpassungen** | Änderungen ab einem Stichtag: neuer fester Betrag (z. B. Gehaltserhöhung) oder ein Prozentsatz, einmalig oder jedes Jahr erneut (z. B. Inflation) |
@@ -29,6 +29,10 @@ Bei Ist-Ständen siehst du den prognostizierten Wert, den tatsächlichen Wert un
 ### Feste und geschätzte Beträge
 
 Nicht jede Ausgabe ist eine feste Abbuchung. Für Lebensmittel, Tanken oder Freizeit trägst du einfach einen Schätzwert als wiederkehrende Buchung ein (z. B. „ca. 450 € im Monat“) und stellst bei **Art** auf **Geschätzt**. Solche Beträge werden mit „≈“ angezeigt, und die Monatsansicht zeigt, wie viel der Einnahmen und Ausgaben geschätzt ist. Einzelne Einkäufe musst du nicht erfassen: Der nächste Ist-Stand gleicht die Schätzung mit der Wirklichkeit ab und zeigt die Abweichung. Unter „Gruppieren nach → Art“ siehst du feste und geschätzte Buchungen getrennt.
+
+### Rücklagen: Geld, das nicht verplant wird
+
+Ein Notgroschen oder eine Reserve für Unvorhergesehenes soll nicht in die Planung einfließen. Setze beim Konto den Haken **Rücklage – nicht zum Verplanen**. Sobald es mindestens ein solches Konto gibt, zeigt die Prognose als Hauptwert das **verfügbare Geld** (alle anderen Konten): Diagramm-Hauptlinie und fette Tabellenspalte heißen „Verfügbar“, der Gesamtstand steht daneben. In der Monatsansicht steht, wie viel in die Rücklage gelegt („In Rücklage gelegt“) oder daraus entnommen wurde („Aus Rücklage entnommen“), und die Warnung vor einem negativen Stand bezieht sich auf das verfügbare Geld. Ohne Rücklage-Konten bleibt alles wie gewohnt.
 
 ### Datensicherheit
 

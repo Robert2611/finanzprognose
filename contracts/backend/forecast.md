@@ -35,12 +35,15 @@ Import: `from app import forecast`. Pure functions, no I/O.
       "closing": <int cents, sum over accounts>,
       "income":  <int cents, sum of positive bookings this month>,
       "expense": <int cents, sum of negative bookings this month>,
+      "available_opening": <int cents, sum over non-reserve accounts>,   // B-028
+      "available_closing": <int cents, sum over non-reserve accounts>,
+      "to_reserve": <int cents, net transfers from available into reserve accounts>,
       "accounts": { "<account_id>": {
           "opening": <int|null>, "closing": <int|null>,
           "items": [ <item>, ... ]
       } }
   }, ... ],
-  "accounts": [ {"id", "name", "kind"}, ... ],   // non-archived only
+  "accounts": [ {"id", "name", "kind", "reserve": bool}, ... ],   // non-archived only
   "warnings": [ {"code", ...params}, ... ]
 }
 ```
@@ -148,7 +151,8 @@ None. Pure computation over the passed `state`. Does not read the DB or the cloc
 - `FC-029` [INFERRED] Archived accounts, entries, adjustments and checkpoints are excluded
   from the forecast.
 - `FC-030` [INFERRED] The top-level `accounts` list in the result contains only
-  non-archived accounts, each as `{id, name, kind}`.
+  non-archived accounts, each as `{id, name, kind, reserve}` (`reserve` a boolean, missing →
+  `false`).
 
 ### Item invariants
 - `FC-031` [INFERRED] Every booking/transfer item carries its `entry_id`, ISO `date`,
@@ -161,6 +165,19 @@ None. Pure computation over the passed `state`. Does not read the DB or the cloc
   entry (missing or `0` → `false`). The mark is informational only (B-015): amounts,
   balances, explanations and the monthly `income`/`expense` are the same as for a fixed
   entry.
+
+### Reserve accounts (B-028)
+- `FC-034` [README] A reserve account (`reserve` truthy) is computed like any other account
+  (its items, balances and checkpoints are unchanged, and it still counts in `opening`,
+  `closing`, `income` and `expense`), but it is left out of the month's
+  `available_opening`/`available_closing`, which sum only the non-reserve accounts. Without
+  reserve accounts they equal `opening`/`closing`.
+- `FC-035` [README] `to_reserve` is the net amount moved by transfers between an available
+  and a reserve account in that month, seen from the available side: a transfer into a
+  reserve adds its amount, a transfer out of a reserve subtracts it. Transfers between two
+  available (or two reserve) accounts and bookings on a reserve account are not counted. An
+  archived account is not a reserve account, so a transfer into an archived reserve is not
+  counted either (the money just leaves, `FC-028`).
 
 ## Examples
 - `amount_at({'amount':-100000,'start_date':'2026-01-01'}, [{'effective_date':'2026-01-01',

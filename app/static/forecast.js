@@ -21,17 +21,27 @@ export async function renderForecast(main) {
   const fc = S.fc = await api('GET', `/api/forecast?start=${S.from}&months=${S.months}`);
   if (S.view !== 'prognose') return; // navigated away while loading: #chart etc. are gone, don't clobber the new view
   if (!S.sel || !fc.months.some(m => m.month === S.sel)) S.sel = fc.months[0].month;
-  const neg = fc.months.find(m => m.closing < 0);
+  const neg = fc.months.find(m => mainClosing(fc, m) < 0);
+  const what = hasReserve(fc) ? 'das verfügbare Geld (ohne Rücklagen)' : 'der Gesamtstand';
   renderLit(html`${fc.warnings.map(w => html`<div class="banner warn">${warnMsg(w)}</div>`)}
-    ${neg ? html`<div class="banner err">Achtung: Im ${fMonth(neg.month)} wird der Gesamtstand voraussichtlich negativ (${eur(neg.closing)}).</div>` : ''}`, $('#warn'));
+    ${neg ? html`<div class="banner err">Achtung: Im ${fMonth(neg.month)} wird ${what} voraussichtlich negativ (${eur(mainClosing(fc, neg))}).</div>` : ''}`, $('#warn'));
   drawChart(fc);
   drawTable(fc);
   drawDetail(fc);
 }
 
+// B-028: with reserve accounts, the page is about the available money (all other accounts);
+// without any, that is simply the total, and the page looks as before.
+const hasReserve = fc => fc.accounts.some(a => a.reserve);
+/** The month-end amount the page is about: the available money, or the total without reserve accounts. */
+const mainClosing = (fc, m) => hasReserve(fc) ? m.available_closing : m.closing;
+const mainOpening = (fc, m) => hasReserve(fc) ? m.available_opening : m.opening;
+const mainLabel = fc => hasReserve(fc) ? 'Verfügbar' : 'Gesamt';
+const reserveTag = a => a.reserve ? html`<span class="tag reserve" title="nicht zum Verplanen">Rücklage</span>` : nothing;
+
 function chartTpl(fc) {
   const W = 1000, H = 250, L = 70, R = 10, T = 10, B = 26;
-  const series = [{ name: 'Gesamt', color: 'var(--ink)', vals: fc.months.map(m => m.closing), w: 2.5 }];
+  const series = [{ name: mainLabel(fc), color: 'var(--ink)', vals: fc.months.map(m => mainClosing(fc, m)), w: 2.5 }];
   if (fc.accounts.length > 1) fc.accounts.forEach((a, i) => series.push({ name: a.name, color: COLORS[i % COLORS.length], vals: fc.months.map(m => m.accounts[a.id]?.closing ?? null), w: 1.5 }));
   const all = series.flatMap(s => s.vals).filter(v => v != null).concat([0]);
   let min = Math.min(...all), max = Math.max(...all); if (min === max) max = min + 100;
@@ -51,7 +61,7 @@ function chartTpl(fc) {
       ${fc.months.map((m, i) => i % step === 0 ? svg`<text x=${x(i)} y=${H - 6} text-anchor="middle">${fMonth(m.month)}</text>` : nothing)}
       ${si >= 0 ? svg`<line x1=${x(si)} x2=${x(si)} y1=${T} y2=${H - B} stroke="var(--accent)" opacity=".5"></line>` : nothing}
       ${series.slice().reverse().map(s => svg`<path d=${pathD(s)} fill="none" stroke=${s.color} stroke-width=${s.w} vector-effect="non-scaling-stroke"></path>`)}
-      ${fc.months.map((m, i) => svg`<rect x=${x(i) - cw / 2} y=${T} width=${cw} height=${H - T - B} fill="transparent" style="cursor:pointer" @click=${() => selectMonth(m.month)}><title>${fMonth(m.month)}: ${eur(m.closing)}</title></rect>`)}
+      ${fc.months.map((m, i) => svg`<rect x=${x(i) - cw / 2} y=${T} width=${cw} height=${H - T - B} fill="transparent" style="cursor:pointer" @click=${() => selectMonth(m.month)}><title>${fMonth(m.month)}: ${eur(mainClosing(fc, m))}</title></rect>`)}
     </svg>
     <div class="legend">${series.map(s => html`<span style="--c:${s.color}">${s.name}</span>`)}</div>`;
 }
@@ -61,13 +71,13 @@ function drawChart(fc) { renderLit(chartTpl(fc), $('#chart')); }
 function selectMonth(m) { S.sel = m; drawChart(S.fc); drawTable(S.fc); drawDetail(S.fc); }
 
 function tableTpl(fc) {
-  const multi = fc.accounts.length > 1;
-  return html`<table><thead><tr><th>Monat (Monatsende)</th>${multi ? fc.accounts.map(a => html`<th class="num">${a.name}</th>`) : nothing}<th class="num">Gesamt</th><th class="num">Veränderung</th></tr></thead><tbody>
+  const multi = fc.accounts.length > 1, res = hasReserve(fc);
+  return html`<table><thead><tr><th>Monat (Monatsende)</th>${multi ? fc.accounts.map(a => html`<th class="num">${a.name}${a.reserve ? html`<div class="small muted">Rücklage</div>` : nothing}</th>`) : nothing}<th class="num">${mainLabel(fc)}</th><th class="num">Veränderung</th>${res ? html`<th class="num">Gesamt</th>` : nothing}</tr></thead><tbody>
       ${fc.months.map(m => {
-        const delta = m.closing - m.opening;
+        const total = mainClosing(fc, m), delta = total - mainOpening(fc, m);
         return html`<tr class="clickable ${m.month === S.sel ? 'selected' : ''}" @click=${() => selectMonth(m.month)}><td>${fMonth(m.month)}</td>
           ${multi ? fc.accounts.map(a => { const c = m.accounts[a.id]?.closing; return html`<td class="num ${eurCls(c)}">${eur(c)}</td>`; }) : nothing}
-          <td class="num ${eurCls(m.closing)}"><b>${eur(m.closing)}</b></td><td class="num">${signed(delta)}</td></tr>`;
+          <td class="num ${eurCls(total)}"><b>${eur(total)}</b></td><td class="num">${signed(delta)}</td>${res ? html`<td class="num muted ${eurCls(m.closing)}">${eur(m.closing)}</td>` : nothing}</tr>`;
       })}
     </tbody></table>`;
 }
@@ -106,10 +116,13 @@ function detailTpl(fc) {
   return html`<h2>${fMonth(m.month)}</h2><div class="kv" style="margin-bottom:12px">
       <span class="muted">Einnahmen</span><span class="num pos" style="text-align:left">${eur(m.income)}</span>${estRow(est.income, 'pos')}
       <span class="muted">Ausgaben</span><span class="num neg" style="text-align:left">${eur(m.expense)}</span>${estRow(est.expense, 'neg')}
-      <span class="muted">Gesamtstand Monatsende</span><b class="${eurCls(m.closing)}">${eur(m.closing)}</b></div>
+      ${hasReserve(fc) ? html`${m.to_reserve ? html`<span class="muted">${m.to_reserve > 0 ? 'In Rücklage gelegt' : 'Aus Rücklage entnommen'}</span><span class="num to-reserve" style="text-align:left">${eur(Math.abs(m.to_reserve))}</span>` : nothing}
+        <span class="muted">Verfügbar Monatsende</span><b class="${eurCls(m.available_closing)}">${eur(m.available_closing)}</b>
+        <span class="muted">Gesamtstand Monatsende</span><span class="${eurCls(m.closing)}">${eur(m.closing)}</span>`
+      : html`<span class="muted">Gesamtstand Monatsende</span><b class="${eurCls(m.closing)}">${eur(m.closing)}</b>`}</div>
     ${getDimension('prognose') !== 'none' ? groupedTpl(fc, m) : fc.accounts.map(a => {
       const am = m.accounts[a.id]; if (!am) return nothing;
-      return html`<div class="acc-card"><div class="head"><span>${a.name}</span><span class="muted small">${KINDS[a.kind] || ''}</span></div>
+      return html`<div class="acc-card"><div class="head"><span>${a.name}${reserveTag(a)}</span><span class="muted small">${KINDS[a.kind] || ''}</span></div>
         <div class="row sum"><span></span><span>Anfangsstand</span><span class="num ${eurCls(am.opening)}">${eur(am.opening)}</span></div>
         ${!am.items.length ? html`<div class="row"><span></span><span class="muted">Keine Buchungen in diesem Monat</span><span></span></div>` : nothing}
         ${am.items.map(itemTpl)}

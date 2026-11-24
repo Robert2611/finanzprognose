@@ -12,7 +12,7 @@ from .connection import connect
 
 # Fields that may be written through the API
 TABLES = {
-    "accounts": ["name", "kind", "note"],
+    "accounts": ["name", "kind", "reserve", "note"],
     "entries": [
         "account_id", "to_account_id", "name", "category", "kind", "amount",
         "start_date", "end_date", "interval_months", "estimated", "note",
@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS accounts(
   id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,
   kind TEXT NOT NULL DEFAULT 'checking',
+  reserve INTEGER NOT NULL DEFAULT 0 CHECK(reserve IN (0,1)),  -- 1 = a reserve, not money to plan with (B-028)
   note TEXT NOT NULL DEFAULT '',
   archived INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
@@ -107,6 +108,12 @@ def _v2_entries_estimated(conn) -> None:
         conn.execute("ALTER TABLE entries ADD COLUMN estimated INTEGER NOT NULL DEFAULT 0 CHECK(estimated IN (0,1))")
 
 
+def _v3_accounts_reserve(conn) -> None:
+    """B-028: mark accounts as a reserve that is not money to plan with; existing accounts stay available."""
+    if not _has_column(conn, "accounts", "reserve"):
+        conn.execute("ALTER TABLE accounts ADD COLUMN reserve INTEGER NOT NULL DEFAULT 0 CHECK(reserve IN (0,1))")
+
+
 # Ordered schema migrations, each `(target_version, migrate_fn)`. Version 1 is the
 # baseline created by SCHEMA above, so real migrations start at 2. A migration must be
 # idempotent (e.g. guard ALTERs with _has_column): a fresh database already gets the
@@ -114,6 +121,7 @@ def _v2_entries_estimated(conn) -> None:
 # of the current schema; every change to an existing table also needs a migration here.
 MIGRATIONS: list[tuple[int, "callable"]] = [
     (2, _v2_entries_estimated),
+    (3, _v3_accounts_reserve),
 ]
 
 
