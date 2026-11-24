@@ -205,3 +205,9 @@ the repository point here. New items are appended at the end when they are done.
 - **Status:** done
 - **Problem:** the intro still told the test writer to treat the linked clauses as not-yet-settled (`xfail`/skipped), although every question was decided and its work (B-017..B-022) is done.
 - **Resolution:** the intro now says the decisions are implemented and the file is the record of them; only a new, undecided question keeps its clauses `xfail`/skipped.
+
+## B-025 Automated PR review by Claude, auto-merge on pass
+
+- **Status:** done
+- **Problem:** PRs were merged without anyone reading the code in detail.
+- **Resolution:** new `.github/workflows/claude-review.yml` runs `anthropics/claude-code-action@v1` on every non-draft PR: a fresh Claude session reviews the diff against `CLAUDE.md` with the instructions in `.github/claude-review.md` (taken from the base branch), posts one PASS/FAIL comment and writes a verdict; the job fails on FAIL and enables auto-merge on PASS. Changes to `.github/` always fail. Setup (secret, "Allow auto-merge", required checks `test` and `review`) is by hand, see `docs/claude-review.md`.

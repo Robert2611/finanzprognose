@@ -9,6 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Open work items are tracked in `BACKLOG.md`. When you finish one, add its resolution and move it to the end of `docs/backlog-done.md` (IDs are stable and never reused; take new ones from the "Next free ID" line). References like "B-020" point to an item in one of the two files.
 - Prefer several smaller files with a well-defined scope over one big file that combines everything. When a file grows unrelated responsibilities, split it rather than adding to the pile.
 - Run `python -m pytest -q` before committing, and don't commit if it fails.
+- Every PR is reviewed by a fresh Claude session in CI (`.github/workflows/claude-review.yml`, B-025, see `docs/claude-review.md`) and auto-merged into `main` when the review passes and CI is green. Keep PRs small and self-explanatory; changes to `.github/` always fail that review and need a human merge.
 
 ## Project
 
