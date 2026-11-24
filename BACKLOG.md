@@ -7,6 +7,6 @@ contracts and `CLAUDE.md` point there.
 
 Status values: `open`, `in progress`.
 
-**Next free ID:** B-027
+**Next free ID:** B-028
 
 No open items.

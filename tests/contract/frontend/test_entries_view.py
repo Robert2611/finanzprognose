@@ -34,10 +34,10 @@ def world(app_page):
 
 @pytest.mark.contract("FE-ENTRIES-004")
 def test_empty_list_row(world, app_page):
-    """FE-ENTRIES-004: an empty list renders a single 'Noch keine Buchungen.' row."""
+    """FE-ENTRIES-004: an empty list renders a single 'Noch keine wiederkehrenden Buchungen.' row."""
     page = open_entries(app_page)
     expect(rows(page)).to_have_count(1)
-    expect(rows(page).first).to_contain_text("Noch keine Buchungen.")
+    expect(rows(page).first).to_contain_text("Noch keine wiederkehrenden Buchungen.")
 
 
 @pytest.mark.contract("FE-ENTRIES-001", "E2E-ARCH-002")
@@ -58,8 +58,9 @@ def test_archived_entries_are_hidden_until_the_checkbox_is_ticked(world, app_pag
 
 
 @pytest.mark.contract("FE-ENTRIES-002", "FE-ENTRIES-003")
-def test_row_content_for_expense_income_transfer_and_once(world, app_page):
-    """FE-ENTRIES-002/003: name+category+note, type, account(→target), base amount, cadence and period per row."""
+def test_row_content_for_expense_income_and_transfer(world, app_page):
+    """FE-ENTRIES-002/003: name+category+note, type, account(→target), base amount, cadence and period per row;
+    one-time bookings are not listed here (B-027)."""
     s, g, t = world["s"], world["giro"], world["tg"]
     s.entry(g["id"], "Miete", -120000, "2026-01-01", category="Wohnen", note="Kaltmiete", end_date="2026-12-01")
     s.entry(g["id"], "Gehalt", 300000, "2026-01-31")
@@ -67,11 +68,12 @@ def test_row_content_for_expense_income_transfer_and_once(world, app_page):
     s.entry(g["id"], "Urlaub", -200000, "2026-03-10", kind="once")
     page = open_entries(app_page)
     miete, gehalt = norm(row_of(page, "Miete").inner_text()), norm(row_of(page, "Gehalt").inner_text())
-    sparen, urlaub = norm(row_of(page, "Sparen").inner_text()), norm(row_of(page, "Urlaub").inner_text())
+    sparen = norm(row_of(page, "Sparen").inner_text())
     assert all(x in miete for x in ("Wohnen", "Kaltmiete", "Ausgabe", "Giro", "-1.200,00 €", "monatlich", "ab 1.1.2026 bis 1.12.2026"))
     assert all(x in gehalt for x in ("Einnahme", "+3.000,00 €", "monatlich", "ab 31.1.2026")) and "bis" not in gehalt
     assert all(x in sparen for x in ("Umbuchung", "Giro", "→ Tagesgeld", "500,00 €", "quartalsweise", "ab 5.2.2026"))
-    assert all(x in urlaub for x in ("Ausgabe", "-2.000,00 €", "einmalig", "10.3.2026")) and "ab 10.3.2026" not in urlaub
+    expect(rows(page)).to_have_count(3)
+    expect(rows(page).filter(has_text="Urlaub")).to_have_count(0)
 
 
 @pytest.mark.contract("FE-ENTRIES-005")
@@ -102,7 +104,7 @@ def test_table_headers_and_row_actions(world, app_page):
     r = row_of(page, "Miete")
     for name in ("Bearbeiten", "Archivieren", "Verlauf"):
         expect(r.get_by_role("button", name=name)).to_have_count(1)
-    expect(page.locator(".toolbar")).to_contain_text("Buchungen")
+    expect(page.locator(".toolbar h2")).to_have_text("Wiederkehrende Buchungen")
     expect(page.locator(".toolbar button.primary")).to_have_text("+ Neue Buchung")
 
 
@@ -117,13 +119,14 @@ def new_entry(page):
 
 @pytest.mark.contract("FE-ENTRIES-006")
 def test_new_entry_dialog_defaults(world, app_page):
-    """FE-ENTRIES-006: defaults are type Ausgabe, Wiederkehrend, monthly, today, first account."""
+    """FE-ENTRIES-006: the dialog is titled 'Neue wiederkehrende Buchung'; defaults are type Ausgabe, monthly, today, first account."""
     page = open_entries(app_page)
     dlg = new_entry(page)
+    expect(dlg.locator("h3")).to_have_text("Neue wiederkehrende Buchung")
     sel = lambda label: field(dlg, label).locator("select").evaluate("s => s.options[s.selectedIndex].text")
-    assert sel("Typ") == "Ausgabe" and sel("Häufigkeit") == "Wiederkehrend" and sel("Rhythmus") == "monatlich"
+    assert sel("Typ") == "Ausgabe" and sel("Rhythmus") == "monatlich"
     assert sel("Konto") == "Giro"
-    expect(field(dlg, "Datum der (ersten) Fälligkeit").locator("input")).to_have_value("2026-01-20")
+    expect(field(dlg, "Datum der ersten Fälligkeit").locator("input")).to_have_value("2026-01-20")
     assert field(dlg, "Typ").locator("option").all_inner_texts() == ["Einnahme", "Ausgabe", "Umbuchung zwischen Konten"]
 
 
@@ -136,11 +139,12 @@ def test_amount_is_entered_positive_and_sign_follows_the_type(world, app_page, t
     put_value(dlg, "Bezeichnung", "Test")
     put_value(dlg, "Typ", typ)
     put_value(dlg, "Betrag (positiv eingeben)", typed)
-    put_value(dlg, "Datum der (ersten) Fälligkeit", "2026-01-31")
+    put_value(dlg, "Datum der ersten Fälligkeit", "2026-01-31")
     dlg.locator("button.primary").click()
     expect(page.locator("#toast")).to_contain_text("Gespeichert")
     expect(page.locator("dialog")).to_have_count(0)
-    assert world["s"].state()["entries"][0]["amount"] == stored
+    saved = world["s"].state()["entries"][0]
+    assert saved["amount"] == stored and saved["kind"] == "recurring"
     expect(row_of(page, "Test")).to_contain_text(typ)
 
 
@@ -178,15 +182,13 @@ def test_switching_away_from_transfer_sends_null_target(world, app_page):
 
 
 @pytest.mark.contract("FE-ENTRIES-009")
-def test_einmalig_hides_rhythm_and_end_date(world, app_page):
-    """FE-ENTRIES-009: 'Einmalig' hides Rhythmus and 'Letzte Fälligkeit (optional)'."""
+def test_recurring_dialog_has_no_frequency_choice(world, app_page):
+    """FE-ENTRIES-009: no 'Häufigkeit' field; Rhythmus and 'Letzte Fälligkeit (optional)' are always shown."""
     page = open_entries(app_page)
     dlg = new_entry(page)
+    expect(field(dlg, "Häufigkeit")).to_have_count(0)
     expect(field(dlg, "Rhythmus")).to_have_count(1)
     expect(field(dlg, "Letzte Fälligkeit (optional)")).to_have_count(1)
-    put_value(dlg, "Häufigkeit", "Einmalig")
-    expect(field(dlg, "Rhythmus")).to_have_count(0)
-    expect(field(dlg, "Letzte Fälligkeit (optional)")).to_have_count(0)
 
 
 @pytest.mark.contract("FE-ENTRIES-010", "FE-ENTRIES-011")
@@ -499,18 +501,17 @@ def test_group_select_defaults_to_none_and_lists_the_dimensions(grouped, app_pag
     assert sel.evaluate("s => [...s.options].map(o => o.text)") == ["Keine", "Kategorie", "Typ", "Konto", "Rhythmus", "Art"]
     assert sel.evaluate("s => s.options[s.selectedIndex].text") == "Keine"
     expect(page.locator("#main tr.group-head")).to_have_count(0)
-    expect(rows(page)).to_have_count(7)
+    expect(rows(page)).to_have_count(6)
 
 
 @pytest.mark.contract("FE-ENTRIES-022", "FE-ENTRIES-023")
 def test_group_by_category_heads_order_and_monthly_sums(grouped, app_page):
     """FE-ENTRIES-022/023: one head per category (case-insensitive, 'Ohne Kategorie' last) with monthly sums;
-    yearly counts 1/12, one-time and archived are not summed, transfers are summed separately."""
+    yearly counts 1/12, archived are not summed, transfers are summed separately; the one-time 'Kino' is not listed."""
     page = open_entries(app_page)
     group_by(page, "Kategorie")
     assert group_heads(page) == [
         "▾ Einkommen · 1 Buchung · +3.200,00 €/Monat",
-        "▾ Freizeit · 1 Buchung",
         "▾ Sparen · 1 Buchung · Umbuchungen 500,00 €/Monat",
         "▾ Wohnen · 3 Buchungen · -1.200,00 €/Monat",
         "▾ Ohne Kategorie · 1 Buchung · +10,00 €/Monat",
@@ -521,10 +522,10 @@ def test_group_by_category_heads_order_and_monthly_sums(grouped, app_page):
 @pytest.mark.parametrize("option,labels", [
     ("Typ", ["Einnahmen", "Ausgaben", "Umbuchungen"]),
     ("Konto", ["Giro", "Tagesgeld"]),
-    ("Rhythmus", ["monatlich", "quartalsweise", "jährlich", "einmalig"]),
+    ("Rhythmus", ["monatlich", "quartalsweise", "jährlich"]),
 ])
 def test_group_order_per_dimension(grouped, app_page, option, labels):
-    """FE-ENTRIES-022: fixed group order for Typ, account order for Konto, interval order with einmalig last."""
+    """FE-ENTRIES-022: fixed group order for Typ, account order for Konto, interval order for Rhythmus."""
     page = open_entries(app_page)
     group_by(page, option)
     assert [h.split(" · ")[0].removeprefix("▾ ") for h in group_heads(page)] == labels
@@ -545,12 +546,12 @@ def test_clicking_a_group_head_folds_and_unfolds_it(grouped, app_page):
     page = open_entries(app_page)
     group_by(page, "Kategorie")
     data_rows = page.locator("#main table tbody tr:not(.group-head)")
-    expect(data_rows).to_have_count(7)
+    expect(data_rows).to_have_count(6)
     page.get_by_role("button", name="▾ Wohnen").click()
-    expect(data_rows).to_have_count(4)
+    expect(data_rows).to_have_count(3)
     expect(page.locator("#main tr.group-head").filter(has_text="Wohnen")).to_contain_text("▸ Wohnen")
     page.get_by_role("button", name="▸ Wohnen").click()
-    expect(data_rows).to_have_count(7)
+    expect(data_rows).to_have_count(6)
 
 
 @pytest.mark.contract("FE-ENTRIES-025")
@@ -573,7 +574,7 @@ def test_grouping_works_without_browser_storage(grouped, app_page):
     errors = []
     page.on("pageerror", lambda e: errors.append(str(e)))
     page = open_entries(app_page)
-    expect(rows(page)).to_have_count(7)
+    expect(rows(page)).to_have_count(6)
     group_by(page, "Typ")
     expect(page.locator("#main tr.group-head")).to_have_count(3)
     assert errors == []

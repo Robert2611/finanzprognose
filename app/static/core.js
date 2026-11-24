@@ -271,6 +271,7 @@ export async function restoreRow(table, row) { if (await setArchived(table, row,
 // navigates, by which point every module has finished loading.
 import { renderForecast } from './forecast.js';
 import { renderEntries } from './entries.js';
+import { renderOnce } from './once.js';
 import { renderAccounts } from './accounts.js';
 import { renderAudit } from './audit.js';
 import { renderBackup, refreshBackupPill } from './backup.js';
@@ -284,6 +285,6 @@ export async function render() {
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b.dataset.view === S.view));
   const main = $('#main');
   try {
-    await ({ prognose: renderForecast, buchungen: renderEntries, konten: renderAccounts, verlauf: renderAudit, sicherung: renderBackup, version: renderUpdate }[S.view] || renderForecast)(main);
+    await ({ prognose: renderForecast, buchungen: renderEntries, einmalig: renderOnce, konten: renderAccounts, verlauf: renderAudit, sicherung: renderBackup, version: renderUpdate }[S.view] || renderForecast)(main);
   } catch (ex) { renderLit(html`<div class="banner err">${ex.message}</div>`, main); }
 }

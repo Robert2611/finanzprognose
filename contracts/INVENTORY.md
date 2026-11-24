@@ -93,7 +93,8 @@ specified inside those API contracts and `data/schema.md`.
 | `form-dialog.md` | `core.js` `formDialog`, `archiveDialog`, `restoreRow` | Generic modal form component: field types, show-if logic, validation, busy/error state, submit. |
 | `navigation.md` | `core.js` routing (`setView`, `render`, hash handling, `load`/`refresh`) | Hash-based view switching, nav highlighting, top-level error banner. |
 | `forecast-view.md` | `forecast.js` `renderForecast` | Toolbar, chart (SVG), month table, month detail with per-item explanations; warnings/negative banner. |
-| `entries-view.md` | `entries.js` `renderEntries`, `entryDialog`, adjustments dialog | List/create/edit bookings and transfers; manage per-entry adjustments. |
+| `entries-view.md` | `entries.js` `renderEntries`, `entry_dialogs.js` `recurringDialog`/`entryDialog`, `adjustments.js` | List/create/edit recurring bookings and transfers; manage per-entry adjustments. |
+| `once-view.md` | `once.js` `renderOnce`, `entry_dialogs.js` `onceDialog` | List/create/edit one-time bookings and transfers (B-027). |
 | `accounts-view.md` | `accounts.js` `renderAccounts`, `accountDialog`, `checkpointDialog` | Account cards with checkpoints; create/edit accounts and actual balances. |
 | `audit-view.md` | `audit.js` `renderAudit`, `historyDialog` | Change-log table with diffs, paging, per-row revert; per-record history dialog. |
 | `backup-view.md` | `backup.js` `renderBackup`, `refreshBackupPill` | Backup status panel, run button, file list, export link, and the header status pill. |

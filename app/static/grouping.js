@@ -1,10 +1,12 @@
-// ------------------------------------------------------------ Gruppierung (Buchungen + Prognose)
+// ------------------------------------------------------------ Gruppierung (Buchungen, Einzelbuchungen, Prognose)
 // A view-only grouping of bookings. Nothing is stored on the server: the chosen dimension is
 // remembered per view in localStorage, folded groups only in memory.
 import { html } from './vendor/lit-html.js';
 import { rhythm, accName, S } from './core.js';
 
 export function entryType(e) { return e.to_account_id ? 'transfer' : e.amount < 0 ? 'expense' : 'income'; }
+/** German label of an entry type, as shown in the booking lists. */
+export const TYPE_LABEL = { income: 'Einnahme', expense: 'Ausgabe', transfer: 'Umbuchung' };
 
 /** Category names per case-insensitive key: key -> {name: most-used spelling, count}. All entries count, archived too. */
 export function categoryNames(entries = S.data.entries) {
@@ -82,13 +84,14 @@ export const monthlyAmount = e => e.kind === 'once' ? null : e.amount / (e.inter
 // The in-memory choice is the source of truth; localStorage only carries it across reloads.
 const storeKey = view => `finanzprognose.groupBy.${view}`;
 const chosen = {};
-export function getDimension(view) {
+/** The view's chosen dimension; one not in `dims` (the view's offered dimensions) counts as 'none'. */
+export function getDimension(view, dims = Object.keys(DIMENSIONS)) {
   if (!(view in chosen)) {
     let v = null;
     try { v = localStorage.getItem(storeKey(view)); } catch { /* storage unavailable */ }
     chosen[view] = v && DIMENSIONS[v] ? v : 'none';
   }
-  return chosen[view];
+  return dims.includes(chosen[view]) ? chosen[view] : 'none';
 }
 function setDimension(view, dim) {
   chosen[view] = dim;
@@ -100,6 +103,20 @@ const toggled = new Set();
 export const isOpen = (view, dim, key, openByDefault) => toggled.has(`${view}|${dim}|${key}`) !== openByDefault;
 export const toggleGroup = (view, dim, key) => { const k = `${view}|${dim}|${key}`; toggled.has(k) ? toggled.delete(k) : toggled.add(k); };
 
-/** The "Gruppieren nach" select; calls onChange() after storing the new choice. */
-export const dimensionSelect = (view, onChange) => html`<label>Gruppieren nach <select name="group-by" @change=${ev => { setDimension(view, ev.target.value); onChange(); }}>
-    ${Object.entries(DIMENSIONS).map(([k, d]) => html`<option value=${k} ?selected=${k === getDimension(view)}>${d.label}</option>`)}</select></label>`;
+/** The "Gruppieren nach" select; calls onChange() after storing the new choice. `dims` limits the offered dimensions. */
+export const dimensionSelect = (view, onChange, dims = Object.keys(DIMENSIONS)) => html`<label>Gruppieren nach <select name="group-by" @change=${ev => { setDimension(view, ev.target.value); onChange(); }}>
+    ${dims.map(k => html`<option value=${k} ?selected=${k === getDimension(view, dims)}>${DIMENSIONS[k].label}</option>`)}</select></label>`;
+
+/** Table body rows of a booking list grouped by the view's dimension: a `group-head` row per group
+ *  ("<label> · N Buchung(en)" plus `sumTpl(items)`), followed by its rows unless folded. */
+export function groupedRows({ view, dims, items, rowTpl, colspan, sumTpl, rerender }) {
+  const dim = getDimension(view, dims);
+  if (dim === 'none') return items.map(rowTpl);
+  return groupItems(items, e => DIMENSIONS[dim].key(e)).map(g => {
+    const open = isOpen(view, dim, g.key, true);
+    const toggle = () => { toggleGroup(view, dim, g.key); rerender(); };
+    return html`<tr class="group-head"><td colspan=${colspan}><button class="link" aria-expanded=${open} @click=${toggle}>${open ? '▾' : '▸'} ${g.label}</button>
+      <span class="muted">· ${g.items.length} Buchung${g.items.length === 1 ? '' : 'en'}</span>${sumTpl(g.items)}</td></tr>
+      ${open ? g.items.map(rowTpl) : ''}`;
+  });
+}

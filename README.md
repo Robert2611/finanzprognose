@@ -7,7 +7,8 @@ Eine selbst gehostete Web-App, die dir zeigt, wie viel Geld du in den kommenden 
 | Bereich | Funktion |
 |---|---|
 | **Konten** | Beliebig viele Konten (Giro, Tagesgeld, Depot …) |
-| **Buchungen** | Einnahmen, Ausgaben und Umbuchungen zwischen Konten, wiederkehrend (monatlich, quartalsweise, jährlich …) oder einmalig, mit Start- und Enddatum |
+| **Wiederkehrende Buchungen** | Einnahmen, Ausgaben und Umbuchungen zwischen Konten, die regelmäßig wiederkommen (monatlich, quartalsweise, jährlich …), mit Start- und optionalem Enddatum. Eigene Seite „Wiederkehrend“. |
+| **Einmalige Buchungen** | Einzelne Zahlungen auf ein Konto oder von einem Konto weg (z. B. Steuererstattung, Urlaub, neue Waschmaschine) und einzelne Umbuchungen, mit einem Datum. Eigene Seite „Einmalig“ mit eigenem, kürzerem Formular. |
 | **Anpassungen** | Änderungen ab einem Stichtag: neuer fester Betrag (z. B. Gehaltserhöhung) oder ein Prozentsatz, einmalig oder jedes Jahr erneut (z. B. Inflation) |
 | **Ist-Stände** | Du trägst ab und zu den echten Kontostand ein. Die Prognose rechnet ab dort mit dem echten Wert weiter und zeigt dir, wie weit sie danebenlag. |
 | **Prognose** | Diagramm und Monatstabelle. Ein Klick auf einen Monat zeigt jede einzelne Buchung, und zu jedem Betrag steht, wie er zustande kommt. |
@@ -214,7 +215,7 @@ Du musst nicht immer den ganzen Stand zurückholen. Für einzelne Fehler reicht 
 ## Bedienung in Kürze
 
 1. **Konto anlegen** mit aktuellem Kontostand und Datum. Dieser Stand ist der Startpunkt der Prognose.
-2. **Buchungen eintragen:** Gehalt, Miete, Versicherungen, Abos, Sparraten (als Umbuchung), geplante Einmalausgaben.
+2. **Buchungen eintragen:** unter „Wiederkehrend“ Gehalt, Miete, Versicherungen, Abos, Sparraten (als Umbuchung); unter „Einmalig“ geplante Einzelausgaben und -einnahmen. In der Prognose legst du beides mit „+ Wiederkehrend“ bzw. „+ Einmalig“ an.
 3. **Änderungen ab einem Datum** legst du über „Anpassungen“ an, nicht durch Ändern des Grundbetrags. Eine Änderung am Grundbetrag wirkt rückwirkend auf alle Termine.
 4. Trage ab und zu (z. B. monatlich) einen **Ist-Stand** ein. So bleibt die Prognose an der Realität ausgerichtet, und du siehst, wie genau sie war.
 

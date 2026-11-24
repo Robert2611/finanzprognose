@@ -14,8 +14,8 @@ computes). `APP_PASSWORD` empty or credentials supplied.
 ## Scenarios
 
 ### Create bookings
-- `E2E-BOOK-001` [BROWSER-REQUIRED] **Given** the "Buchungen" view, **when** the user clicks
-  `"+ Neue Buchung"`, enters name `"Gehalt"`, type `Einnahme`, amount `3.000,00`, Wiederkehrend
+- `E2E-BOOK-001` [BROWSER-REQUIRED] **Given** the "Wiederkehrend" view, **when** the user clicks
+  `"+ Neue Buchung"`, enters name `"Gehalt"`, type `Einnahme`, amount `3.000,00`,
   monthly, start `2026-01-31`, and submits, **then** a `"Gespeichert"` toast appears and the
   booking row shows `"Gehalt"`, type `Einnahme`, `+3.000,00 €`, cadence `monatlich`. [FE-ENTRIES]
 - `E2E-BOOK-002` [HTTP-checkable] **Given** the same via API,
