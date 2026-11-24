@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import pytest
 from playwright.sync_api import expect
 
-from tests.contract.frontend.conftest import call, norm
+from tests.contract.frontend.conftest import call, norm, show_balance
 
 NOW = datetime(2026, 1, 20, 11, 0, 0, tzinfo=timezone.utc)      # 2026-01-20 12:00 Berlin
 
@@ -50,6 +50,7 @@ def test_without_reserve_accounts_the_page_shows_the_total(app_page):
     s.account("Tagesgeld", 0, "2026-01-15", kind="savings")
     page = open_view(app_page)
     assert heads(page) == ["Monat (Monatsende)", "Giro", "Tagesgeld", "Gesamt", "Veränderung"]
+    show_balance(page)
     assert page.locator("#chart .legend span").all_inner_texts()[0] == "Gesamt"
     select(page, "2026-01")
     expect(page.locator("#fdetail")).not_to_contain_text("Verfügbar")
@@ -60,6 +61,7 @@ def test_with_a_reserve_the_table_and_chart_are_about_available_money(world, app
     """FE-FORECAST-023: 'Verfügbar' is the bold column and the main series; 'Veränderung' follows it; 'Gesamt' last."""
     page = open_view(app_page)
     assert heads(page) == ["Monat (Monatsende)", "Giro", "Notgroschen Rücklage", "Verfügbar", "Veränderung", "Gesamt"]
+    show_balance(page)
     assert page.locator("#chart .legend span").all_inner_texts() == ["Verfügbar", "Giro", "Notgroschen"]
     feb = [norm(t) for t in row(page, "2026-02").locator("td").all_inner_texts()]
     assert feb[1:] == ["5.500,00 €", "10.300,00 €", "5.500,00 €", "+1.500,00 €", "15.800,00 €"]

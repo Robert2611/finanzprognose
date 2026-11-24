@@ -337,6 +337,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | FE-FORECAST-021..022 | R | — |
 | FE-FORECAST-023..025 | R | — |
 | FE-FORECAST-026..028 | R | — |
+| FE-FORECAST-029..033 | R | — |
 | FE-ENTRIES-001..015 | I | — |
 | FE-ENTRIES-016 | R | — |
 | FE-ENTRIES-017..019 | I | — |

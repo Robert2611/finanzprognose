@@ -1,6 +1,7 @@
 import re
 
 import pytest
+from playwright.sync_api import expect
 
 
 def norm(s):
@@ -57,3 +58,9 @@ def put_value(dlg, label, value):
         control.set_checked(bool(value))
     else:
         control.fill(str(value))
+
+
+def show_balance(page):
+    """Switch the forecast chart to the 'Kontostand' (balance lines) view (B-030: the default is the bar chart)."""
+    page.locator("#chart .chart-mode button[data-mode=balance]").click()
+    expect(page.locator("#chart svg.chart[data-mode=balance]")).to_have_count(1)

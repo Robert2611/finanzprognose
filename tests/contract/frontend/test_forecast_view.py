@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import pytest
 from playwright.sync_api import expect
 
-from tests.contract.frontend.conftest import call, norm
+from tests.contract.frontend.conftest import call, norm, show_balance
 
 NOW = datetime(2026, 1, 20, 11, 0, 0, tzinfo=timezone.utc)        # 2026-01-20 12:00 in Berlin
 
@@ -167,6 +167,7 @@ def test_clicking_a_chart_month_selects_it_too(app_page, world):
 def test_chart_has_total_and_account_series_and_a_legend(app_page, world):
     """FE-FORECAST-008: legend lists 'Gesamt' and each account (more than one account); axis labels use € / k €."""
     page = open_forecast(app_page)
+    show_balance(page)
     legend = norm(page.locator("#chart .legend").inner_text())
     assert "Gesamt" in legend and "Giro" in legend and "Tagesgeld" in legend
     labels = " ".join((el.text_content() or "") for el in page.locator("#chart svg text").all())
@@ -177,6 +178,7 @@ def test_chart_has_total_and_account_series_and_a_legend(app_page, world):
 def test_chart_legend_with_a_single_account_lists_only_the_total(app_page, single):
     """FE-FORECAST-008: with one account only the 'Gesamt' series is drawn (per-account series appear for >1 account)."""
     page = open_forecast(app_page)
+    show_balance(page)
     legend = norm(page.locator("#chart .legend").inner_text())
     assert "Gesamt" in legend and "Giro" not in legend
 
@@ -199,7 +201,7 @@ def test_account_card_lists_start_items_and_end(app_page, world):
     """FE-FORECAST-010: each account card lists Anfangsstand, the month's items and Endstand."""
     page = open_forecast(app_page)
     select(page, "2026-03")
-    text = norm(page.locator("#fdetail").inner_text())
+    text = norm(" ".join(page.locator("#fdetail .acc-card").all_inner_texts()))   # the cards, not the events list (B-030)
     assert text.count("Anfangsstand") >= 2 and text.count("Endstand") >= 2
     assert "Gehalt" in text and "Miete" in text and "Sparen" in text
     assert text.index("Anfangsstand") < text.index("Gehalt") < text.index("Endstand")

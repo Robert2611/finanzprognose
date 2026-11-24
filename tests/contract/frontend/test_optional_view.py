@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import pytest
 from playwright.sync_api import expect
 
-from tests.contract.frontend.conftest import call, field, norm, put_value
+from tests.contract.frontend.conftest import call, field, norm, put_value, show_balance
 
 NOW = datetime(2026, 1, 20, 11, 0, 0, tzinfo=timezone.utc)      # 2026-01-20 12:00 Berlin
 
@@ -94,6 +94,7 @@ def test_without_optional_bookings_there_is_no_panel(app_page):
     page = open_view(app_page)
     expect(page.locator("#ftable tr.clickable").first).to_be_visible()
     expect(panel(page)).to_have_count(0)
+    show_balance(page)
     assert "mit optionalen Posten" not in page.locator("#chart .legend").inner_text()
 
 
@@ -165,6 +166,7 @@ def test_works_without_browser_storage(world, app_page):
 def test_dashed_comparison_and_summary_line(world, app_page):
     """FE-FORECAST-028: a dashed 'mit optionalen Posten' series and a summary line while some are left out."""
     page = open_view(app_page)
+    show_balance(page)
     expect(page.locator("#chart .legend span.dashed")).to_have_text("mit optionalen Posten")
     expect(page.locator("#chart path[stroke-dasharray]")).to_have_count(1)
     select(page, "2026-03")

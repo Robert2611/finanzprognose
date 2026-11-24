@@ -2,7 +2,8 @@
 import { html, render as renderLit } from './vendor/lit-html.js';
 import { eur, fDate, toInput, today, toast, api, S, formDialog, refresh, load, setArchived } from './core.js';
 
-function adjLabel(a) {
+/** German label of an adjustment's change, e.g. "neuer Betrag 3.200,00 €" or "+3 % jährlich wiederkehrend". */
+export function adjLabel(a) {
   if (a.mode === 'set') return `neuer Betrag ${eur(a.amount)}`;
   return `${a.percent > 0 ? '+' : ''}${String(a.percent).replace('.', ',')} %${a.repeat_yearly ? ' jährlich wiederkehrend' : ''}`;
 }
