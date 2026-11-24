@@ -16,6 +16,8 @@ services:
       BACKUP_REQUIRE_MARKER: "1"
       DB_PATH: /data/finanzen.sqlite
       BACKUP_DIR: /backup
+      UPDATE_DIR: /updater                    # B-026: status of the host updater, "Jetzt aktualisieren"
     volumes:
       - ./data:/data                          # working database (local disk of the VM)
+      - ./updater:/updater                    # files shared with auto-update.sh on the host
       - ${BACKUP_HOST_DIR:?Please set BACKUP_HOST_DIR in .env}:/backup   # NAS share

@@ -86,6 +86,9 @@ const VALIDATION_CODES = {
 const ERROR_CODES = {
   not_found: p => `${ENTITY[p.entity] || p.entity} #${p.id} nicht gefunden`,
   backup_not_found: p => `Sicherung „${p.name}“ nicht gefunden.`,
+  updater_not_configured: () => 'Die automatische Aktualisierung ist auf diesem System nicht eingerichtet.',
+  update_in_progress: () => 'Es läuft bereits ein Update.',
+  updater_unavailable: () => 'Die Update-Anfrage konnte nicht abgelegt werden (Ordner /updater nicht beschreibbar).',
   conflict: () => 'Der Datensatz wurde inzwischen geändert. Bitte Seite neu laden und erneut versuchen.',
   unknown_table: () => 'Unbekannter Datentyp',
   ref_not_found: p => `Verweis ${p.field}=${p.id} existiert nicht.`,
@@ -140,6 +143,25 @@ const VERIFY_PROBLEMS = {
   version_mismatch: p => `Der Datenstand der Datei (Version ${p.data_version}) passt nicht zum Dateinamen (v${p.file_version}).`,
 };
 export const verifyProblemMsg = p => VERIFY_PROBLEMS[p.code]?.(p.params || {}) ?? p.code;
+
+// ------------------------------------------------------------ Version/Update: Codes -> Deutsch (B-026)
+const UPDATE_RESULTS = {
+  success: 'erfolgreich',
+  rolled_back: 'fehlgeschlagen – die vorherige Version läuft wieder',
+  rollback_failed: 'fehlgeschlagen – auch das Zurückrollen ist fehlgeschlagen, bitte auf dem Server prüfen',
+  failed: 'fehlgeschlagen – nichts wurde umgestellt',
+};
+export const updateResult = r => UPDATE_RESULTS[r] ?? r;
+const UPDATE_MODES = { auto: 'automatisch – neue Versionen werden alle 15 Minuten gesucht und installiert', notify: 'nur anzeigen – installiert wird erst nach „Jetzt aktualisieren“' };
+export const updateMode = m => UPDATE_MODES[m] ?? m;
+const UPDATER_ERRORS = {
+  pull_failed: () => 'Die neueste Version konnte nicht abgefragt werden (ghcr.io nicht erreichbar oder Token abgelaufen).',
+  bad_version_label: () => 'Das neueste Image hat keine gültige Versionsangabe.',
+  updater_status_missing: () => 'Vom Update-Dienst auf dem Server liegt noch kein Status vor. Läuft der Timer finanzprognose-update.timer?',
+  updater_status_unreadable: () => 'Der Status des Update-Dienstes ist nicht lesbar.',
+};
+/** German text of an updater code: a host check_error (string) or a host_error {code, params}. */
+export const updaterErrMsg = e => { const c = typeof e === 'string' ? e : e?.code; return c ? UPDATER_ERRORS[c]?.(e?.params || {}) ?? c : ''; };
 
 // ------------------------------------------------------------ Zustand
 export const S = { view: location.hash.slice(1) || 'prognose', data: null, from: thisMonth(), months: 24, sel: null, showArchived: false, fc: null };
@@ -252,6 +274,7 @@ import { renderEntries } from './entries.js';
 import { renderAccounts } from './accounts.js';
 import { renderAudit } from './audit.js';
 import { renderBackup, refreshBackupPill } from './backup.js';
+import { renderUpdate } from './update.js';
 
 export function setView(v) { S.view = v; location.hash = v; render(); }
 document.addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b) setView(b.dataset.view); });
@@ -261,6 +284,6 @@ export async function render() {
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b.dataset.view === S.view));
   const main = $('#main');
   try {
-    await ({ prognose: renderForecast, buchungen: renderEntries, konten: renderAccounts, verlauf: renderAudit, sicherung: renderBackup }[S.view] || renderForecast)(main);
+    await ({ prognose: renderForecast, buchungen: renderEntries, konten: renderAccounts, verlauf: renderAudit, sicherung: renderBackup, version: renderUpdate }[S.view] || renderForecast)(main);
   } catch (ex) { renderLit(html`<div class="banner err">${ex.message}</div>`, main); }
 }

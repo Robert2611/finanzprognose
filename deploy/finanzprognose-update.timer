@@ -1,0 +1,11 @@
+# Installed by install.sh/update.sh (B-026): looks for a new release every 15 minutes.
+[Unit]
+Description=Finanzprognose: regular update check
+
+[Timer]
+OnBootSec=5min
+OnUnitInactiveSec=15min
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target

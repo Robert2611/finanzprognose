@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import auth, backup_schedule, db, errors
 from .routes import router
+from .update_routes import router as update_router
 from .settings import Settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -39,6 +40,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     app.middleware("http")(auth.basic_auth)
     errors.register(app)
     app.include_router(router)
+    app.include_router(update_router)
     # Mounted last: API routes must be registered before the catch-all static mount.
     app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
     return app

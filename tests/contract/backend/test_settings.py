@@ -27,3 +27,12 @@ def test_unset_variables_fall_back_to_defaults():
     """SETTINGS-003: an empty environment gives the dataclass defaults."""
     assert Settings.from_env({}) == Settings()
     assert Settings.from_env({"DB_PATH": "/x/db.sqlite"}) == Settings(db_path="/x/db.sqlite")
+
+
+@pytest.mark.contract("SETTINGS-004")
+def test_version_and_update_dir():
+    """SETTINGS-004: APP_VERSION / UPDATE_DIR are copied; unset they are "dev" and ""."""
+    s = Settings.from_env({"APP_VERSION": "v1.4.0", "UPDATE_DIR": "/updater"})
+    assert (s.app_version, s.update_dir) == ("v1.4.0", "/updater")
+    d = Settings.from_env({})
+    assert (d.app_version, d.update_dir) == ("dev", "")

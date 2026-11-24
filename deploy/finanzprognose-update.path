@@ -1,0 +1,11 @@
+# Installed by install.sh/update.sh (B-026): starts the update service as soon as the app
+# asks for an update ("Jetzt aktualisieren" writes updater/request.json).
+[Unit]
+Description=Finanzprognose: update requested from the app
+
+[Path]
+PathExists=@INSTALL_DIR@/updater/request.json
+Unit=finanzprognose-update.service
+
+[Install]
+WantedBy=paths.target

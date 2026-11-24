@@ -23,11 +23,12 @@ source tag.
 
 | Layer | Directory | Contracts |
 |---|---|---|
-| Backend (Python) | `backend/` | db-connection, db-schema, db-crud, db-audit, db-errors, forecast, schemas, auth, app-errors |
-| HTTP API | `api/` | health-and-state, accounts, resources, audit, forecast, backup, export |
-| Frontend (lit-html) | `frontend/` | core-helpers, form-dialog, navigation, forecast-view, entries-view, accounts-view, audit-view, backup-view |
+| Backend (Python) | `backend/` | db-connection, db-schema, db-crud, db-audit, db-errors, forecast, schemas, auth, app-errors, settings, updater |
+| HTTP API | `api/` | health-and-state, accounts, resources, audit, forecast, backup, export, update |
+| Frontend (lit-html) | `frontend/` | core-helpers, form-dialog, navigation, forecast-view, entries-view, accounts-view, audit-view, backup-view, update-view |
 | Data | `data/` | schema |
 | Backup | `backup/` | backup, restore-manual |
+| Deploy (host scripts) | `deploy/` | auto-update |
 | End-to-end | `e2e/` | onboarding-forecast, bookings-adjustments, checkpoints-deviation, archive-restore-undo, backup-and-export, auth-and-persistence |
 
 Supporting documents:

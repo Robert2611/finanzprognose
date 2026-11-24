@@ -211,3 +211,10 @@ the repository point here. New items are appended at the end when they are done.
 - **Status:** done
 - **Problem:** PRs were merged without anyone reading the code in detail.
 - **Resolution:** new `.github/workflows/claude-review.yml` runs `anthropics/claude-code-action@v1` on every non-draft PR: a fresh Claude session reviews the diff against `CLAUDE.md` with the instructions in `.github/claude-review.md` (taken from the base branch), posts one PASS/FAIL comment and writes a verdict; the job fails on FAIL and enables auto-merge on PASS. Changes to `.github/` always fail. Setup (secret, "Allow auto-merge", required checks `test` and `review`) is by hand, see `docs/claude-review.md`.
+
+## B-026 Automatic updates, status and „Jetzt aktualisieren“ in the app
+
+- **Status:** done
+- **Problem:** updates could only be started from a shell on the server, and the app showed nothing about them. The host is not reachable from outside and must stay that way, and the app must not get control over Docker.
+- **Decision (with the user):** a time-based, pull-only check on the host; app and host only exchange files in a shared folder.
+- **Resolution:** new `deploy/auto-update.sh` with three systemd units (`finanzprognose-update.service`/`.timer`/`.path`), installed by `install.sh`/`update.sh`. Every 15 minutes it pulls `:latest`, writes `updater/status.json` and, with `AUTO_UPDATE=auto` (default; `notify` only reports), installs a new release via `update.sh --auto-rollback`. That new flag restores the pre-update DB copy and the previous version when the new one doesn't become healthy (the failed DB goes to `data/failed-update_*/`, nothing is deleted); a failed release isn't retried by the timer. The app reads the status (`app/updater_link.py`, `GET /api/update/status`) and writes `updater/request.json` for „Jetzt aktualisieren“ (`POST /api/update/request`), which the path unit picks up at once. Frontend: new „Version“ view (`update.js`) and an update pill in the header. Clauses `DEPLOY-UPD-001..013`, `UPDATER-001..008`, `API-UPD-001..005`, `FE-UPDATE-001..007`, `SETTINGS-004`; the host scripts are tested against a fake `docker`.

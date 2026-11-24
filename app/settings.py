@@ -22,6 +22,8 @@ class Settings:
     backup_scheduler: bool = True         # start the daily backup thread in the lifespan
     app_user: str = "admin"
     app_password: str = ""                # empty disables auth
+    app_version: str = "dev"              # release tag baked into the image (Dockerfile ARG APP_VERSION)
+    update_dir: str = ""                  # folder shared with the host updater (B-026); empty = none
 
     @property
     def status_file(self) -> str:
@@ -39,6 +41,8 @@ class Settings:
             backup_scheduler=env.get("BACKUP_SCHEDULER", "1") == "1",
             app_user=env.get("APP_USER", d.app_user),
             app_password=env.get("APP_PASSWORD", d.app_password),
+            app_version=env.get("APP_VERSION", d.app_version),
+            update_dir=env.get("UPDATE_DIR", d.update_dir),
         )
 
 

@@ -104,6 +104,7 @@ Das Skript fragt nacheinander ab:
 - GitHub-Benutzername und das Token aus Schritt 3
 - wie das NAS erreicht wird (`smb`, `nfs` oder `manual`, falls du es selbst eingebunden hast), dazu Adresse, Freigabe und ggf. Zugangsdaten
 - Port (Standard 8080), Benutzername und Passwort für die App (leer lassen = Passwort erzeugen), Uhrzeit der täglichen Sicherung
+- ob neue Versionen automatisch installiert (`auto`) oder nur in der App angezeigt werden (`notify`), siehe [Updates](#updates)
 
 Danach liegt alles in `/opt/finanzprognose`:
 
@@ -112,7 +113,9 @@ Danach liegt alles in `/opt/finanzprognose`:
 | `.env` | deine Einstellungen (nur für root lesbar) |
 | `data/` | die Datenbank |
 | `data/pre-update/` | Kopien der Datenbank vor jedem Update |
-| `docker-compose.yml`, `update.sh`, `install.sh` | kommen aus dem Image und werden bei jedem Update ersetzt, nicht von Hand ändern |
+| `data/failed-update_DATUM/` | die Datenbank eines fehlgeschlagenen automatischen Updates (nach dem Zurückrollen) |
+| `updater/` | Austausch mit der App: Status des Update-Dienstes, Update-Anfragen, Ausgabe des letzten Updates |
+| `docker-compose.yml`, `update.sh`, `install.sh`, `auto-update.sh` | kommen aus dem Image und werden bei jedem Update ersetzt, nicht von Hand ändern |
 
 Die NAS-Freigabe ist unter `/mnt/nas-finanzen` eingebunden (Eintrag in `/etc/fstab`), die Sicherungen landen in `/mnt/nas-finanzen/finanzprognose`. Dort legt das Skript auch die Datei `.nas-marker` an.
 
@@ -126,27 +129,38 @@ Du kannst `install.sh` jederzeit erneut ausführen, z. B. um Passwort oder NAS z
 
 ### Updates
 
-Lies vorher kurz die Release-Notizen auf GitHub. Dann:
+Neue Versionen kommen von selbst auf den Server: Der systemd-Timer `finanzprognose-update.timer` schaut alle 15 Minuten auf ghcr.io nach, ob es ein neues Release gibt. Der Server muss dafür nur nach außen ins Internet kommen, von außen erreichbar sein muss er nicht. Was passiert, steuert `AUTO_UPDATE` in `.env`:
+
+- `AUTO_UPDATE=auto` (Standard): Ein neues Release wird automatisch installiert, spätestens etwa 15 Minuten nach dem Veröffentlichen.
+- `AUTO_UPDATE=notify`: Das neue Release wird nur angezeigt. Installiert wird es erst, wenn du in der App auf **Version → Jetzt aktualisieren** klickst.
+
+In der App zeigt die Seite **Version** die laufende und die neueste Version, ob gerade ein Update läuft, wie das letzte ausgegangen ist und dessen Ausgabe. Gibt es ein Update oder ist eins fehlgeschlagen, erscheint oben rechts ein Hinweis. Mit **Jetzt aktualisieren** startet das Update sofort; die Seite lädt neu, sobald die neue Version läuft.
+
+Die App installiert dabei nichts selbst. Sie legt nur eine Anfrage in `updater/` ab, und den Rest erledigt `auto-update.sh` auf dem Server (gestartet von `finanzprognose-update.path`). Startet eine neue Version nicht, rollt das Skript selbst zurück: Es legt die Datenbank der neuen Version nach `data/failed-update_DATUM/`, holt die Kopie von vor dem Update zurück und startet wieder die alte Version. Dieses Release wird danach nicht mehr automatisch versucht; das nächste Release schon, und mit **Erneut versuchen** auch dieses.
+
+Von Hand geht es weiterhin so:
 
 ```bash
 sudo /opt/finanzprognose/update.sh            # neueste Version
 sudo /opt/finanzprognose/update.sh v1.4.0     # eine bestimmte Version
+sudo systemctl start finanzprognose-update    # jetzt nach Updates suchen (wie der Timer)
+journalctl -u finanzprognose-update           # was der Update-Dienst gemacht hat
 ```
 
-Das Skript
+`update.sh`
 
 1. lädt das neue Image herunter (ist schon die neueste Version installiert, hört es hier auf),
 2. hält die App an und kopiert die Datenbank nach `data/pre-update/DATUM_ALTEVERSION/`,
-3. übernimmt die neuen `docker-compose.yml`, `update.sh` und `install.sh` aus dem Image,
+3. übernimmt die neuen `docker-compose.yml`, `update.sh`, `install.sh` und `auto-update.sh` aus dem Image und richtet die Timer ein,
 4. trägt die neue Version in `.env` ein, startet die App und wartet, bis sie läuft.
 
 Die Kopien in `data/pre-update/` werden nie gelöscht. Wenn der Platz knapp wird, kannst du alte Kopien von Hand entfernen.
 
-Vor großen Updates lohnt sich zusätzlich ein **Snapshot der VM** in Proxmox.
+Vor großen Updates lohnt sich zusätzlich ein **Snapshot der VM** in Proxmox. Damit dir das automatische Update nicht zuvorkommt, setze vorher `AUTO_UPDATE=notify` in `.env`; der Timer liest die Datei bei jedem Lauf neu, ein Neustart ist nicht nötig.
 
 ### Zurückrollen
 
-Neue Versionen können die Datenbank umbauen (Migration). Eine ältere Version kann eine umgebaute Datenbank nicht immer lesen. Zum Zurückrollen gehören deshalb **beide Schritte**: die Datenbank-Kopie von vor dem Update zurückholen und die alte Version starten. Schlägt ein Update fehl, zeigt `update.sh` die passenden Befehle mit den richtigen Pfaden an. Allgemein:
+Neue Versionen können die Datenbank umbauen (Migration). Eine ältere Version kann eine umgebaute Datenbank nicht immer lesen. Zum Zurückrollen gehören deshalb **beide Schritte**: die Datenbank-Kopie von vor dem Update zurückholen und die alte Version starten. Startet die neue Version nicht, macht das automatische Update das selbst (siehe oben). Schlägt ein Update von Hand fehl, zeigt `update.sh` die passenden Befehle mit den richtigen Pfaden an. Allgemein:
 
 ```bash
 cd /opt/finanzprognose
@@ -232,9 +246,9 @@ Die API-Dokumentation findest du unter `/api/docs`.
 1. Änderungen per Pull Request in `main` mergen (`main` ist geschützt, direkte Pushes sind nicht möglich).
 2. Auf GitHub unter *Releases → Draft a new release* einen neuen Tag im Format `vX.Y.Z` anlegen (z. B. `v1.4.0`), Release-Notizen schreiben und veröffentlichen.
 3. Der Workflow `.github/workflows/release.yml` führt die Tests aus, baut das Image, lädt es als `ghcr.io/robert2611/finanzprognose:vX.Y.Z` und `:latest` hoch und hängt `install.sh` an das Release.
-4. Auf dem Server: `sudo /opt/finanzprognose/update.sh`.
+4. Der Server installiert es innerhalb von etwa 15 Minuten selbst (bei `AUTO_UPDATE=notify` nach einem Klick auf **Version → Jetzt aktualisieren**).
 
-Ein Release mit dem Haken **„Set as a pre-release“** (z. B. `v1.4.0-rc1`) bekommt kein `latest`. Es lässt sich gezielt mit `update.sh v1.4.0-rc1` testen, ohne dass `update.sh` ohne Versionsangabe es installiert.
+Ein Release mit dem Haken **„Set as a pre-release“** (z. B. `v1.4.0-rc1`) bekommt kein `latest`. Es lässt sich gezielt mit `update.sh v1.4.0-rc1` testen, ohne dass `update.sh` ohne Versionsangabe oder das automatische Update es installiert.
 
 Das Image lokal bauen und mit der Produktions-Compose-Datei starten (braucht eine `.env` im Projektordner, siehe `.env.example`; der Ordner aus `BACKUP_HOST_DIR` muss eine `.nas-marker` enthalten):
 
