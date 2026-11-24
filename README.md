@@ -11,7 +11,13 @@ Eine selbst gehostete Web-App, die dir zeigt, wie viel Geld du in den kommenden 
 | **Einmalige Buchungen** | Einzelne Zahlungen auf ein Konto oder von einem Konto weg (z. B. Steuererstattung, Urlaub, neue Waschmaschine) und einzelne Umbuchungen, mit einem Datum. Eigene Seite „Einmalig“ mit eigenem, kürzerem Formular. |
 | **Anpassungen** | Änderungen ab einem Stichtag: neuer fester Betrag (z. B. Gehaltserhöhung) oder ein Prozentsatz, einmalig oder jedes Jahr erneut (z. B. Inflation) |
 | **Ist-Stände** | Du trägst ab und zu den echten Kontostand ein. Die Prognose rechnet ab dort mit dem echten Wert weiter und zeigt dir, wie weit sie danebenlag. |
-| **Prognose** | Diagramm und Monatstabelle. Ein Klick auf einen Monat zeigt jede einzelne Buchung, und zu jedem Betrag steht, wie er zustande kommt. |
+| **Prognose** | Diagramm (Überschuss pro Monat oder Kontostand) und Monatstabelle. Ein Klick auf einen Monat zeigt jede einzelne Buchung und die Ereignisse des Monats, und zu jedem Betrag steht, wie er zustande kommt. |
+
+### Diagramm: Überschuss pro Monat
+
+Ein Kontostand-Verlauf ist meist eine fast gerade Linie, weil die monatlichen Buchungen den Großteil ausmachen. Deshalb zeigt das Diagramm standardmäßig den **Überschuss pro Monat**: ein Balken pro Monat, Einnahmen nach oben, Ausgaben nach unten, und ein Strich für das, was am Ende übrig bleibt. Die Balken sind danach eingefärbt, wie planbar eine Buchung ist: monatlich wiederkehrend (grau), seltener wiederkehrend wie jährliche Versicherungen (orange), einmalig (lila) und – bei Rücklage-Konten – was in die Rücklage fließt (grün). Geschätzte Beträge sind heller, eingeschaltete optionale Posten gestrichelt. So fallen Monate mit Urlaub, Jahreszahlungen oder geänderten Einnahmen sofort auf.
+
+Punkte über den Balken markieren **Ereignisse**: einmalige Buchungen, Anpassungen (z. B. Gehaltserhöhung), wiederkehrende Buchungen, die beginnen oder enden (z. B. Ende des Elterngelds). Die Monatsansicht listet sie unter „Ereignisse in diesem Monat“. Mit dem Knopf **Kontostand** wechselst du zur bisherigen Linien-Ansicht; die Wahl merkt sich dein Browser.
 
 ### Nachvollziehbarkeit: Warum ist ein Wert so, wie er ist?
 

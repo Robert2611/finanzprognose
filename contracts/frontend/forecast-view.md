@@ -3,8 +3,8 @@ ID prefix: FE-FORECAST
 Layer: frontend
 
 ## Purpose
-The main screen: a time-range toolbar, a line chart of the projected total (and per
-account), a month table, and a detail panel breaking a selected month into every booking
+The main screen: a time-range toolbar, a chart (by default the monthly surplus as bars, B-030;
+or the projected balances as lines), a month table, and a detail panel breaking a selected month into every booking
 with its derivation. It also surfaces warnings and a negative-balance alert. If there are no
 accounts yet, it shows a welcome call-to-action.
 
@@ -16,7 +16,9 @@ Stable DOM:
   (FE-FORECAST-018), a `"+ Wiederkehrend"` primary button, a `"+ Einmalig"` button, and a
   `"+ Ist-Stand"` button.
 - `#warn` — warning/negative banners.
-- `#chart` — the SVG chart (`svg.chart`), with clickable month `<rect>`s and a `.legend`.
+- `#chart` — the chart: `.chart-mode` buttons (`button[data-mode=flow]` „Überschuss pro
+  Monat“, `button[data-mode=balance]` „Kontostand“), the SVG (`svg.chart[data-mode]`) with
+  clickable month `<rect>`s carrying a `<title>`, and a `.legend`. Drawn by `forecast_chart.js`.
 - `#ftable` — the month table (`table` with header `"Monat (Monatsende)"`, per-account
   columns when >1 account, `"Gesamt"`, `"Veränderung"`); rows are `tr.clickable`, the
   selected row has class `selected`.
@@ -46,9 +48,9 @@ state `S.from`, `S.months`, `S.sel`.
   (`"Veränderung"`, signed/colored); with more than one account, a column per account.
 - `FE-FORECAST-007` [INFERRED] Clicking a table row (or a chart month rect) selects that
   month: the row gains `selected` and the detail panel updates to that month.
-- `FE-FORECAST-008` [INFERRED] The chart draws a `"Gesamt"` series plus one series per
-  account (when >1), a zero reference line, axis labels in `k €`/`€`, and a `.legend`
-  listing each series name.
+- `FE-FORECAST-008` [INFERRED] In the „Kontostand“ view the chart draws a `"Gesamt"` series
+  plus one series per account (when >1), a zero reference line, axis labels in `k €`/`€`, and
+  a `.legend` listing each series name.
 - `FE-FORECAST-009` [INFERRED] The detail panel (`#fdetail`) for the selected month shows
   `"Einnahmen"`, `"Ausgaben"`, and `"Gesamtstand Monatsende"`, then a card per account.
 - `FE-FORECAST-010` [INFERRED] Each account card lists `"Anfangsstand"`, each item for the
@@ -130,6 +132,40 @@ state `S.from`, `S.months`, `S.sel`.
   with reserve accounts, else the total — with every optional booking counted), shown dashed
   in the legend too, and the month summary ends with `"mit allen optionalen Posten <eur>"`.
   A ticked optional booking's items carry an `"optional"` tag in the month detail.
+
+### Monthly surplus chart and events (B-030)
+- `FE-FORECAST-029` [README] The chart has two views, switched by the `.chart-mode` buttons:
+  „Überschuss pro Monat“ (`flow`, the default) and „Kontostand“ (`balance`, the line chart of
+  FE-FORECAST-008/023/028). The active button has class `active` and `aria-pressed="true"`.
+  The choice is remembered in the browser across reloads; without browser storage the page
+  works and the choice lasts until the next reload.
+- `FE-FORECAST-030` [README] In the flow view each month has one bar (`g.bar[data-month]`)
+  made of the month's booking items on the counted accounts — the non-reserve accounts when
+  there is a reserve account, otherwise all — summed into segments
+  (`rect.seg[data-cls][data-est][data-opt][data-amount]`) by class: `monthly` (recurring
+  every month), `irregular` (recurring less often, e.g. quarterly or yearly) and `once`;
+  with reserve accounts the month's reserve flow is a `reserve` segment of `−to_reserve`.
+  Other transfers are not shown (they cancel out within the counted money). Estimated and
+  optional (switched-in) parts are separate segments, drawn lighter and dashed respectively.
+  Positive segments stack upward from zero, negative ones downward, in the class order above.
+- `FE-FORECAST-031` [README] Each bar has a surplus marker (`line.net[data-amount]`), the sum
+  of its segments. A month's click target has the tooltip
+  `"<Monat>: Überschuss <±eur>"`, `"Einnahmen <eur>, Ausgaben <eur>"` and one `"• <event>"`
+  line per event (FE-FORECAST-032); clicking it selects the month. The legend lists the
+  classes that occur, `"Überschuss des Monats"`, the event marker when there are events, and
+  a note `"heller = geschätzt"` / `"gestrichelt = optional"` when such parts occur. The bars
+  show planned cash flow only: corrections by later checkpoints are not part of them.
+- `FE-FORECAST-032` [README] A month's events, from the bookings the forecast counts (active,
+  on an active account, optional ones only when switched in): a one-time booking
+  (`"<Name>: <±eur> (einmalig)"`, a transfer as `"Umbuchung <eur>"`), a recurring booking
+  starting (`"Neu: <Name> <±eur> <Rhythmus>"`, except in the first shown month) or ending
+  (`"Endet: <Name> (letzte Fälligkeit <Datum>)"`), and an active adjustment taking effect
+  (`"<Name>: ab <Datum> <change>"`, the change labeled as in FE-ENTRIES-016), sorted by date.
+  In the flow view a month with events has a marker (`circle.event-mark[data-month][data-count]`)
+  above its bar.
+- `FE-FORECAST-033` [README] In both views the month detail lists the selected month's events
+  under `"Ereignisse in diesem Monat"` (`.events li.event[data-kind]`, kinds `once`, `start`,
+  `end`, `adjustment`), after the month summary; without events the block is absent.
 
 ## Examples
 - Account with a start checkpoint and a monthly salary → the first month's card shows

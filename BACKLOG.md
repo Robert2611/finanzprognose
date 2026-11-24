@@ -12,19 +12,7 @@ Status values: `open`, `in progress`.
 The forecast page should answer the questions the app is really used for: planning a year with
 its events (holidays, renovations, raises, parental leave ending) and seeing whether the money
 works out. B-028..B-032 came out of one discussion with the user and are meant to be done in
-this order, each as its own small PR (B-028 reserve accounts and B-029 optional bookings are done).
-
-## B-030 Main chart: monthly surplus instead of the cumulative balance
-
-- **Status:** open
-- **Problem:** the balance line is cumulative, so the ~80 % recurring part turns into a
-  straight slope and the interesting events (planned expenses, income changes) are only
-  barely visible bends.
-- **Idea:** one bar per month (income up, expenses down, net marker), split into monthly
-  recurring / irregular recurring (quarterly, yearly) / one-time, estimates lighter, optional
-  items dashed (B-029). Markers for events: one-time bookings, adjustments taking effect, end
-  dates of recurring bookings. The balance line stays available as a toggle. Built on the
-  available money (B-028).
+this order, each as its own small PR (B-028 reserve accounts, B-029 optional bookings and B-030 the monthly surplus chart are done).
 
 ## B-031 „Was ist diesen Monat anders?“
 

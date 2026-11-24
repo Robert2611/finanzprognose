@@ -102,3 +102,13 @@ tr.group-head button.link, .acc-card.group > .head button.link { color: var(--in
 .usage ul { margin: 6px 0 0 18px; padding: 0; }
 .update-log { max-height: 320px; overflow: auto; background: var(--bg); padding: 8px 10px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; }
 #updatePill[hidden] { display: none; }
+
+/* B-030: chart mode buttons, bar chart keys, month events */
+.chart-mode { display: flex; gap: 4px; justify-content: flex-end; margin-bottom: 4px; }
+.chart-mode button.active { background: var(--sel, var(--bg)); color: var(--accent); border-color: var(--accent); }
+.legend span.net-key::before { height: 0; border-radius: 0; background: none; border-top: 3px solid var(--c); width: 14px; vertical-align: 3px; }
+.legend span.event-key::before { border-radius: 50%; }
+.legend span.legend-note::before { display: none; }
+.events { margin: 0 0 12px; }
+.events ul { margin: 4px 0 0; padding-left: 18px; }
+.events li { font-size: 13px; }

@@ -24,6 +24,9 @@ function save() {
 export const optionalEntries = () => S.data.entries.filter(e => e.optional && !e.archived)
   .sort((a, b) => a.start_date.localeCompare(b.start_date) || a.name.localeCompare(b.name, 'de'));
 
+/** Whether an optional booking is switched in (counts in the forecast). */
+export const isIncluded = id => load().has(id);
+
 /** The `include=` query part for the forecast: the switched-in ids that are still active optional bookings. */
 export function includeQuery() {
   const live = new Set(optionalEntries().map(e => e.id));

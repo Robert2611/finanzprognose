@@ -1,10 +1,12 @@
 // ------------------------------------------------------------ Prognose
-import { html, svg, render as renderLit, nothing } from './vendor/lit-html.js';
-import { $, eur, eurCls, signed, approx, ESTIMATE_NOTE, fShort, fMonth, thisMonth, api, KINDS, COLORS, warnMsg, explLine, S } from './core.js';
+import { html, render as renderLit, nothing } from './vendor/lit-html.js';
+import { $, eur, eurCls, signed, approx, ESTIMATE_NOTE, fShort, fMonth, thisMonth, api, KINDS, warnMsg, explLine, S } from './core.js';
 import { entryDialog, recurringDialog, onceDialog } from './entry_dialogs.js';
 import { accountDialog, checkpointDialog } from './accounts.js';
 import { DIMENSIONS, groupItems, getDimension, isOpen, toggleGroup, dimensionSelect } from './grouping.js';
 import { optionalPanelTpl, includeQuery } from './optional.js';
+import { chartTpl, hasReserve, mainClosing, mainOpening, mainLabel, withOptional } from './forecast_chart.js';
+import { eventsByMonth } from './events.js';
 
 export async function renderForecast(main) {
   if (!S.data.accounts.length) {
@@ -31,49 +33,10 @@ export async function renderForecast(main) {
   drawDetail(fc);
 }
 
-// B-028: with reserve accounts, the page is about the available money (all other accounts);
-// without any, that is simply the total, and the page looks as before.
-const hasReserve = fc => fc.accounts.some(a => a.reserve);
-/** The month-end amount the page is about: the available money, or the total without reserve accounts. */
-const mainClosing = (fc, m) => hasReserve(fc) ? m.available_closing : m.closing;
-const mainOpening = (fc, m) => hasReserve(fc) ? m.available_opening : m.opening;
-const mainLabel = fc => hasReserve(fc) ? 'Verfügbar' : 'Gesamt';
-/** B-029: the main month-end amount with every optional booking counted. */
-const withOptional = (fc, m) => hasReserve(fc) ? m.with_optional.available_closing : m.with_optional.closing;
 const optTag = it => it.optional ? html`<span class="tag optional">optional</span>` : nothing;
 const reserveTag = a => a.reserve ? html`<span class="tag reserve" title="nicht zum Verplanen">Rücklage</span>` : nothing;
 
-function chartTpl(fc) {
-  const W = 1000, H = 250, L = 70, R = 10, T = 10, B = 26;
-  const series = [{ name: mainLabel(fc), color: 'var(--ink)', vals: fc.months.map(m => mainClosing(fc, m)), w: 2.5 }];
-  // B-029: what the main line would be with every optional booking, dashed
-  if (fc.months.some(m => m.with_optional)) series.push({ name: 'mit optionalen Posten', color: 'var(--ink)', dash: '6 4', w: 1.5,
-    vals: fc.months.map(m => m.with_optional ? (hasReserve(fc) ? m.with_optional.available_closing : m.with_optional.closing) : mainClosing(fc, m)) });
-  if (fc.accounts.length > 1) fc.accounts.forEach((a, i) => series.push({ name: a.name, color: COLORS[i % COLORS.length], vals: fc.months.map(m => m.accounts[a.id]?.closing ?? null), w: 1.5 }));
-  const all = series.flatMap(s => s.vals).filter(v => v != null).concat([0]);
-  let min = Math.min(...all), max = Math.max(...all); if (min === max) max = min + 100;
-  const pad = (max - min) * .08; min -= pad; max += pad;
-  const n = fc.months.length, x = i => L + (n === 1 ? 0 : i * (W - L - R) / (n - 1)), y = v => T + (max - v) * (H - T - B) / (max - min);
-  const gridLevels = [0, 1, 2, 3, 4].map(k => min + (max - min) * k / 4);
-  const step = Math.ceil(n / 12);
-  const si = fc.months.findIndex(m => m.month === S.sel);
-  const cw = (W - L - R) / Math.max(n - 1, 1);
-  const pathD = s => { let d = '', pen = false; s.vals.forEach((v, i) => { if (v == null) { pen = false; return; } d += `${pen ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`; pen = true; }); return d; };
-  // Nested sub-templates that produce bare SVG elements (no <svg> wrapper of their own) must
-  // use the svg tag, not html - otherwise the HTML parser creates them in the wrong namespace
-  // and the browser silently fails to render them.
-  return html`<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
-      ${gridLevels.map(v => svg`<line x1=${L} x2=${W - R} y1=${y(v)} y2=${y(v)} stroke="var(--line)"></line><text x=${L - 6} y=${y(v) + 4} text-anchor="end">${Math.round(v / 100).toLocaleString('de-DE')} €</text>`)}
-      <line x1=${L} x2=${W - R} y1=${y(0)} y2=${y(0)} stroke="var(--neg)" stroke-dasharray="4 3" opacity=".6"></line>
-      ${fc.months.map((m, i) => i % step === 0 ? svg`<text x=${x(i)} y=${H - 6} text-anchor="middle">${fMonth(m.month)}</text>` : nothing)}
-      ${si >= 0 ? svg`<line x1=${x(si)} x2=${x(si)} y1=${T} y2=${H - B} stroke="var(--accent)" opacity=".5"></line>` : nothing}
-      ${series.slice().reverse().map(s => svg`<path d=${pathD(s)} fill="none" stroke=${s.color} stroke-width=${s.w} stroke-dasharray=${s.dash ?? nothing} vector-effect="non-scaling-stroke"></path>`)}
-      ${fc.months.map((m, i) => svg`<rect x=${x(i) - cw / 2} y=${T} width=${cw} height=${H - T - B} fill="transparent" style="cursor:pointer" @click=${() => selectMonth(m.month)}><title>${fMonth(m.month)}: ${eur(mainClosing(fc, m))}</title></rect>`)}
-    </svg>
-    <div class="legend">${series.map(s => html`<span class=${s.dash ? 'dashed' : ''} style="--c:${s.color}">${s.name}</span>`)}</div>`;
-}
-
-function drawChart(fc) { renderLit(chartTpl(fc), $('#chart')); }
+function drawChart(fc) { renderLit(chartTpl(fc, selectMonth, () => drawChart(S.fc)), $('#chart')); }
 
 function selectMonth(m) { S.sel = m; drawChart(S.fc); drawTable(S.fc); drawDetail(S.fc); }
 
@@ -116,6 +79,13 @@ function estimatedTotals(m) {
   return t;
 }
 
+/** B-030: the month's events (one-time bookings, adjustments, recurring bookings starting or ending). */
+function eventsTpl(fc, m) {
+  const list = eventsByMonth(fc).get(m.month);
+  if (!list) return nothing;
+  return html`<div class="events"><b class="small">Ereignisse in diesem Monat</b><ul>${list.map(ev => html`<li class="event" data-kind=${ev.kind}>${ev.text}</li>`)}</ul></div>`;
+}
+
 function detailTpl(fc) {
   const m = fc.months.find(x => x.month === S.sel); if (!m) return html``;
   const est = estimatedTotals(m);
@@ -128,6 +98,7 @@ function detailTpl(fc) {
         <span class="muted">Gesamtstand Monatsende</span><span class="${eurCls(m.closing)}">${eur(m.closing)}</span>`
       : html`<span class="muted">Gesamtstand Monatsende</span><b class="${eurCls(m.closing)}">${eur(m.closing)}</b>`}
       ${m.with_optional ? html`<span class="muted">mit allen optionalen Posten</span><span class="with-optional ${eurCls(withOptional(fc, m))}">${eur(withOptional(fc, m))}</span>` : nothing}</div>
+    ${eventsTpl(fc, m)}
     ${getDimension('prognose') !== 'none' ? groupedTpl(fc, m) : fc.accounts.map(a => {
       const am = m.accounts[a.id]; if (!am) return nothing;
       return html`<div class="acc-card"><div class="head"><span>${a.name}${reserveTag(a)}</span><span class="muted small">${KINDS[a.kind] || ''}</span></div>
