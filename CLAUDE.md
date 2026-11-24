@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - `main` is protected: never commit to it or push to it directly. Do all work on a feature branch, push that branch, and open a pull request into `main`.
 - Never revert any commits.
-- Open work items are tracked in `BACKLOG.md`. When you finish one, update its status there.
+- Open work items are tracked in `BACKLOG.md`. When you finish one, add its resolution and move it to the end of `docs/backlog-done.md` (IDs are stable and never reused; take new ones from the "Next free ID" line). References like "B-020" point to an item in one of the two files.
 - Prefer several smaller files with a well-defined scope over one big file that combines everything. When a file grows unrelated responsibilities, split it rather than adding to the pile.
 - Run `python -m pytest -q` before committing, and don't commit if it fails.
 

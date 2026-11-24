@@ -1,4 +1,4 @@
-"""Schema definition and the migration runner (see BACKLOG.md B-002).
+"""Schema definition and the migration runner (see docs/backlog-done.md B-002).
 
 Core data-safety principles enforced here:
   * NOTHING is ever deleted. Records are only archived (archived=1).

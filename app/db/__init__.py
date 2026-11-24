@@ -1,6 +1,6 @@
 """Data layer. Every write goes through this package.
 
-Split into focused modules (see BACKLOG.md B-009):
+Split into focused modules (see docs/backlog-done.md B-009):
   * connection.py -- connect/tx/read, the single-writer lock
   * schema.py     -- table/trigger DDL and the migration runner
   * errors.py     -- ApiError/NotFound/Conflict
