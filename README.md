@@ -30,6 +30,10 @@ Bei Ist-Ständen siehst du den prognostizierten Wert, den tatsächlichen Wert un
 
 Nicht jede Ausgabe ist eine feste Abbuchung. Für Lebensmittel, Tanken oder Freizeit trägst du einfach einen Schätzwert als wiederkehrende Buchung ein (z. B. „ca. 450 € im Monat“) und stellst bei **Art** auf **Geschätzt**. Solche Beträge werden mit „≈“ angezeigt, und die Monatsansicht zeigt, wie viel der Einnahmen und Ausgaben geschätzt ist. Einzelne Einkäufe musst du nicht erfassen: Der nächste Ist-Stand gleicht die Schätzung mit der Wirklichkeit ab und zeigt die Abweichung. Unter „Gruppieren nach → Art“ siehst du feste und geschätzte Buchungen getrennt.
 
+### Optionale Buchungen: noch nicht entschieden
+
+Ein zweiter Urlaub, eine Renovierung, ein neues Abo – manches ist geplant, aber noch nicht beschlossen. Stelle solche Buchungen im Formular bei **Planung** auf **Optional – noch nicht entschieden**. Sie zählen dann zunächst nicht in der Prognose. Stattdessen erscheint auf der Prognose-Seite der Bereich **Optionale Posten** mit einem Haken pro Buchung: Was du anhakst, zählt mit, alles andere nicht. Eine gestrichelte Linie im Diagramm und die Zeile „mit allen optionalen Posten“ in der Monatsansicht zeigen jederzeit, wie es mit allen aussähe. Welche Haken gesetzt sind, merkt sich nur dein Browser; an den Daten ändert sich dadurch nichts.
+
 ### Rücklagen: Geld, das nicht verplant wird
 
 Ein Notgroschen oder eine Reserve für Unvorhergesehenes soll nicht in die Planung einfließen. Setze beim Konto den Haken **Rücklage – nicht zum Verplanen**. Sobald es mindestens ein solches Konto gibt, zeigt die Prognose als Hauptwert das **verfügbare Geld** (alle anderen Konten): Diagramm-Hauptlinie und fette Tabellenspalte heißen „Verfügbar“, der Gesamtstand steht daneben. In der Monatsansicht steht, wie viel in die Rücklage gelegt („In Rücklage gelegt“) oder daraus entnommen wurde („Aus Rücklage entnommen“), und die Warnung vor einem negativen Stand bezieht sich auf das verfügbare Geld. Ohne Rücklage-Konten bleibt alles wie gewohnt.

@@ -9,6 +9,7 @@ function fmtVal(k, v) {
   if (k === 'entry_id') return S.data.entries.find(e => e.id === v)?.name ?? `#${v}`;
   if (k.endsWith('date')) return fDate(v);
   if (k === 'estimated') return v ? 'geschätzt' : 'fest';
+  if (k === 'optional') return v ? 'optional' : 'eingeplant';
   if (k === 'repeat_yearly' || k === 'archived' || k === 'reserve') return v ? 'ja' : 'nein';
   if (k === 'interval_months') return rhythm(v);
   if (k === 'mode') return v === 'set' ? 'fester Betrag' : 'Prozent';

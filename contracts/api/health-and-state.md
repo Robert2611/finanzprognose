@@ -55,6 +55,8 @@ Read-only. Reads all four data tables and the audit max-id (`data_version`).
   `false` for a fixed amount, `true` for an estimate (B-015).
 - `API-STATE-011` [README] `AccountOut.reserve` is a real boolean (not the stored `0/1`):
   `false` for available money, `true` for a reserve account (B-028).
+- `API-STATE-012` [README] `EntryOut.optional` is a real boolean (not the stored `0/1`):
+  `false` for a planned booking, `true` for an optional one (B-029).
 
 ## Examples
 - Fresh DB → `{"accounts":[],"entries":[],"adjustments":[],"checkpoints":[],"data_version":0}`.

@@ -10,10 +10,10 @@ import { entryType, TYPE_LABEL, dimensionSelect, groupedRows } from './grouping.
 /** "Gruppieren nach" options of this view: a rhythm makes no sense for one-time bookings. */
 const DIMS = ['none', 'category', 'type', 'account', 'estimated'];
 
-/** Total of a group's active one-time bookings; transfers shown separately.
+/** Total of a group's active planned one-time bookings (optional ones left out, B-029); transfers shown separately.
  *  A sum that contains an estimated booking is marked "≈" itself. */
 function groupSumTpl(entries) {
-  const active = entries.filter(e => !e.archived);
+  const active = entries.filter(e => !e.archived && !e.optional);
   const sum = list => list.reduce((t, e) => t + e.amount, 0);
   const est = list => approx(list.some(e => e.estimated));
   const bookings = active.filter(e => entryType(e) !== 'transfer'), transfers = active.filter(e => entryType(e) === 'transfer');
@@ -29,7 +29,7 @@ export async function renderOnce(main) {
   const rerender = () => renderOnce(main);
   const rowTpl = e => html`<tr class="${e.archived ? 'archived' : ''}">
       <td>${fDate(e.start_date)}</td>
-      <td><b>${e.name}</b>${e.category ? html`<span class="tag">${e.category}</span>` : ''}${e.note ? html`<div class="small muted">${e.note}</div>` : ''}</td>
+      <td><b>${e.name}</b>${e.optional ? html`<span class="tag optional">optional</span>` : ''}${e.category ? html`<span class="tag">${e.category}</span>` : ''}${e.note ? html`<div class="small muted">${e.note}</div>` : ''}</td>
       <td>${TYPE_LABEL[entryType(e)]}</td>
       <td>${accName(e.account_id)}${e.to_account_id ? html` → ${accName(e.to_account_id)}` : ''}</td>
       <td class="num">${approx(e.estimated)}${entryType(e) === 'transfer' ? eur(e.amount) : signed(e.amount)}</td>

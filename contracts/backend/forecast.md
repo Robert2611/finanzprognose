@@ -38,6 +38,7 @@ Import: `from app import forecast`. Pure functions, no I/O.
       "available_opening": <int cents, sum over non-reserve accounts>,   // B-028
       "available_closing": <int cents, sum over non-reserve accounts>,
       "to_reserve": <int cents, net transfers from available into reserve accounts>,
+      "with_optional": null | {"closing", "available_closing"},          // B-029
       "accounts": { "<account_id>": {
           "opening": <int|null>, "closing": <int|null>,
           "items": [ <item>, ... ]
@@ -48,8 +49,8 @@ Import: `from app import forecast`. Pure functions, no I/O.
 }
 ```
 **Item shapes (inside `accounts.<id>.items`):**
-- booking: `{type:'booking', entry_id, date, category, estimated, label, amount, balance, explanation}`
-- transfer: `{type:'transfer', entry_id, date, category, estimated, label, amount, balance, explanation}`
+- booking: `{type:'booking', entry_id, date, category, estimated, optional, label, amount, balance, explanation}`
+- transfer: `{type:'transfer', entry_id, date, category, estimated, optional, label, amount, balance, explanation}`
 - checkpoint: `{type:'checkpoint', checkpoint_id, date, balance, note[, expected, deviation]}`
 
 **Explanation step shapes (list on each booking/transfer item):**
@@ -156,7 +157,7 @@ None. Pure computation over the passed `state`. Does not read the DB or the cloc
 
 ### Item invariants
 - `FC-031` [INFERRED] Every booking/transfer item carries its `entry_id`, ISO `date`,
-  `category`, `estimated`, a `label`, the signed `amount`, the running `balance` after it, and a
+  `category`, `estimated`, `optional`, a `label`, the signed `amount`, the running `balance` after it, and a
   non-empty `explanation` list.
 - `FC-032` [INFERRED] Within an account, items are ordered by `(date, kind-order, id)` with
   bookings before checkpoints on the same day (per `FC-007`), and each item's `balance`
@@ -178,6 +179,16 @@ None. Pure computation over the passed `state`. Does not read the DB or the cloc
   available (or two reserve) accounts and bookings on a reserve account are not counted. An
   archived account is not a reserve account, so a transfer into an archived reserve is not
   counted either (the money just leaves, `FC-028`).
+
+### Optional entries (B-029)
+- `FC-036` [README] `compute(state, start, months, include=())`: an entry with `optional`
+  truthy is left out entirely (no items, no warnings, no effect on any number) unless its id
+  is in `include`; then it is computed like any other entry. Ids in `include` that are not
+  optional entries are ignored. Every booking/transfer item carries `optional: bool` from its
+  entry (missing → `false`).
+- `FC-037` [README] When at least one non-archived optional entry is left out, every month
+  carries `with_optional: {closing, available_closing}` — those two totals as they would be
+  with every non-archived optional entry counted. Otherwise `with_optional` is `null`.
 
 ## Examples
 - `amount_at({'amount':-100000,'start_date':'2026-01-01'}, [{'effective_date':'2026-01-01',

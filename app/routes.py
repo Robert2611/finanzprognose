@@ -116,11 +116,12 @@ def revert(audit_id: int, s: Settings = Depends(get_settings)):
 
 @router.get("/api/forecast")
 def get_forecast(start: Optional[str] = Query(None, pattern=r"^\d{4}-(0[1-9]|1[0-2])$"), months: int = Query(24, ge=1, le=240),
-                 s: Settings = Depends(get_settings)):
+                 include: list[int] = Query([]), s: Settings = Depends(get_settings)):
+    """`include` (repeatable) lists the optional entries to count in the main numbers (B-029)."""
     start = start or date.today().strftime("%Y-%m")
     with db.read(s.db_path) as conn:
         state = {t: db.all_rows(conn, t) for t in db.TABLES}
-    return forecast.compute(state, start, months)
+    return forecast.compute(state, start, months, include)
 
 
 @router.get("/api/backup/status", response_model=BackupStatusOut)

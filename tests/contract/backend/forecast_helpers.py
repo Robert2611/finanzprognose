@@ -10,11 +10,12 @@ def account(id, name=None, kind="checking", archived=0, reserve=0):
 
 
 def entry(id, account_id, amount, start_date, name=None, kind="recurring", interval_months=1, end_date=None,
-          to_account_id=None, category="", archived=0, estimated=None):
+          to_account_id=None, category="", archived=0, estimated=None, optional=None):
     return {"id": id, "account_id": account_id, "to_account_id": to_account_id, "name": name or f"E{id}",
             "category": category, "kind": kind, "amount": amount, "start_date": start_date, "end_date": end_date,
             "interval_months": interval_months, "note": "", "archived": archived, "created_at": T, "updated_at": T,
-            **({} if estimated is None else {"estimated": estimated})}
+            **({} if estimated is None else {"estimated": estimated}),
+            **({} if optional is None else {"optional": optional})}
 
 
 def adjustment(id, entry_id, effective_date, mode="set", amount=None, percent=None, repeat_yearly=0, note="", archived=0):

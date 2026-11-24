@@ -93,7 +93,8 @@ def test_new_dialog_fields_and_defaults(world, app_page):
     dlg = new_entry(page)
     expect(dlg.locator("h3")).to_have_text("Neue einmalige Buchung")
     labels = [norm(t).removesuffix(" *") for t in dlg.locator("label.field > span").all_inner_texts()]
-    assert labels == ["Bezeichnung", "Typ", "Konto", "Betrag (positiv eingeben)", "Art", "Datum", "Kategorie (optional)", "Notiz (optional)"]
+    assert labels == ["Bezeichnung", "Typ", "Konto", "Betrag (positiv eingeben)", "Art", "Datum", "Planung",
+                      "Kategorie (optional)", "Notiz (optional)"]
     sel = lambda label: field(dlg, label).locator("select").evaluate("s => s.options[s.selectedIndex].text")
     assert sel("Typ") == "Ausgabe" and sel("Konto") == "Giro"
     expect(field(dlg, "Datum").locator("input")).to_have_value("2026-01-20")

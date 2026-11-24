@@ -12,6 +12,7 @@ function categorySuggestions() {
 }
 
 const TYPE_OPTIONS = [{ value: 'income', label: 'Einnahme' }, { value: 'expense', label: 'Ausgabe' }, { value: 'transfer', label: 'Umbuchung zwischen Konten' }];
+const OPTIONAL_HINT = 'Optionale Buchungen zählen in der Prognose erst, wenn du sie dort unter „Optionale Posten“ einschaltest.';
 const ESTIMATED_HINT = 'Geschätzte Beträge werden mit „≈“ angezeigt. Die Abweichung zur Wirklichkeit zeigt der nächste Ist-Stand.';
 
 /** The dialog for `kind` ('recurring' or 'once'); `e` is the booking to edit, or null for a new one. */
@@ -23,6 +24,7 @@ async function bookingDialog(kind, e) {
   const values = e ? { ...e, type: entryType(e), amount: toInput(Math.abs(e.amount)), to_account_id: e.to_account_id ?? '', end_date: e.end_date ?? '' }
     : { type: 'expense', interval_months: 1, start_date: today(), account_id: accs[0].id };
   values.estimated = e?.estimated ? '1' : '0';
+  values.optional = e?.optional ? '1' : '0';
   const noun = recurring ? 'wiederkehrende Buchung' : 'einmalige Buchung';
   const ok = await formDialog({
     title: e ? `Buchung „${e.name}“ bearbeiten` : `Neue ${noun}`, values,
@@ -43,6 +45,8 @@ async function bookingDialog(kind, e) {
       ] : [
         { name: 'start_date', label: 'Datum', type: 'date', required: true },
       ]),
+      { name: 'optional', label: 'Planung', type: 'select', hint: OPTIONAL_HINT,
+        options: [{ value: '0', label: 'Eingeplant' }, { value: '1', label: 'Optional – noch nicht entschieden' }] },
       { name: 'category', label: 'Kategorie (optional)', type: 'text', suggestions: categorySuggestions() },
       { name: 'note', label: 'Notiz (optional)', type: 'textarea' },
     ],
@@ -52,7 +56,7 @@ async function bookingDialog(kind, e) {
         name: v.name, account_id: +v.account_id, to_account_id: v.type === 'transfer' ? +v.to_account_id : null,
         amount: v.type === 'expense' ? -abs : abs, kind, interval_months: recurring ? +(v.interval_months || 1) : 1,
         start_date: v.start_date, end_date: recurring ? v.end_date || null : null, category: v.category || '', note: v.note || '',
-        estimated: v.estimated === '1',
+        estimated: v.estimated === '1', optional: v.optional === '1',
       };
       return e ? api('PUT', `/api/entries/${e.id}`, { ...body, expected_updated_at: e.updated_at }) : api('POST', '/api/entries', body);
     },

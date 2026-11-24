@@ -50,7 +50,7 @@ export const FIELD = {
   name: 'Name', kind: 'Art', note: 'Notiz', account_id: 'Konto', to_account_id: 'Zielkonto', category: 'Kategorie',
   amount: 'Betrag', start_date: 'Start', end_date: 'Ende', interval_months: 'Rhythmus (Monate)', entry_id: 'Buchung',
   effective_date: 'Gültig ab', mode: 'Art', percent: 'Prozent', repeat_yearly: 'Jährlich wiederholen', date: 'Datum',
-  balance: 'Kontostand', archived: 'Archiviert', estimated: 'Fest/geschätzt', reserve: 'Rücklage',
+  balance: 'Kontostand', archived: 'Archiviert', estimated: 'Fest/geschätzt', reserve: 'Rücklage', optional: 'Planung',
 };
 export const COLORS = ['#2f6fdb', '#1a9e77', '#d9822b', '#8e5bd9', '#c94f6d', '#2aa1b3', '#7a8b2b'];
 

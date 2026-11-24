@@ -13,6 +13,8 @@ around `forecast.compute` (see `FC` for the full computation contract).
   - `start` optional, must match `^\d{4}-\d{2}$`; defaults to the current month
     (`date.today()` in `YYYY-MM`).
   - `months` optional int, `1 ≤ months ≤ 240`, default `24`.
+  - `include` optional, repeatable int (`&include=3&include=7`): the optional entries to count
+    in the main numbers (B-029, `FC-036`).
 
 ## Dependencies & side effects
 Read-only. Loads all four tables and runs `forecast.compute`. No clock dependency when
@@ -39,6 +41,9 @@ Read-only. Loads all four tables and runs `forecast.compute`. No clock dependenc
   OPEN_QUESTIONS #8).
 - `API-FC-008` [INFERRED] With no accounts, the result has an empty `accounts` list, empty
   `warnings`, and `months` whose portfolio `opening`/`closing` are 0.
+- `API-FC-009` [README] Optional entries are left out of the result unless their id is given
+  as an `include` parameter (repeatable); `with_optional` then compares (`FC-036/037`). A
+  non-integer `include` is a `422 validation_error`.
 
 ## Examples
 - `GET /api/forecast?start=2026-02&months=1` after adding a checkpoint on 2026-02-20 →

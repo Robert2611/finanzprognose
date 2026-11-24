@@ -4,6 +4,7 @@ import { $, eur, eurCls, signed, approx, ESTIMATE_NOTE, fShort, fMonth, thisMont
 import { entryDialog, recurringDialog, onceDialog } from './entry_dialogs.js';
 import { accountDialog, checkpointDialog } from './accounts.js';
 import { DIMENSIONS, groupItems, getDimension, isOpen, toggleGroup, dimensionSelect } from './grouping.js';
+import { optionalPanelTpl, includeQuery } from './optional.js';
 
 export async function renderForecast(main) {
   if (!S.data.accounts.length) {
@@ -16,9 +17,9 @@ export async function renderForecast(main) {
       <button @click=${() => { S.from = thisMonth(); S.sel = null; renderForecast(main); }}>Heute</button>
       ${dimensionSelect('prognose', () => S.fc && drawDetail(S.fc))}<span class="spacer"></span>
       <button class="primary" @click=${() => recurringDialog()}>+ Wiederkehrend</button><button @click=${() => onceDialog()}>+ Einmalig</button><button @click=${() => checkpointDialog()}>+ Ist-Stand</button></div>
-    <div id="warn"></div><div class="panel" style="margin-bottom:16px"><div id="chart"></div></div>
+    <div id="warn"></div>${optionalPanelTpl(() => renderForecast(main))}<div class="panel" style="margin-bottom:16px"><div id="chart"></div></div>
     <div class="fc-layout"><div class="panel table-wrap" id="ftable"></div><div class="panel detail" id="fdetail"></div></div>`, main);
-  const fc = S.fc = await api('GET', `/api/forecast?start=${S.from}&months=${S.months}`);
+  const fc = S.fc = await api('GET', `/api/forecast?start=${S.from}&months=${S.months}${includeQuery()}`);
   if (S.view !== 'prognose') return; // navigated away while loading: #chart etc. are gone, don't clobber the new view
   if (!S.sel || !fc.months.some(m => m.month === S.sel)) S.sel = fc.months[0].month;
   const neg = fc.months.find(m => mainClosing(fc, m) < 0);
@@ -37,11 +38,17 @@ const hasReserve = fc => fc.accounts.some(a => a.reserve);
 const mainClosing = (fc, m) => hasReserve(fc) ? m.available_closing : m.closing;
 const mainOpening = (fc, m) => hasReserve(fc) ? m.available_opening : m.opening;
 const mainLabel = fc => hasReserve(fc) ? 'Verfügbar' : 'Gesamt';
+/** B-029: the main month-end amount with every optional booking counted. */
+const withOptional = (fc, m) => hasReserve(fc) ? m.with_optional.available_closing : m.with_optional.closing;
+const optTag = it => it.optional ? html`<span class="tag optional">optional</span>` : nothing;
 const reserveTag = a => a.reserve ? html`<span class="tag reserve" title="nicht zum Verplanen">Rücklage</span>` : nothing;
 
 function chartTpl(fc) {
   const W = 1000, H = 250, L = 70, R = 10, T = 10, B = 26;
   const series = [{ name: mainLabel(fc), color: 'var(--ink)', vals: fc.months.map(m => mainClosing(fc, m)), w: 2.5 }];
+  // B-029: what the main line would be with every optional booking, dashed
+  if (fc.months.some(m => m.with_optional)) series.push({ name: 'mit optionalen Posten', color: 'var(--ink)', dash: '6 4', w: 1.5,
+    vals: fc.months.map(m => m.with_optional ? (hasReserve(fc) ? m.with_optional.available_closing : m.with_optional.closing) : mainClosing(fc, m)) });
   if (fc.accounts.length > 1) fc.accounts.forEach((a, i) => series.push({ name: a.name, color: COLORS[i % COLORS.length], vals: fc.months.map(m => m.accounts[a.id]?.closing ?? null), w: 1.5 }));
   const all = series.flatMap(s => s.vals).filter(v => v != null).concat([0]);
   let min = Math.min(...all), max = Math.max(...all); if (min === max) max = min + 100;
@@ -60,10 +67,10 @@ function chartTpl(fc) {
       <line x1=${L} x2=${W - R} y1=${y(0)} y2=${y(0)} stroke="var(--neg)" stroke-dasharray="4 3" opacity=".6"></line>
       ${fc.months.map((m, i) => i % step === 0 ? svg`<text x=${x(i)} y=${H - 6} text-anchor="middle">${fMonth(m.month)}</text>` : nothing)}
       ${si >= 0 ? svg`<line x1=${x(si)} x2=${x(si)} y1=${T} y2=${H - B} stroke="var(--accent)" opacity=".5"></line>` : nothing}
-      ${series.slice().reverse().map(s => svg`<path d=${pathD(s)} fill="none" stroke=${s.color} stroke-width=${s.w} vector-effect="non-scaling-stroke"></path>`)}
+      ${series.slice().reverse().map(s => svg`<path d=${pathD(s)} fill="none" stroke=${s.color} stroke-width=${s.w} stroke-dasharray=${s.dash ?? nothing} vector-effect="non-scaling-stroke"></path>`)}
       ${fc.months.map((m, i) => svg`<rect x=${x(i) - cw / 2} y=${T} width=${cw} height=${H - T - B} fill="transparent" style="cursor:pointer" @click=${() => selectMonth(m.month)}><title>${fMonth(m.month)}: ${eur(mainClosing(fc, m))}</title></rect>`)}
     </svg>
-    <div class="legend">${series.map(s => html`<span style="--c:${s.color}">${s.name}</span>`)}</div>`;
+    <div class="legend">${series.map(s => html`<span class=${s.dash ? 'dashed' : ''} style="--c:${s.color}">${s.name}</span>`)}</div>`;
 }
 
 function drawChart(fc) { renderLit(chartTpl(fc), $('#chart')); }
@@ -93,7 +100,7 @@ function itemTpl(it) {
           : html`<div class="expl"><div>Ausgangspunkt der Berechnung für dieses Konto</div></div>`}
       </div>`;
   }
-  return html`<div class="row"><span>${fShort(it.date)}</span><span><button class="link" title="Buchung bearbeiten" @click=${() => entryDialog(S.data.entries.find(e => e.id === it.entry_id))}>${it.label}</button>${it.category ? html`<span class="tag">${it.category}</span>` : ''}</span><span class="num">${approx(it.estimated)}${signed(it.amount)}</span>
+  return html`<div class="row"><span>${fShort(it.date)}</span><span><button class="link" title="Buchung bearbeiten" @click=${() => entryDialog(S.data.entries.find(e => e.id === it.entry_id))}>${it.label}</button>${it.category ? html`<span class="tag">${it.category}</span>` : ''}${optTag(it)}</span><span class="num">${approx(it.estimated)}${signed(it.amount)}</span>
       <div class="expl">${explTpl(it)}<div>Kontostand danach: ${eur(it.balance)}</div></div></div>`;
 }
 
@@ -119,7 +126,8 @@ function detailTpl(fc) {
       ${hasReserve(fc) ? html`${m.to_reserve ? html`<span class="muted">${m.to_reserve > 0 ? 'In Rücklage gelegt' : 'Aus Rücklage entnommen'}</span><span class="num to-reserve" style="text-align:left">${eur(Math.abs(m.to_reserve))}</span>` : nothing}
         <span class="muted">Verfügbar Monatsende</span><b class="${eurCls(m.available_closing)}">${eur(m.available_closing)}</b>
         <span class="muted">Gesamtstand Monatsende</span><span class="${eurCls(m.closing)}">${eur(m.closing)}</span>`
-      : html`<span class="muted">Gesamtstand Monatsende</span><b class="${eurCls(m.closing)}">${eur(m.closing)}</b>`}</div>
+      : html`<span class="muted">Gesamtstand Monatsende</span><b class="${eurCls(m.closing)}">${eur(m.closing)}</b>`}
+      ${m.with_optional ? html`<span class="muted">mit allen optionalen Posten</span><span class="with-optional ${eurCls(withOptional(fc, m))}">${eur(withOptional(fc, m))}</span>` : nothing}</div>
     ${getDimension('prognose') !== 'none' ? groupedTpl(fc, m) : fc.accounts.map(a => {
       const am = m.accounts[a.id]; if (!am) return nothing;
       return html`<div class="acc-card"><div class="head"><span>${a.name}${reserveTag(a)}</span><span class="muted small">${KINDS[a.kind] || ''}</span></div>
@@ -151,7 +159,7 @@ function groupedTpl(fc, m) {
     return html`<div class="acc-card group"><div class="head"><button class="link" aria-expanded=${open} @click=${toggle}>${open ? '▾' : '▸'} ${g.label}</button>
         <span class="num">${bookings.length ? html`<span class="group-sum">${est(bookings)}${signed(sum)}</span>` : ''}${transfers.length
           ? html` <span class="muted small">Umbuchungen</span> <span class="group-transfers">${est(transfers)}${eur(transfers.reduce((t, it) => t + Math.abs(it.amount), 0))}</span>` : ''}</span></div>
-      ${open ? g.items.map(it => html`<div class="row"><span>${fShort(it.date)}</span><span><button class="link" title="Buchung bearbeiten" @click=${() => entryDialog(entryOf(it))}>${it.label}</button>${multi && dim !== 'account' ? html`<span class="tag">${fc.accounts.find(a => a.id === it.accountId)?.name}</span>` : ''}</span><span class="num">${approx(it.estimated)}${signed(it.amount)}</span>
+      ${open ? g.items.map(it => html`<div class="row"><span>${fShort(it.date)}</span><span><button class="link" title="Buchung bearbeiten" @click=${() => entryDialog(entryOf(it))}>${it.label}</button>${optTag(it)}${multi && dim !== 'account' ? html`<span class="tag">${fc.accounts.find(a => a.id === it.accountId)?.name}</span>` : ''}</span><span class="num">${approx(it.estimated)}${signed(it.amount)}</span>
           <div class="expl">${explTpl(it)}</div></div>`) : ''}</div>`;
   });
 }

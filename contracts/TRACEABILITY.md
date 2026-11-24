@@ -34,6 +34,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | DATA-015 | R | — |
 | DATA-016 | R | — |
 | DATA-017 | R | — |
+| DATA-018 | R | — |
 
 ## Backend
 | Clause | Tag | Covered by |
@@ -60,6 +61,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | DB-SCHEMA-011 | I | — |
 | DB-SCHEMA-012 | R | — |
 | DB-SCHEMA-013 | R | — |
+| DB-SCHEMA-014 | R | — |
 | DB-CRUD-001 | I | — |
 | DB-CRUD-002 | I | — |
 | DB-CRUD-003 | I | flow |
@@ -131,6 +133,8 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | FC-033 | R | — |
 | FC-034 | R | — |
 | FC-035 | R | — |
+| FC-036 | R | — |
+| FC-037 | R | — |
 | SCH-001 | I | — |
 | SCH-002 | I | — |
 | SCH-003 | I | — |
@@ -151,6 +155,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | SCH-018 | I | — |
 | SCH-019 | R | — |
 | SCH-020 | R | — |
+| SCH-021 | R | — |
 | AUTH-001 | R | — |
 | AUTH-002 | R | (all tests run with auth off) |
 | AUTH-003 | I | — |
@@ -195,6 +200,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | API-STATE-009 | I | — |
 | API-STATE-010 | R | — |
 | API-STATE-011 | R | — |
+| API-STATE-012 | R | — |
 | API-ACC-001 | T | flow, state |
 | API-ACC-002 | I | — |
 | API-ACC-003 | R | — |
@@ -226,6 +232,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | API-RES-019 | R | nodel (DB-level) |
 | API-RES-020 | R | — |
 | API-RES-021 | R | — |
+| API-RES-022 | R | — |
 | API-AUDIT-001 | T | lock |
 | API-AUDIT-002 | T | audit |
 | API-AUDIT-003 | T | lock |
@@ -245,6 +252,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | API-FC-006 | I | — |
 | API-FC-007 | R | — |
 | API-FC-008 | I | — |
+| API-FC-009 | R | — |
 | API-BKP-001 | T | bstat |
 | API-BKP-002 | I | — |
 | API-BKP-003 | I | — |
@@ -328,6 +336,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | FE-FORECAST-018..020 | R | — |
 | FE-FORECAST-021..022 | R | — |
 | FE-FORECAST-023..025 | R | — |
+| FE-FORECAST-026..028 | R | — |
 | FE-ENTRIES-001..015 | I | — |
 | FE-ENTRIES-016 | R | — |
 | FE-ENTRIES-017..019 | I | — |
@@ -335,6 +344,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | FE-ENTRIES-021..025 | R | — |
 | FE-ENTRIES-026..027 | R | — |
 | FE-ENTRIES-028 | R | — |
+| FE-ENTRIES-029 | R | — |
 | FE-ONCE-001..008 | R | — |
 | FE-ACCOUNTS-001..003 | I | — |
 | FE-ACCOUNTS-004 | R/I | — |
@@ -346,6 +356,7 @@ Existing test keys: `flow`=test_full_flow, `lock`=test_optimistic_locking_and_au
 | FE-AUDIT-011 | R | — |
 | FE-AUDIT-012 | R | — |
 | FE-AUDIT-013 | R | — |
+| FE-AUDIT-014 | R | — |
 | FE-BACKUP-001..002 | I | — |
 | FE-BACKUP-003 | R | — |
 | FE-BACKUP-004..006 | I | — |

@@ -10,7 +10,7 @@ T = "2026-01-01T00:00:00"
 
 
 # The column lines each migration added to SCHEMA, by the version that introduced them.
-ADDED_COLUMNS = {2: "estimated ", 3: "reserve "}
+ADDED_COLUMNS = {2: "estimated ", 3: "reserve ", 4: "optional "}
 LATEST = max(t for t, _ in db.MIGRATIONS)
 
 
@@ -55,7 +55,7 @@ def test_v2_adds_estimated_and_keeps_every_row(tmp_path):
     db.init(path)
     assert scalar(path, "PRAGMA user_version") == LATEST
     after = {t: dump(path, t) for t in before}
-    assert [{k: v for k, v in r.items() if k != "estimated"} for r in after["entries"]] == before["entries"]
+    assert [{k: v for k, v in r.items() if k not in ("estimated", "optional")} for r in after["entries"]] == before["entries"]
     assert [r["estimated"] for r in after["entries"]] == [0, 0]
     assert [{k: v for k, v in r.items() if k != "reserve"} for r in after["accounts"]] == before["accounts"]
     assert {t: after[t] for t in ("checkpoints", "audit_log")} == {t: before[t] for t in ("checkpoints", "audit_log")}
@@ -68,7 +68,7 @@ def test_upgraded_database_matches_a_fresh_one(tmp_path):
     make_v1_database(old)
     db.init(old)
     db.init(fresh)
-    assert columns(old, "entries")[:-1] == [c for c in columns(fresh, "entries") if c[0] != "estimated"]
+    assert sorted(columns(old, "entries")) == sorted(columns(fresh, "entries"))
     assert ("estimated", "INTEGER", 1, "0") in columns(old, "entries")
     assert ("estimated", "INTEGER", 1, "0") in columns(fresh, "entries")
 
@@ -123,12 +123,12 @@ def test_v3_adds_reserve_and_keeps_every_row(tmp_path):
     make_old_database(path, 2)
     before = {t: dump(path, t) for t in ("accounts", "entries", "checkpoints", "audit_log")}
     db.init(path)
-    assert scalar(path, "PRAGMA user_version") == 3
+    assert scalar(path, "PRAGMA user_version") == LATEST
     after = {t: dump(path, t) for t in before}
     assert [{k: v for k, v in r.items() if k != "reserve"} for r in after["accounts"]] == before["accounts"]
     assert [r["reserve"] for r in after["accounts"]] == [0]
-    assert {t: after[t] for t in ("entries", "checkpoints", "audit_log")} == \
-           {t: before[t] for t in ("entries", "checkpoints", "audit_log")}
+    assert [{k: v for k, v in r.items() if k != "optional"} for r in after["entries"]] == before["entries"]
+    assert {t: after[t] for t in ("checkpoints", "audit_log")} == {t: before[t] for t in ("checkpoints", "audit_log")}
 
 
 @pytest.mark.contract("DB-SCHEMA-013")
@@ -166,3 +166,61 @@ def test_reserve_rejects_values_other_than_zero_and_one(fresh_db, value):
     with open_db(fresh_db) as c:
         with pytest.raises(sqlite3.IntegrityError):
             c.execute("INSERT INTO accounts(name, reserve, created_at, updated_at) VALUES ('A', ?, ?, ?)", (value, T, T))
+
+
+# ---------------------------------------------------------------------------- migration 4 (B-029)
+
+@pytest.mark.contract("DB-SCHEMA-014")
+def test_v4_adds_optional_and_keeps_every_row(tmp_path):
+    """DB-SCHEMA-014: upgrading a version-3 database adds entries.optional=0 and keeps all rows unchanged."""
+    path = str(tmp_path / "old.sqlite")
+    make_old_database(path, 3)
+    before = {t: dump(path, t) for t in ("accounts", "entries", "checkpoints", "audit_log")}
+    db.init(path)
+    assert scalar(path, "PRAGMA user_version") == 4
+    after = {t: dump(path, t) for t in before}
+    assert [{k: v for k, v in r.items() if k != "optional"} for r in after["entries"]] == before["entries"]
+    assert [r["optional"] for r in after["entries"]] == [0, 0]
+    assert {t: after[t] for t in ("accounts", "checkpoints", "audit_log")} == \
+           {t: before[t] for t in ("accounts", "checkpoints", "audit_log")}
+
+
+@pytest.mark.contract("DB-SCHEMA-014")
+def test_v4_upgraded_entries_match_a_fresh_database(tmp_path):
+    """DB-SCHEMA-014: the upgraded entries table has the same columns (as a set) as a fresh database's."""
+    old, fresh = str(tmp_path / "old.sqlite"), str(tmp_path / "fresh.sqlite")
+    make_old_database(old, 3)
+    db.init(old)
+    db.init(fresh)
+    assert sorted(columns(old, "entries")) == sorted(columns(fresh, "entries"))
+    assert ("optional", "INTEGER", 1, "0") in columns(fresh, "entries")
+
+
+@pytest.mark.contract("DB-SCHEMA-014")
+def test_v4_is_a_no_op_when_the_column_exists(fresh_db):
+    """DB-SCHEMA-014: the migration is guarded, so running it on a database that has the column changes nothing."""
+    migrate = dict(db.MIGRATIONS)[4]
+    with open_db(fresh_db) as c:
+        migrate(c)
+        assert [r["name"] for r in c.execute("PRAGMA table_info(entries)")].count("optional") == 1
+
+
+@pytest.mark.contract("DATA-018")
+def test_optional_defaults_to_zero(fresh_db):
+    """DATA-018: an entry inserted without optional is planned (0)."""
+    with open_db(fresh_db) as c:
+        c.execute("INSERT INTO accounts(name, created_at, updated_at) VALUES ('A', ?, ?)", (T, T))
+        c.execute("INSERT INTO entries(account_id, name, kind, amount, start_date, created_at, updated_at)"
+                  " VALUES (1, 'E', 'once', -1, '2026-01-01', ?, ?)", (T, T))
+        assert c.execute("SELECT optional FROM entries").fetchone()[0] == 0
+
+
+@pytest.mark.contract("DATA-018")
+@pytest.mark.parametrize("value", [2, -1, "ja"])
+def test_optional_rejects_values_other_than_zero_and_one(fresh_db, value):
+    """DATA-018: the CHECK constraint rejects anything but 0/1."""
+    with open_db(fresh_db) as c:
+        c.execute("INSERT INTO accounts(name, created_at, updated_at) VALUES ('A', ?, ?)", (T, T))
+        with pytest.raises(sqlite3.IntegrityError):
+            c.execute("INSERT INTO entries(account_id, name, kind, amount, start_date, optional, created_at, updated_at)"
+                      " VALUES (1, 'E', 'once', -1, '2026-01-01', ?, ?, ?)", (value, T, T))

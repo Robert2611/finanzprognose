@@ -55,6 +55,8 @@ template) with a `"Schließen"` button.
 - `FE-AUDIT-009` [INFERRED] `historyDialog(entity, id)` fetches that record's history
   (`entity`/`entity_id` filter, limit 500) and renders the same rows in a modal with a
   `"Schließen"` button; closing it refreshes the underlying view.
+- `FE-AUDIT-014` [README] The entry field `optional` is labeled `Planung` and its values are
+  shown as `eingeplant` / `optional` (B-029), e.g. `"Planung: eingeplant → optional"`.
 
 ## Examples
 - Rename an account from `X` to `Y` → the top audit row shows action `"Geändert"`, object

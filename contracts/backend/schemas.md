@@ -79,6 +79,9 @@ to the HTTP envelope by `ERRENV`.
 - `SCH-020` [README] `AccountIn.reserve` (and so `AccountCreate.reserve`) is a boolean,
   default `False` (available money); `True` marks the account as a reserve that is not money
   to plan with (B-028). A value that is not a boolean fails with `bool_parsing`.
+- `SCH-021` [README] `EntryIn.optional` is a boolean, default `False` (planned); `True` marks
+  the booking as not yet decided, so the forecast leaves it out unless it is switched in
+  (B-029). A value that is not a boolean fails with `bool_parsing`.
 
 ## Examples
 - `EntryIn(account_id=1, name='x', kind='once', amount=-500, start_date='2026-01-01',
