@@ -1,0 +1,78 @@
+# Automated code review of every pull request by a fresh Claude Code session (B-025).
+# Claude reviews the diff against CLAUDE.md, posts one comment with its findings and writes a verdict;
+# this job fails on FAIL. On PASS it turns on auto-merge, so GitHub merges the PR as soon as all
+# required checks (CI / test and Claude review / review) are green.
+#
+# One-time setup (by hand, see docs/claude-review.md):
+#   - secret CLAUDE_CODE_OAUTH_TOKEN (from `claude setup-token`) or ANTHROPIC_API_KEY
+#   - Settings > General: "Allow auto-merge"
+#   - branch protection / ruleset on main: require the checks "test" and "review"
+name: Claude review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: write        # auto-merge needs it
+  pull-requests: write   # post the review comment, enable auto-merge
+  id-token: write        # used by claude-code-action
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      BASE_REF: ${{ github.base_ref }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # The review instructions come from the base branch, so a PR can't rewrite its own review.
+      - name: Build the review prompt
+        id: prompt
+        run: |
+          git fetch --no-tags origin "$BASE_REF"
+          git show "origin/$BASE_REF:.github/claude-review.md" > "$RUNNER_TEMP/prompt.md" 2>/dev/null \
+            || cp .github/claude-review.md "$RUNNER_TEMP/prompt.md"
+          {
+            echo "text<<PROMPT_EOF"
+            envsubst '${PR_NUMBER} ${BASE_REF} ${HEAD_SHA} ${REPO}' < "$RUNNER_TEMP/prompt.md"
+            echo "PROMPT_EOF"
+          } >> "$GITHUB_OUTPUT"
+          rm -f review-verdict.txt
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ github.token }}
+          prompt: ${{ steps.prompt.outputs.text }}
+          claude_args: >-
+            --max-turns 60
+            --allowedTools "Read,Glob,Grep,Write,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*)"
+
+      - name: Check the verdict
+        run: |
+          verdict="$(tr -d '[:space:]' < review-verdict.txt 2>/dev/null || true)"
+          echo "Verdict: ${verdict:-none}"
+          case "$verdict" in
+            PASS) ;;
+            FAIL) echo "::error::Claude review found blocking issues, see the PR comment"; exit 1 ;;
+            *)    echo "::error::Claude review wrote no verdict"; exit 1 ;;
+          esac
+
+      - name: Enable auto-merge
+        run: |
+          gh pr merge "$PR_NUMBER" --repo "$REPO" --auto --merge --match-head-commit "$HEAD_SHA" \
+            || echo "::warning::Could not enable auto-merge (is 'Allow auto-merge' on in the repo settings?)"
