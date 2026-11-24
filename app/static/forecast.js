@@ -1,7 +1,7 @@
 // ------------------------------------------------------------ Prognose
 import { html, svg, render as renderLit, nothing } from './vendor/lit-html.js';
 import { $, eur, eurCls, signed, approx, ESTIMATE_NOTE, fShort, fMonth, thisMonth, api, KINDS, COLORS, warnMsg, explLine, S } from './core.js';
-import { entryDialog } from './entries.js';
+import { entryDialog, recurringDialog, onceDialog } from './entry_dialogs.js';
 import { accountDialog, checkpointDialog } from './accounts.js';
 import { DIMENSIONS, groupItems, getDimension, isOpen, toggleGroup, dimensionSelect } from './grouping.js';
 
@@ -15,7 +15,7 @@ export async function renderForecast(main) {
       <label>Zeitraum <select @change=${e => { S.months = +e.target.value; renderForecast(main); }}>${[12, 24, 36, 60, 120].map(n => html`<option value=${n} ?selected=${n == S.months}>${n} Monate</option>`)}</select></label>
       <button @click=${() => { S.from = thisMonth(); S.sel = null; renderForecast(main); }}>Heute</button>
       ${dimensionSelect('prognose', () => S.fc && drawDetail(S.fc))}<span class="spacer"></span>
-      <button class="primary" @click=${() => entryDialog()}>+ Buchung</button><button @click=${() => checkpointDialog()}>+ Ist-Stand</button></div>
+      <button class="primary" @click=${() => recurringDialog()}>+ Wiederkehrend</button><button @click=${() => onceDialog()}>+ Einmalig</button><button @click=${() => checkpointDialog()}>+ Ist-Stand</button></div>
     <div id="warn"></div><div class="panel" style="margin-bottom:16px"><div id="chart"></div></div>
     <div class="fc-layout"><div class="panel table-wrap" id="ftable"></div><div class="panel detail" id="fdetail"></div></div>`, main);
   const fc = S.fc = await api('GET', `/api/forecast?start=${S.from}&months=${S.months}`);

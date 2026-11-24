@@ -1,9 +1,9 @@
 import pytest
 from playwright.sync_api import expect
 
-NAV = [("prognose", "Prognose"), ("buchungen", "Buchungen"), ("konten", "Konten & Ist-Stände"),
+NAV = [("prognose", "Prognose"), ("buchungen", "Wiederkehrend"), ("einmalig", "Einmalig"), ("konten", "Konten & Ist-Stände"),
        ("verlauf", "Verlauf"), ("sicherung", "Sicherung"), ("version", "Version")]
-HEADINGS = {"buchungen": "Buchungen", "konten": "Konten & Ist-Stände", "verlauf": "Änderungsverlauf", "sicherung": "Sicherung",
+HEADINGS = {"buchungen": "Wiederkehrende Buchungen", "einmalig": "Einmalige Buchungen", "konten": "Konten & Ist-Stände", "verlauf": "Änderungsverlauf", "sicherung": "Sicherung",
             "version": "Laufende Version"}
 
 
@@ -32,12 +32,12 @@ def test_initial_view_comes_from_the_hash(one_account):
 
 
 @pytest.mark.contract("FE-NAV-002", "E2E-ONBOARD-007")
-def test_header_shows_brand_six_nav_buttons_and_pill(app_page):
-    """FE-NAV-002: header has the brand, the six nav buttons with exact labels, and the backup pill."""
+def test_header_shows_brand_seven_nav_buttons_and_pill(app_page):
+    """FE-NAV-002: header has the brand, the seven nav buttons with exact labels, and the backup pill."""
     page = app_page.open()
     expect(page.locator("header .brand")).to_have_text("Finanzprognose")
     buttons = page.locator("#nav button")
-    expect(buttons).to_have_count(6)
+    expect(buttons).to_have_count(7)
     assert [(b.get_attribute("data-view"), b.inner_text().strip()) for b in buttons.all()] == NAV
     expect(page.locator("button#backupPill.pill")).to_be_visible()
     assert page.locator("main#main").count() == 1 and page.locator("div#toast").count() == 1
@@ -93,7 +93,7 @@ def test_view_render_failure_shows_an_error_banner_not_a_blank_shell(one_account
     page.route("**/api/forecast*", lambda r: r.fulfill(status=500, content_type="application/json", body='{"detail":"render kaputt"}'))
     page.goto("/")
     expect(page.locator("#main .banner.err")).to_be_visible()
-    expect(page.locator("#nav button")).to_have_count(6)
+    expect(page.locator("#nav button")).to_have_count(7)
     page.locator('#nav button[data-view="konten"]').click()
     expect(page.locator("#main")).to_contain_text("Konten & Ist-Stände")
 

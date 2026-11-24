@@ -13,7 +13,8 @@ Rendered into `#main` when view = `prognose`. Fetches `GET /api/forecast?start=&
 Stable DOM:
 - `.toolbar` with: an `Ab` `<input type="month">` (start month), a `Zeitraum` `<select>`
   (options `12/24/36/60/120 Monate`), a `"Heute"` button, a `Gruppieren nach` `<select>`
-  (FE-FORECAST-018), a `"+ Buchung"` primary button, and a `"+ Ist-Stand"` button.
+  (FE-FORECAST-018), a `"+ Wiederkehrend"` primary button, a `"+ Einmalig"` button, and a
+  `"+ Ist-Stand"` button.
 - `#warn` — warning/negative banners.
 - `#chart` — the SVG chart (`svg.chart`), with clickable month `<rect>`s and a `.legend`.
 - `#ftable` — the month table (`table` with header `"Monat (Monatsende)"`, per-account
@@ -67,9 +68,11 @@ state `S.from`, `S.months`, `S.sel`.
   `.banner.err` naming the first such month and amount
   (`"Achtung: Im <Monat> wird der Gesamtstand voraussichtlich negativ (<eur>)."`).
 - `FE-FORECAST-016` [INFERRED] Clicking a booking item's label opens that entry's edit
-  dialog (pre-filled).
-- `FE-FORECAST-017` [INFERRED] `"+ Buchung"` opens the new-entry dialog; `"+ Ist-Stand"`
-  opens the new-checkpoint dialog; both refresh the forecast after a successful save.
+  dialog (pre-filled): the recurring dialog for a recurring booking, the one-time dialog for a
+  one-time booking (B-027).
+- `FE-FORECAST-017` [INFERRED] `"+ Wiederkehrend"` opens the new recurring booking dialog,
+  `"+ Einmalig"` the new one-time booking dialog (B-027); `"+ Ist-Stand"` opens the
+  new-checkpoint dialog; all refresh the forecast after a successful save.
 
 ### Grouping (B-012)
 - `FE-FORECAST-018` [README] The toolbar has a `Gruppieren nach` select with the same

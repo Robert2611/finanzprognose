@@ -71,9 +71,9 @@ def test_toolbar_chart_table_and_detail_are_rendered(app_page, single):
     expect(tb.locator('input[type="month"]')).to_have_count(1)
     expect(tb.locator("select:not([name=group-by])")).to_have_count(1)   # Zeitraum
     expect(tb.locator("select[name=group-by]")).to_have_count(1)          # Gruppieren nach (FE-FORECAST-018)
-    for name in ("Heute", "+ Buchung", "+ Ist-Stand"):
-        expect(tb.get_by_role("button", name=name)).to_have_count(1)
-    expect(tb.locator("button.primary")).to_have_text("+ Buchung")
+    for name in ("Heute", "+ Wiederkehrend", "+ Einmalig", "+ Ist-Stand"):
+        expect(tb.get_by_role("button", name=name, exact=True)).to_have_count(1)
+    expect(tb.locator("button.primary")).to_have_text("+ Wiederkehrend")
 
 
 @pytest.mark.contract("FE-FORECAST-003")
@@ -299,19 +299,51 @@ def test_clicking_a_booking_label_opens_the_prefilled_edit_dialog(app_page, worl
 
 
 @pytest.mark.contract("FE-FORECAST-017")
-def test_buchung_button_opens_new_entry_dialog_and_refreshes_the_forecast(app_page, single):
-    """FE-FORECAST-017: '+ Buchung' opens the new-entry dialog; saving refreshes the forecast."""
+def test_wiederkehrend_button_opens_new_recurring_dialog_and_refreshes_the_forecast(app_page, single):
+    """FE-FORECAST-017: '+ Wiederkehrend' opens the new recurring booking dialog; saving refreshes the forecast."""
     page = open_forecast(app_page)
-    page.locator(".toolbar").get_by_role("button", name="+ Buchung").click()
+    page.locator(".toolbar").get_by_role("button", name="+ Wiederkehrend").click()
     dlg = page.locator("dialog")
+    expect(dlg.locator("h3")).to_have_text("Neue wiederkehrende Buchung")
     expect(dlg.locator("label.field").filter(has_text="Bezeichnung")).to_have_count(1)
     dlg.locator("label.field").filter(has_text="Bezeichnung").locator("input").fill("Streaming")
     dlg.locator("label.field").filter(has_text="Betrag").locator("input").first.fill("12,99")
-    dlg.locator("label.field").filter(has_text="Datum der (ersten) Fälligkeit").locator("input").fill("2026-02-10")
+    dlg.locator("label.field").filter(has_text="Datum der ersten Fälligkeit").locator("input").fill("2026-02-10")
     dlg.locator("button.primary").click()
     expect(page.locator("dialog")).to_have_count(0)
     select(page, "2026-02")
     expect(page.locator("#fdetail")).to_contain_text("Streaming")
+
+
+@pytest.mark.contract("FE-FORECAST-017")
+def test_einmalig_button_opens_new_one_time_dialog_and_refreshes_the_forecast(app_page, single):
+    """FE-FORECAST-017: '+ Einmalig' opens the new one-time booking dialog; saving refreshes the forecast."""
+    page = open_forecast(app_page)
+    page.locator(".toolbar").get_by_role("button", name="+ Einmalig").click()
+    dlg = page.locator("dialog")
+    expect(dlg.locator("h3")).to_have_text("Neue einmalige Buchung")
+    dlg.locator("label.field").filter(has_text="Bezeichnung").locator("input").fill("Waschmaschine")
+    dlg.locator("label.field").filter(has_text="Betrag").locator("input").first.fill("650")
+    dlg.locator("label.field").filter(has_text="Datum").locator("input").fill("2026-02-10")
+    dlg.locator("button.primary").click()
+    expect(page.locator("dialog")).to_have_count(0)
+    select(page, "2026-02")
+    expect(page.locator("#fdetail")).to_contain_text("Waschmaschine")
+    select(page, "2026-03")
+    expect(page.locator("#fdetail")).not_to_contain_text("Waschmaschine")
+
+
+@pytest.mark.contract("FE-FORECAST-016")
+def test_clicking_a_one_time_booking_opens_the_one_time_dialog(app_page, single):
+    """FE-FORECAST-016: a one-time booking opens in the one-time dialog (no Rhythmus field)."""
+    app_page.seed.entry(single["id"], "Urlaub", -150000, "2026-02-10", kind="once")
+    page = open_forecast(app_page)
+    select(page, "2026-02")
+    page.locator("#fdetail").get_by_text("Urlaub", exact=True).first.click()
+    dlg = page.locator("dialog")
+    expect(dlg.locator("h3")).to_have_text("Buchung „Urlaub“ bearbeiten")
+    expect(dlg.locator("label.field").filter(has_text="Rhythmus")).to_have_count(0)
+    expect(dlg.locator("label.field").filter(has_text="Datum").locator("input")).to_have_value("2026-02-10")
 
 
 @pytest.mark.contract("FE-FORECAST-017")

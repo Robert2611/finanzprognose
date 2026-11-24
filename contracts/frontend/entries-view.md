@@ -1,30 +1,36 @@
-# Frontend — entries view ("Buchungen") & adjustments
+# Frontend — recurring bookings view ("Wiederkehrend") & adjustments
 ID prefix: FE-ENTRIES
 Layer: frontend
 
 ## Purpose
-Where the user manages bookings — income, expenses, and transfers between accounts — and
-the per-booking adjustments (a new fixed amount or a percentage change from a date). It
-lists bookings, supports create/edit/archive/restore, and opens an adjustments sub-dialog.
+Where the user manages recurring bookings — income, expenses, and transfers between
+accounts — and the per-booking adjustments (a new fixed amount or a percentage change from a
+date). It lists recurring bookings, supports create/edit/archive/restore, and opens an
+adjustments sub-dialog. One-time bookings have their own view and dialog
+(`once-view.md`, FE-ONCE, B-027); this view never lists or creates them.
 
 ## Interface
-Rendered into `#main` when view = `buchungen`. Reads bookings from in-memory state `S.data`.
+Rendered into `#main` when view = `buchungen` (`entries.js`). Reads bookings with
+`kind = 'recurring'` from in-memory state `S.data`. The dialogs live in `entry_dialogs.js`,
+the adjustments sub-dialog in `adjustments.js`.
 Stable DOM:
-- `.toolbar` with heading `"Buchungen"`, an `"Archivierte zeigen"` checkbox, a
+- `.toolbar` with heading `"Wiederkehrende Buchungen"`, an `"Archivierte zeigen"` checkbox, a
   `Gruppieren nach` select (FE-ENTRIES-021), and a
   `"+ Neue Buchung"` primary button.
 - A `table` with headers `Bezeichnung, Typ, Konto, Grundbetrag, Rhythmus, Zeitraum,
   Anpassungen`, plus an action column. Archived rows have class `archived`. Empty list shows
-  `"Noch keine Buchungen."`.
+  `"Noch keine wiederkehrenden Buchungen."`.
 - Per row action buttons: `"Bearbeiten"`, `"Archivieren"` (or `"Wiederherstellen"` when
   archived), `"Verlauf"`, and an `"N Anpassung(en)"` button.
 
 Dialogs (via `formDialog`):
-- `entryDialog(entry?)` — fields: `Bezeichnung`, `Typ` (Einnahme/Ausgabe/Umbuchung zwischen
+- `recurringDialog(entry?)` — title `"Neue wiederkehrende Buchung"` (or `Buchung „<name>“
+  bearbeiten`); fields: `Bezeichnung`, `Typ` (Einnahme/Ausgabe/Umbuchung zwischen
   Konten), `Konto`, `Zielkonto` (only for transfer), `Betrag (positiv eingeben)`, `Art`
-  (Fest/Geschätzt),
-  `Häufigkeit` (Wiederkehrend/Einmalig), `Rhythmus` (only recurring), `Datum der (ersten)
-  Fälligkeit`, `Letzte Fälligkeit (optional)` (only recurring), `Kategorie`, `Notiz`.
+  (Fest/Geschätzt), `Rhythmus`, `Datum der ersten Fälligkeit`,
+  `Letzte Fälligkeit (optional)`, `Kategorie`, `Notiz`. Always saves `kind = 'recurring'`.
+- `entryDialog(entry)` — opens an existing booking in the dialog that matches its kind
+  (`recurringDialog` or `onceDialog`); used by the forecast view.
 - `adjustmentsDialog(entry)` — a sub-dialog listing adjustments with `+ Anpassung`.
 
 ## Dependencies & side effects
@@ -34,26 +40,31 @@ history dialog. Refreshes forecast/state after saves.
 ## Behavior clauses
 
 ### List
-- `FE-ENTRIES-001` [INFERRED] The view lists all non-archived bookings by default; ticking
-  `"Archivierte zeigen"` also lists archived ones (shown with the `archived` class).
+- `FE-ENTRIES-001` [INFERRED] The view lists all non-archived recurring bookings by default
+  (one-time bookings never appear here, B-027); ticking `"Archivierte zeigen"` also lists
+  archived ones (shown with the `archived` class).
 - `FE-ENTRIES-002` [INFERRED] Each row shows the name (with optional category tag and note),
   the type label (`Einnahme`/`Ausgabe`/`Umbuchung`), the account (and `→ target` for
-  transfers), the base amount, the cadence (`einmalig` or the German rhythm), and the period
-  (`ab <date>` / `ab <date> bis <date>` / a single date for once).
+  transfers), the base amount, the German rhythm, and the period
+  (`ab <date>` / `ab <date> bis <date>`).
 - `FE-ENTRIES-003` [INFERRED] The type is derived from the data: a transfer has
   `to_account_id`; otherwise negative amount = expense, positive = income.
-- `FE-ENTRIES-004` [INFERRED] An empty list renders a single `"Noch keine Buchungen."` row.
+- `FE-ENTRIES-004` [INFERRED] An empty list renders a single
+  `"Noch keine wiederkehrenden Buchungen."` row.
 - `FE-ENTRIES-005` [INFERRED] The `"N Anpassung(en)"` button shows the count of non-archived
   adjustments for that entry and opens the adjustments dialog.
 
 ### Create / edit
-- `FE-ENTRIES-006` [INFERRED] `"+ Neue Buchung"` opens the entry dialog with defaults
-  (type Ausgabe, Wiederkehrend, monthly, today, first account).
+- `FE-ENTRIES-006` [INFERRED] `"+ Neue Buchung"` opens the recurring dialog, titled
+  `"Neue wiederkehrende Buchung"`, with defaults (type Ausgabe, monthly, today, first
+  account).
 - `FE-ENTRIES-007` [INFERRED] Amount is entered as a positive number; the type determines the
   stored sign (expense → negative, income/transfer → positive).
 - `FE-ENTRIES-008` [INFERRED] Selecting type `"Umbuchung zwischen Konten"` reveals the
   `Zielkonto` field; it is hidden and sent as null for non-transfers.
-- `FE-ENTRIES-009` [INFERRED] Selecting `"Einmalig"` hides the Rhythmus and end-date fields.
+- `FE-ENTRIES-009` [README] The recurring dialog has no `Häufigkeit` choice (B-027): the
+  `Rhythmus` and `Letzte Fälligkeit (optional)` fields are always shown, and the booking is
+  saved with `kind = 'recurring'`. A booking never changes its kind in the UI.
 - `FE-ENTRIES-010` [INFERRED] Editing an existing booking pre-fills the form and sends
   `expected_updated_at`; a successful save toasts `"Gespeichert"` and refreshes.
 - `FE-ENTRIES-011` [INFERRED] When editing, an informational note explains that changing the
@@ -95,11 +106,11 @@ history dialog. Refreshes forecast/state after saves.
   in the usual order. Groups: `Kategorie` — case-insensitive, labeled with the most-used
   spelling (as in FE-ENTRIES-020), alphabetical, `Ohne Kategorie` last; `Typ` — `Einnahmen`,
   `Ausgaben`, `Umbuchungen`; `Konto` — the booking's (source) account, in account order;
-  `Rhythmus` — by interval (`monatlich` first), `einmalig` last; `Art` — `fest`, then
+  `Rhythmus` — by interval (`monatlich` first); `Art` — `fest`, then
   `geschätzt` (B-015).
 - `FE-ENTRIES-023` [README] A group header shows the monthly equivalent of the group's
   non-archived recurring bookings as `"<±eur>/Monat"` (amount ÷ interval in months, from the
-  base amount, rounded to the cent). One-time bookings are listed but not summed. Transfers
+  base amount, rounded to the cent). Transfers
   are summed separately as `"Umbuchungen <eur>/Monat"`. A part with nothing to sum is omitted.
 - `FE-ENTRIES-024` [README] Groups are open by default; clicking a group header folds or
   unfolds its rows.
@@ -125,7 +136,7 @@ history dialog. Refreshes forecast/state after saves.
   `"1 Anpassung"` and the forecast salary jumps in March.
 
 ## Out of scope / not specified
-- Exact sort order of the booking list beyond "archived last, then by kind/name".
+- Exact sort order of the booking list beyond "archived last, then by name".
 - Field tab order within dialogs.
 
 ## Open questions

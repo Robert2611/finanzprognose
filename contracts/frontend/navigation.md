@@ -3,7 +3,7 @@ ID prefix: FE-NAV
 Layer: frontend
 
 ## Purpose
-The app shell: a fixed header with six nav buttons, an update pill and a backup status pill, a `#main`
+The app shell: a fixed header with seven nav buttons, an update pill and a backup status pill, a `#main`
 content area, and hash-based routing that swaps views without a page reload. It also loads
 the app state once at startup and re-renders on navigation, and shows a top-level error
 banner if a view fails.
@@ -12,8 +12,9 @@ banner if a view fails.
 Static page `index.html` (served at `/`). Stable DOM anchors (the main selectors a browser
 test can rely on):
 - `header` with `.brand` text `"Finanzprognose"`.
-- `nav#nav` containing six `<button data-view=…>`: `prognose` ("Prognose"),
-  `buchungen` ("Buchungen"), `konten` ("Konten & Ist-Stände"), `verlauf` ("Verlauf"),
+- `nav#nav` containing seven `<button data-view=…>`: `prognose` ("Prognose"),
+  `buchungen` ("Wiederkehrend"), `einmalig` ("Einmalig", B-027), `konten`
+  ("Konten & Ist-Stände"), `verlauf` ("Verlauf"),
   `sicherung` ("Sicherung"), `version` ("Version", B-026).
 - `button#updatePill.pill` (`data-view="version"`), hidden unless an update is available,
   running or failed (`FE-UPDATE-001`).
@@ -26,14 +27,14 @@ Routing exports (from `core.js`): `setView(v)`, `render()`, `load()`, `refresh()
 
 ## Dependencies & side effects
 `load()` calls `GET /api/state`. Clicking a `[data-view]` element sets `location.hash` and
-re-renders. The active view maps: `prognose→forecast`, `buchungen→entries`,
+re-renders. The active view maps: `prognose→forecast`, `buchungen→entries`, `einmalig→once`,
 `konten→accounts`, `verlauf→audit`, `sicherung→backup`, `version→update` (unknown → forecast).
 
 ## Behavior clauses
 
 - `FE-NAV-001` [INFERRED] On load, the app fetches `/api/state`, renders the initial view
   (from `location.hash`, default `prognose`), and starts the backup-pill and update-pill refresh.
-- `FE-NAV-002` [INFERRED] The header always shows the six nav buttons with the exact German
+- `FE-NAV-002` [INFERRED] The header always shows the seven nav buttons with the exact German
   labels listed above, plus the backup pill.
 - `FE-NAV-003` [INFERRED] Clicking a nav button sets `location.hash` to its `data-view` and
   renders the corresponding view into `#main`.
